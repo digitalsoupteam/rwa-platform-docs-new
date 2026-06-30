@@ -2,10 +2,12 @@ FROM oven/bun:latest AS base
 WORKDIR /app
 
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
-COPY .env.local .env.local
+COPY .env .env
+
+RUN bunx fumadocs-mdx
 
 RUN bun run build
 
