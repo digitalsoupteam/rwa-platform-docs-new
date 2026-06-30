@@ -1,0 +1,11 @@
+{
+  "title": "Images",
+  "pages": [
+    "get-image",
+    "get-images",
+    "create-image",
+    "update-image",
+    "delete-image",
+    "upload-image"
+  ]
+}

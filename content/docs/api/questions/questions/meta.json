@@ -1,0 +1,13 @@
+{
+  "title": "Questions",
+  "pages": [
+    "get-question",
+    "get-questions",
+    "create-question",
+    "update-question-text",
+    "create-question-answer",
+    "update-question-answer",
+    "delete-question",
+    "toggle-question-like"
+  ]
+}

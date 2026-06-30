@@ -1,0 +1,88 @@
+---
+title: Secondary Market Overview
+description: Trading RWA tokens on the secondary market
+---
+
+# Secondary Market Overview
+
+RWA tokens can be traded on the secondary market through each pool's built-in Automated Market Maker (AMM). There is no order book — every trade executes instantly against the pool's reserves.
+
+## How Trading Works
+
+Each pool contains an AMM that enables continuous trading between HOLD and RWA tokens. The AMM uses a **constant product formula** with virtual reserves:
+
+```
+k = virtualHoldReserve × virtualRwaReserve
+```
+
+When you buy RWA tokens, the price increases. When you sell, the price decreases. The virtual reserves provide price stability by dampening the impact of individual trades.
+
+For a detailed explanation of the AMM formula, price impact, and worked examples, see [Order Matching](/docs/trading/order-matching).
+
+## Buy RWA Tokens
+
+To buy RWA tokens, call `Pool.mint()` on-chain:
+
+```solidity
+function mint(
+    uint256 rwaAmount,      // Amount of RWA tokens to buy
+    uint256 maxHoldAmount,  // Maximum HOLD to spend (slippage protection)
+    uint256 validUntil,     // Transaction deadline
+    bool allowPartial       // Accept partial fill
+) external nonReentrant
+```
+
+The cost is calculated as:
+
+```
+holdAmount = (k / (virtualRwaReserve - rwaAmount)) - (virtualHoldReserve + realHoldReserve)
+fee = holdAmount × entryFeePercent / 10000
+totalCost = holdAmount + fee
+```
+
+You need to approve the HOLD tokens first, then call `mint`. For a full code example, see [Join a Pool](/docs/pools/join-pool).
+
+## Sell RWA Tokens
+
+To sell RWA tokens, call `Pool.burn()`:
+
+```solidity
+function burn(
+    uint256 rwaAmount,       // RWA tokens to sell
+    uint256 minHoldAmount,   // Minimum HOLD to receive (slippage protection)
+    uint256 minBonusAmount,  // Minimum bonus to receive
+    uint256 validUntil       // Transaction deadline
+) external nonReentrant
+```
+
+You receive:
+
+- **Base return** — your proportional share of returned funds, calculated via the AMM
+- **Bonus** — additional rewards if the business has exceeded its obligations
+
+Both amounts are subject to the exit fee.
+
+## Price Discovery
+
+The AMM price is determined by the pool's reserves:
+
+```
+price = (virtualHoldReserve + realHoldReserve) / virtualRwaReserve
+```
+
+The price updates after every trade. You can query current and historical prices via the [Charts API](/docs/charts/overview):
+
+- **[Raw price data](/docs/api/charts/get-raw-price-data)** — historical price points with reserve snapshots
+- **[OHLC data](/docs/api/charts/get-ohlc-price-data)** — open, high, low, close prices over configurable intervals
+- **[Volume data](/docs/api/charts/get-volume-data)** — mint and burn volumes over time
+- **[Real-time updates](/docs/api/charts/price-updates)** — subscribe to price changes via WebSocket
+
+## Settlement
+
+All trades settle instantly on-chain. When you mint, RWA tokens are transferred to your wallet. When you burn, HOLD tokens are transferred from the pool to your wallet. There is no order book or matching engine — the AMM is always ready to trade.
+
+## Learn More
+
+- [Order Matching](/docs/trading/order-matching) — AMM formula details, price impact, and worked examples
+- [Join a Pool](/docs/pools/join-pool) — full code examples for buying and selling
+- [Charts & Real-Time Data](/docs/charts/overview) — price data, OHLC, volume, and WebSocket subscriptions

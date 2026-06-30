@@ -1,0 +1,111 @@
+---
+title: Staking
+description: Stake PlatformTokens to participate in governance
+---
+
+# Staking
+
+Staking allows you to deposit PlatformTokens in exchange for governance voting power and rewards.
+
+## How Staking Works
+
+The `DaoStaking` contract manages staking:
+
+```solidity
+function stake(uint256 amount) external nonReentrant
+function unstake(uint256 amount) external nonReentrant
+```
+
+When you stake:
+
+1. PlatformTokens are transferred from your wallet to the staking contract
+2. Your staked amount is recorded and converted to voting power (1:1 ratio)
+3. Your staking timestamp is set, starting reward accrual
+4. If you already have staked tokens, any pending rewards are automatically reinvested
+
+```javascript
+// Approve PlatformToken for DaoStaking contract
+await platformToken.approve(daoStakingAddress, amount);
+
+// Stake
+await daoStaking.stake(amount);
+```
+
+## Staking Rewards
+
+Rewards are calculated based on:
+
+- **Annual reward rate** — **10%** (1000 bps, `daoStakingAnnualRewardRate` in Config)
+- **Staking duration** — time since last stake or reinvest
+- **Available rewards** — contract balance minus total user deposits
+
+```solidity
+annualReward = stakedAmount × annualRewardRate / 10000
+pendingReward = annualReward × stakingDuration / 365 days
+```
+
+For example, if you stake **50,000 PlatformToken** and hold for **30 days**:
+
+```
+annualReward = 50,000 × 10% = 5,000 PlatformToken
+pendingReward = 5,000 × 30 / 365 ≈ 410.96 PlatformToken
+```
+
+After 30 days you earn **~411 PlatformToken** on top of your 50,000.
+
+If you hold for a full year:
+
+```
+pendingReward = 5,000 × 365 / 365 = 5,000 PlatformToken
+```
+
+Total: **55,000 PlatformToken** (10% APY).
+
+Rewards are automatically reinvested when you stake more or partially unstake.
+
+## Unstaking
+
+To unstake, call `unstake(amount)`:
+
+```javascript
+await daoStaking.unstake(amount);
+```
+
+- **Full unstake** — if you unstake your entire position, you receive your staked tokens plus all accrued rewards
+- **Partial unstake** — if you unstake part of your position, the remaining amount plus rewards are automatically reinvested
+
+**Constraint:** You cannot unstake while your voting lock is active (tokens locked until voted proposal ends).
+
+## Voting Lock
+
+When you vote on a proposal, `Governance.vote()` calls `DaoStaking.lock(user, proposal.endTime)`, which locks your staked tokens until the proposal's end time:
+
+```solidity
+function lock(address user, uint256 unlockTimestamp) external {
+    addressBook.requireGovernance(msg.sender);
+    require(stakedAmount[user] > 0, "No staked tokens");
+    require(unlockTimestamp > block.timestamp, "Invalid unlock timestamp");
+
+    // Only extends — never shortens
+    if (unlockTimestamp > votingLockTimestamp[user]) {
+        votingLockTimestamp[user] = unlockTimestamp;
+    }
+}
+```
+
+This means:
+- After voting, you cannot unstake until the proposal's `endTime`
+- If you vote on multiple proposals, your lock extends to the latest `endTime`
+- The lock only extends, never shortens
+
+## View Functions
+
+```javascript
+const staked = await daoStaking.stakedAmount(user);
+const votingPower = await daoStaking.getVotingPower(user);
+const totalVotingPower = await daoStaking.getTotalVotingPower();  // = totalSupply
+const pendingRewards = await daoStaking.calculatePendingRewards(user);
+const availableRewards = await daoStaking.getAvailableRewards();
+```
+
+Total voting power for quorum calculations is based on the total PlatformToken supply (not just staked amount).

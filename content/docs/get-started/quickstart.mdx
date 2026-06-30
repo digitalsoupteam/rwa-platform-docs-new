@@ -1,0 +1,67 @@
+---
+title: Quick Start
+description: Get up and running with Slices in minutes
+---
+
+# Quick Start
+
+This guide walks you through launching your first RWA pool end-to-end. Each step links to the detailed documentation and API reference — follow along to go from zero to a live pool.
+
+## Prerequisites
+
+- A Web3 wallet (MetaMask, WalletConnect)
+- HOLD tokens for pool creation fees
+- BNB for gas on BSC Testnet (get from the [Testnet Faucet](/docs/testnet-faucet/overview))
+
+## Step 1: Create a Company
+
+A company is the organizational entity that owns businesses and pools. [Create a company](/docs/api/company/company/create-company) via GraphQL with a name, description, country, and social links.
+
+Once created, the [AI evaluator](/docs/ai-evaluator/overview) can analyze your business and assign a risk score.
+
+## Step 2: Create a Business
+
+Under your company, [create a business](/docs/api/rwa/businesses/create-business) — the tokenizable entity. You can use [AI-assisted creation](/docs/api/rwa/businesses/create-business-with-ai) to generate metadata from a description, or set fields manually:
+
+- **Name** — your business name
+- **Business type** — `growth`, `startup`, or `franchise` (see [Asset Types](/docs/tokenization/asset-types))
+- **Country** — jurisdiction for compliance
+- **Description** — what your business does
+- **Tags** — categorization labels
+
+## Step 3: Deploy the RWA Token Contract
+
+After your business is created, request multi-signature approval for RWA deployment:
+
+1. [Request approval signatures](/docs/api/rwa/businesses/request-business-approval-signatures) — authorized signers review and sign off-chain
+2. [Check the signature task](/docs/api/signers-manager/get-signature-task) — poll until `completed = true`
+3. Call `Factory.deployRWA()` on-chain with the collected signatures
+
+See [Token Creation](/docs/tokenization/token-creation) for the full process and contract details.
+
+## Step 4: Configure and Deploy a Pool
+
+With your RWA token deployed, configure your pool:
+
+1. [Create the pool](/docs/api/rwa/pools/create-pool) — link it to your business
+2. [Edit the pool](/docs/api/rwa/pools/edit-pool) — set funding target, RWA supply, fees, periods, tranches, AMM parameters
+3. [Request pool approval signatures](/docs/api/rwa/pools/request-pool-approval-signatures) — signers review and sign
+4. Call `Factory.deployPool()` on-chain with the collected signatures + fee in HOLD
+
+For a detailed walkthrough of pool configuration and deployment, see [Launch a Pool](/docs/pools/launch-pool).
+
+## Step 5: Promote and Collect
+
+Once your pool is live:
+
+1. Share the pool link with potential participants
+2. Track contributions in real-time via [charts](/docs/charts/overview) and [portfolio](/docs/api/portfolio/get-balances)
+3. When the target is reached, claim outgoing tranches via `Pool.claimOutgoingTranches()`
+4. Return funds via `Pool.returnIncomingTranche()` to fulfill your obligations
+
+## Next Steps
+
+- Learn about [Core Concepts](/docs/get-started/concepts) — the building blocks of the platform
+- Explore [Pool Types](/docs/pools/overview) — how pools work
+- Read the [Smart Contract Architecture](/docs/smart-contracts/architecture) — how contracts fit together
+- Browse the [API Reference](/docs/api/rwa/pools/get-pools) — complete GraphQL documentation

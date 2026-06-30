@@ -1,0 +1,64 @@
+---
+title: Asset Types
+description: Supported real-world asset categories on Slices
+---
+
+# Asset Types
+
+Slices supports three business types that can be tokenized on the platform. Each type has different characteristics, risk profiles, and expectations for how capital is used and returned.
+
+## Business Types
+
+The platform currently supports three business types:
+
+| Type | Description | Example |
+|---|---|---|
+| **Growth** | Established businesses seeking expansion capital | A manufacturing company opening a new facility |
+| **Startup** | Early-stage ventures with high growth potential | A tech startup developing a new product |
+| **Franchise** | Franchise operations expanding to new locations | A restaurant chain opening a new branch |
+
+The `businessType` is set when creating a business via the [Create Business](/docs/api/rwa/businesses/create-business) mutation and can be updated via [Edit Business](/docs/api/rwa/businesses/edit-business). It is an enum (`BusinessType`) with values `growth`, `startup`, `franchise`.
+
+## How Type Affects Evaluation
+
+The AI Risk Evaluator considers the business type as part of its analysis. Each type carries different risk characteristics:
+
+- **Growth** — typically lower risk: established revenue, proven business model, expansion into adjacent markets
+- **Startup** — typically higher risk: unproven product-market fit, no historical revenue, but higher potential upside
+- **Franchise** — moderate risk: proven brand and operational model, but depends on location-specific factors and franchisor relationship
+
+The risk score (0-100) reflects this: growth businesses tend toward the lower end, startups toward the higher end, franchises in the middle. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for how the score is computed.
+
+## How Type Affects Pool Configuration
+
+While all three types use the same pool mechanism, the tranche structure and parameters typically differ:
+
+- **Growth** — shorter completion periods, lower reward percentages (lower risk premium), more frequent outgoing tranches
+- **Startup** — longer completion periods, higher reward percentages (higher risk premium for participants), fewer but larger tranches
+- **Franchise** — moderate periods, moderate reward, tranches aligned with expected franchise revenue timeline
+
+These are not enforced by the protocol — any business can configure any valid pool parameters. But the AI evaluation and participant expectations are informed by the business type.
+
+## Token Metadata
+
+Each RWA token has a metadata URI that points to detailed information about the asset:
+
+```
+{baseMetadataUri}/{contract_address}/{token_id}
+```
+
+The metadata includes the business name, description, risk score, and supporting documents. The `businessType` is part of the business profile and is visible to participants when they review a pool.
+
+## Risk Evaluation
+
+Each business undergoes an AI-powered risk evaluation before tokenization. The evaluation considers:
+
+- **Business description** — the nature and viability of the business
+- **Business type** — growth, startup, or franchise (affects risk baseline)
+- **Market context** — industry and competitive landscape
+- **Financial factors** — revenue model, cost structure
+- **Team** — experience and track record
+- **Documents** — uploaded business plans, financial projections, legal documents
+- **Gallery images** — photos of the business, products, or locations
+
+The result is a **risk score** (0-100) and a detailed breakdown of evaluation factors. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for the full process.

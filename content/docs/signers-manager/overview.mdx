@@ -1,0 +1,123 @@
+---
+title: Signers Manager
+description: How multi-signature approvals work for RWA and pool deployments
+---
+
+# Signers Manager
+
+The Signers Manager coordinates multi-signature approvals for sensitive operations on the Slices platform — primarily RWA token deployment and pool deployment.
+
+## Why Multi-Signature?
+
+Every RWA token and pool deployment requires approval from **authorized signers**. This provides:
+
+- **Identity verification** — signers verify the business owner's identity before approving
+- **Due diligence** — signers review the business and pool parameters
+- **Fraud prevention** — multiple independent approvals reduce the risk of malicious deployments
+
+## Architecture
+
+The signing system consists of three components:
+
+```
+┌──────────────┐     RabbitMQ      ┌──────────────┐
+│ Signers      │ ◄─── sign.exchange ──── │ Signer       │
+│ Manager      │     (fanout)       │ (Agent)      │
+│ (Service)    │ ──── sign.responses ──► │ (Service)    │
+└──────────────┘                    └──────────────┘
+```
+
+- **Signers Manager** — the central service that creates signature tasks and tracks progress
+- **Signer Agents** — individual services (one per authorized signer) that listen for tasks and respond with signatures
+- **RabbitMQ** — message broker for task distribution and response collection
+
+## Flow
+
+### 1. Create a Signature Task
+
+When a user requests RWA or pool deployment, the platform creates a signature task:
+
+- For RWA: [requestBusinessApprovalSignatures](/docs/api/rwa/businesses/request-business-approval-signatures)
+- For Pool: [requestPoolApprovalSignatures](/docs/api/rwa/pools/request-pool-approval-signatures)
+
+Parameters include:
+- **`hash`** — the keccak256 hash of the deployment parameters to be signed
+- **`requiredSignatures`** — minimum number of signatures needed (must be ≥ `minSignersRequired` from Config)
+- **`expired`** — deadline timestamp; the task expires after this time
+
+### 2. Task Distribution
+
+The Signers Manager publishes the task to a **fanout exchange** (`sign.exchange`), which delivers it to all connected Signer Agents. Each agent receives:
+
+```json
+{
+  "hash": "0xabc...",
+  "taskId": "task_123",
+  "expired": 1717200000
+}
+```
+
+### 3. Signing
+
+Each Signer Agent:
+1. Receives the task from the queue
+2. Verifies the hash and deadline
+3. Signs the hash using its private key
+4. Sends the signature back to the Signers Manager
+
+The signature is created using EIP-191 (personal sign):
+
+```solidity
+hashToSign = keccak256(abi.encodePacked(hash, expired))
+signature = sign(ethSignedMessage(hashToSign))
+```
+
+### 4. Signature Collection
+
+The Signers Manager collects signatures and tracks progress. [Check the task status](/docs/api/signers-manager/get-signature-task) via GraphQL — poll until `completed = true`.
+
+Once `signaturesCount >= requiredSignatures`, the task is marked as `completed`.
+
+### 5. On-Chain Deployment
+
+The collected signatures are used in the on-chain deployment transaction:
+
+```solidity
+Factory.deployRWA(
+    createRWAFee,
+    entityId,
+    entityOwnerId,
+    entityOwnerType,
+    owner,
+    signers,      // Array of signer addresses
+    signatures,   // Array of signatures (same order)
+    expired       // Deadline
+)
+```
+
+The Factory contract verifies:
+- Each signer is an authorized signer in `AddressBook`
+- Each signature is valid for the deployment parameters
+- No duplicate signatures
+- The request has not expired
+
+## Rejecting a Request
+
+Authorized users can reject a signature request, which cancels the task:
+
+- For RWA: [rejectBusinessApprovalSignatures](/docs/api/rwa/businesses/reject-business-approval-signatures)
+- For Pool: [rejectPoolApprovalSignatures](/docs/api/rwa/pools/reject-pool-approval-signatures)
+
+## Managing Signers
+
+Authorized signers are managed by Governance through the `AddressBook` contract:
+
+```solidity
+// Add a new signer
+addressBook.addSigner(address);
+
+// Remove a signer
+addressBook.removeSigner(address);
+```
+
+The minimum number of required signers (`minSignersRequired`) is configured in the `Config` contract and can be updated by Governance.

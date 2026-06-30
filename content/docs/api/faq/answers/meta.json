@@ -1,0 +1,10 @@
+{
+  "title": "Answers",
+  "pages": [
+    "get-faq-answer",
+    "get-faq-answers",
+    "create-faq-answer",
+    "update-faq-answer",
+    "delete-faq-answer"
+  ]
+}

@@ -1,0 +1,68 @@
+---
+title: Core Concepts
+description: The building blocks of the Slices platform — RWA tokens, pools, governance, and trading
+---
+
+# Core Concepts
+
+The Slices platform is built around a few key concepts. Understanding these will help you navigate the rest of the documentation.
+
+## RWA Tokens
+
+RWA (Real World Asset) tokens are digital representations of real-world assets on the blockchain. Each token is an **ERC1155** token — a multi-token standard that allows a single contract to manage multiple token types.
+
+Key properties:
+
+- **Business-owned** — each RWA contract belongs to a specific business entity
+- **Pool-linked** — each token ID is linked to a specific crowdfunding pool
+- **Supply-limited** — each token ID has a maximum supply set at creation
+- **Metadata** — each token has a metadata URI pointing to its description and documentation
+
+RWA tokens are minted when participants contribute to a pool and burned when they exit. The token represents a proportional stake in the pool — when you burn it, you receive HOLD from the pool's reserves via the AMM formula, plus any available bonus.
+
+## Pools
+
+A pool is a crowdfunding smart contract that connects businesses with participants. Each pool has:
+
+- **A funding target** — the amount of HOLD tokens the business aims to raise
+- **An RWA token** — the token participants receive in exchange for their contribution
+- **An AMM (Automated Market Maker)** — determines the exchange rate between HOLD and RWA tokens using a constant product formula (x × y = k)
+- **Tranches** — automated distribution schedules for both outgoing payments to the business and incoming returns from the business
+
+Pools have two key flags:
+
+- **`fixedSell`** — if true, the total RWA supply is fixed and cannot be exceeded
+- **`allowEntryBurn`** — if true, participants can exit during the entry period
+
+## Tranches
+
+Tranches are scheduled payment installments that automate the flow of funds:
+
+- **Outgoing tranches** — HOLD tokens distributed from the pool to the business owner after the target is reached. Each tranche has an amount and a timestamp when it becomes claimable.
+- **Incoming tranches** — expected returns from the business back to the pool. Each tranche has an amount and an expiration deadline.
+
+If the business returns funds early and `floatingOutTranchesTimestamps` is enabled, outgoing tranche timestamps are adjusted forward proportionally.
+
+## HOLD Token
+
+HOLD is the platform's utility token (an ERC20). It serves multiple roles:
+
+- **Medium of exchange** — used to buy RWA tokens in pools
+- **Fee payment** — pool entry/exit fees are paid in HOLD
+- **Governance** — staked PlatformToken grants voting power in the DAO
+
+## Governance
+
+The Slices DAO allows HOLD stakers to participate in protocol governance:
+
+- **Proposals** — users with sufficient voting power can create proposals to execute arbitrary contract calls
+- **Voting** — stakers vote during a fixed voting period
+- **Quorum** — a minimum percentage of total voting power must participate for a proposal to pass
+- **Timelock** — passed proposals are queued with a delay before execution, providing a security window
+
+## Secondary Market
+
+RWA tokens can be traded on the secondary market through the pool's built-in AMM. The AMM uses a constant product formula with virtual reserves to provide price stability. Participants can:
+
+- **Buy RWA** — contribute HOLD to the pool and receive RWA tokens at the current AMM price
+- **Sell RWA** — burn RWA tokens and receive HOLD from the pool's reserves, plus any available bonus

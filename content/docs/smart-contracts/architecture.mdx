@@ -1,0 +1,282 @@
+---
+title: Contract Architecture
+description: The smart contract system behind Slices — roles, access control, and upgradeability
+---
+
+# Contract Architecture
+
+The Slices protocol is built on a modular system of upgradeable smart contracts. Each contract has a specific role, and they communicate through a central registry (`AddressBook`) that provides discovery, access control, and upgrade coordination.
+
+## System Overview
+
+The protocol consists of four layers:
+
+| Layer | Contracts | Purpose |
+|---|---|---|
+| **System** | AddressBook, Config, EventEmitter | Registry, parameters, event logging |
+| **RWA** | Factory, RWA, Pool | Asset tokenization and crowdfunding |
+| **DAO** | Governance, Timelock, Treasury, DaoStaking | Decentralized governance and treasury |
+| **Platform** | PlatformToken, ReferralTreasury | Staking token and referral rewards |
+
+All contracts use the **UUPS (Universal Upgradeable Proxy Standard)** pattern, which allows logic updates without changing the contract address. Upgrade rights are controlled by a dedicated `upgradeRole` address stored in `AddressBook`.
+
+## Contract Roles
+
+### AddressBook
+
+The central registry of the protocol. Every other contract looks up dependencies through `AddressBook`, making it the single source of truth for contract addresses.
+
+```solidity
+// AddressBook stores references to all core contracts
+Governance public governance;
+Config public config;
+EventEmitter public eventEmitter;
+DaoStaking public daoStaking;
+Timelock public timelock;
+Treasury public treasury;
+Factory public factory;
+PlatformToken public platformToken;
+ReferralTreasury public referralTreasury;
+```
+
+It also maintains:
+
+- **Registered pools** — an array of all deployed `Pool` contracts with an `isPool` mapping
+- **Registered RWAs** — an array of all deployed `RWA` contracts with an `isRWA` mapping
+- **Authorized signers** — a set of addresses that can approve multi-signature operations
+- **Protocol contracts** — an `isProtocolContract` mapping used for access control on `EventEmitter`
+
+All setter functions are restricted to `Governance` (via `requireGovernance`).
+
+### Config
+
+Stores every configurable parameter in the protocol. Parameters are grouped by domain:
+
+- **Fees** — RWA creation fee range, pool creation fee ratio range, entry/exit fee percentage ranges
+- **Amounts** — expected HOLD and RWA amount ranges
+- **Periods** — entry period min/max duration, completion period min/max duration, entry start offsets
+- **Tranches** — outgoing and incoming tranche count, percent, and interval limits
+- **DAO** — voting period, voting delay, quorum percentage, proposal threshold, timelock delay
+- **Staking** — annual reward rate for DAO staking
+- **AMM** — liquidity coefficients mapped by price impact percentage
+
+All update functions are restricted to `Governance`. Other contracts access `Config` through `AddressBook`:
+
+```solidity
+Config config = addressBook.config();
+uint256 fee = config.entryFeePercentMin();
+```
+
+### EventEmitter
+
+A centralized event logging contract. Instead of each contract emitting its own events, all protocol contracts call `EventEmitter` functions, which emit the events. This simplifies indexing and ensures a single source of truth for on-chain activity.
+
+Events are grouped by domain:
+
+- **Pool events** — `Pool_Deployed`, `Pool_RwaMinted`, `Pool_RwaBurned`, `Pool_TargetReached`, `Pool_FundsFullyReturned`, `Pool_OutgoingTrancheClaimed`, `Pool_IncomingTrancheUpdate`, `Pool_BonusWithdrawn`, `Pool_ReservesUpdated`, `Pool_PausedStateChanged`
+- **DAO events** — `Governance_ProposalCreated`, `Governance_VoteCast`, `Governance_ProposalExecuted`, `Governance_ProposalCancelled`, `DaoStaking_TokensStaked`, `DaoStaking_TokensUnstaked`, `DaoStaking_TokensLocked`, `Timelock_TransactionQueued`, `Timelock_TransactionExecuted`, `Timelock_TransactionCancelled`, `Treasury_Withdrawal`
+- **RWA events** — `RWA_Deployed`, `RWA_Transfer`, `RWA_PausedStateChanged`
+- **Factory events** — `Factory_RwaDeployed`, `Factory_PoolDeployed`, `Factory_FeesCollected`
+
+All emitter functions are restricted to protocol contracts via `addressBook.requireProtocolContract(msg.sender)`.
+
+### Factory
+
+The deployment factory for RWA tokens and Pools. Uses the ERC1967 proxy pattern to deploy new instances.
+
+**`deployRWA`** — deploys a new RWA token contract:
+
+```solidity
+function deployRWA(
+    uint256 createRWAFee,
+    string calldata entityId,
+    string calldata entityOwnerId,
+    string calldata entityOwnerType,
+    address owner,
+    address[] calldata signers,
+    bytes[] calldata signatures,
+    uint256 expired
+) external nonReentrant returns (address)
+```
+
+**`deployPool`** — deploys a new Pool contract:
+
+```solidity
+function deployPool(
+    uint256 createPoolFeeRatio,
+    string calldata entityId,
+    string calldata entityOwnerId,
+    string calldata entityOwnerType,
+    address owner,
+    RWA rwa,
+    uint256 expectedHoldAmount,
+    uint256 expectedRwaAmount,
+    uint256 rewardPercent,
+    uint256 entryFeePercent,
+    uint256 exitFeePercent,
+    uint256 priceImpactPercent,
+    uint256 entryPeriodStart,
+    uint256 entryPeriodExpired,
+    uint256 completionPeriodExpired,
+    bool awaitCompletionExpired,
+    bool floatingOutTranchesTimestamps,
+    bool fixedSell,
+    bool allowEntryBurn,
+    uint256[] calldata outgoingTranches,
+    uint256[] calldata outgoingTranchTimestamps,
+    uint256[] calldata incomingTranches,
+    uint256[] calldata incomingTrancheExpired,
+    address[] calldata signers,
+    bytes[] calldata signatures,
+    uint256 expired
+) external nonReentrant returns (address)
+```
+
+Both functions require:
+
+1. **Multi-signature approval** — a minimum number of authorized signers must sign the request
+2. **Fee payment** — the caller must pay the creation fee in HOLD tokens
+3. **Parameter validation** — all parameters are checked against `Config` limits
+
+After deployment, the new contract is registered in `AddressBook` and a `Pool_Deployed` event is emitted.
+
+### RWA Token
+
+An ERC1155 token contract representing tokenized real-world assets. Each RWA contract belongs to a business entity and can have multiple token IDs, each linked to a specific Pool.
+
+Key characteristics:
+
+- **`createToken(address pool)`** — creates a new token ID linked to a pool. Only callable by `Factory`.
+- **`mint` / `burn`** — only callable by the associated pool contract
+- **`uri(uint256 tokenId)`** — returns metadata URI in the format `{baseMetadataUri}/{contract_address}/{token_id}`
+- **Pause** — `enablePause()` by Governance, `disablePause()` by Timelock. When paused, all transfers, mints, and burns are blocked.
+
+### Pool
+
+The core crowdfunding contract. Implements an AMM (Automated Market Maker) with virtual reserves for price discovery, plus a tranche system for automated distributions.
+
+Key state:
+
+```solidity
+// AMM reserves
+uint256 public k;                    // Constant product (x * y = k)
+uint256 public realHoldReserve;      // Actual HOLD tokens held
+uint256 public virtualHoldReserve;   // Virtual HOLD for price stability
+uint256 public virtualRwaReserve;    // Virtual RWA for price stability
+
+// Tranches
+OutgoingTranche[] public outgoingTranches;  // Distributions to participants
+IncomingTranche[] public incomingTranches;  // Expected returns from business
+```
+
+Core functions:
+
+- **`mint`** — buy RWA tokens with HOLD. Price determined by AMM formula.
+- **`burn`** — sell RWA tokens back for HOLD. Returns proportional share of returned funds plus any available bonus.
+- **`claimOutgoingTranches`** — claim distributed HOLD tokens from completed outgoing tranches. Only callable by the pool owner.
+- **`returnIncomingTranche`** — business returns funds to fulfill an incoming tranche. Anyone can call this.
+
+### Treasury
+
+Holds protocol fees collected during RWA and Pool creation, plus entry/exit fees from pool operations. Withdrawals are restricted to `Timelock`:
+
+```solidity
+function withdrawERC20(address token, address to, uint256 amount) external nonReentrant {
+    addressBook.requireTimelock(msg.sender);
+    IERC20(token).safeTransfer(to, amount);
+}
+```
+
+### Timelock
+
+Enforces a time delay on governance actions. Transactions must be queued with an ETA (earliest execution time) that is at least `timelockDelay` seconds in the future. Once queued, they can be executed by anyone after the ETA, within a 7-day grace period.
+
+```solidity
+function queueTransaction(address target, bytes memory data, uint256 eta) external returns (bytes32)
+function executeTransaction(address target, bytes memory data, uint256 eta) external nonReentrant
+function cancelTransaction(address target, bytes memory data, uint256 eta) external
+```
+
+### Governance
+
+The DAO governance contract. Proposals are created by users with sufficient voting power, voted on by stakers, and automatically executed when the voting period ends if quorum is met.
+
+```solidity
+function propose(address target, bytes memory data, string memory description) external returns (uint256)
+function vote(uint256 proposalId, bool support, string memory reason) external
+function cancel(uint256 proposalId) external
+```
+
+- **Proposal threshold** — minimum voting power required to create a proposal (set in `Config`)
+- **Voting period** — duration of the voting window (set in `Config`)
+- **Quorum** — minimum participation required for a proposal to pass (set in `Config`)
+- **Execution** — proposals are executed automatically when the voting period ends if they pass
+
+### DaoStaking
+
+Manages staking of PlatformTokens for governance voting power. Users stake tokens to gain voting power. When you vote on a proposal, your tokens are locked until the proposal's end time and cannot be unstaked until the lock expires.
+
+```solidity
+function stake(uint256 amount) external
+function unstake(uint256 amount) external
+function lock(address user, uint256 unlockTimestamp) external  // governance only
+```
+
+- **`stake`** — deposit Platform Tokens, gain voting power proportional to staked amount
+- **`unstake`** — withdraw tokens. Requires the voting lock to have expired.
+- **`lock`** — governance can extend the lock period for a specific user
+
+## Access Control
+
+The protocol uses a layered access control model:
+
+| Role | Contracts | Can call |
+|---|---|---|
+| **Governance** | Governance contract | All `set*` and `update*` functions on AddressBook, Config, and other system contracts |
+| **Timelock** | Timelock contract | Treasury withdrawals, RWA unpause |
+| **UpgradeRole** | A dedicated address | `upgradeTo` on all UUPS contracts |
+| **Factory** | Factory contract | `createToken`, `addPool`, `addRWA` |
+| **Signer** | Authorized multi-sig addresses | Approve RWA and Pool deployments |
+| **Protocol Contract** | Any registered contract | `EventEmitter` emit functions |
+| **Pool Owner** | The business that owns the pool | `claimOutgoingTranches` |
+
+## Upgradeability
+
+All core contracts inherit from `UpgradeableContract`, which implements the UUPS proxy pattern:
+
+```solidity
+abstract contract UpgradeableContract is Initializable, UUPSUpgradeable {
+    function uniqueContractId() public pure virtual returns (bytes32);
+    function implementationVersion() public pure virtual returns (uint256);
+    function _verifyAuthorizeUpgradeRole() internal view virtual;
+    function upgradeTo(address newImplementation) external virtual;
+    function upgradeToAndCall(address newImplementation, bytes memory data) external virtual;
+}
+```
+
+Each contract has a unique identifier (`uniqueContractId`) and a version number (`implementationVersion`). The `_verifyAuthorizeUpgradeRole` function ensures only the `upgradeRole` address can authorize upgrades.
+
+## Key Interactions
+
+**Deployment flow:**
+
+1. Business creates a company profile on the web platform
+2. Business requests multi-signature approval for RWA deployment
+3. Once approved, `Factory.deployRWA()` is called — creates an RWA token contract via ERC1967 proxy
+4. Business configures pool parameters (amounts, periods, tranches, fees)
+5. Multi-signature approval is requested for pool deployment
+6. `Factory.deployPool()` is called — creates a Pool contract linked to the RWA token
+
+**Pool participation flow:**
+
+1. Participants buy RWA tokens via `Pool.mint()` — HOLD tokens are exchanged for RWA at the AMM price
+2. The pool owner claims distributed funds via `Pool.claimOutgoingTranches()`
+3. The business returns funds via `Pool.returnIncomingTranche()`
+4. Participants sell RWA tokens back via `Pool.burn()` — receiving their proportional share of returned funds plus any bonus
+
+**Governance flow:**
+
+1. A staker with sufficient voting power creates a proposal via `Governance.propose()`
+2. Stakers vote during the voting period via `Governance.vote()`
+3. When the voting period ends, the proposal is automatically executed if it passed and met quorum
+4. The executed call goes through `Timelock`, which enforces a delay before the action takes effect

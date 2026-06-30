@@ -1,0 +1,72 @@
+---
+title: Testnet Faucet
+description: Get test tokens on BSC Testnet for development and testing
+---
+
+# Testnet Faucet
+
+The Testnet Faucet provides free test tokens on BSC Testnet for platform development and testing. You can request gas tokens (BNB), HOLD tokens, and PlatformTokens.
+
+## Available Tokens
+
+| Token | Purpose | How to Use |
+|-------|---------|------------|
+| **Gas (BNB)** | Pay transaction fees on BSC Testnet | Required for any on-chain interaction |
+| **HOLD** | Platform utility token | Buy RWA tokens in pools, pay fees |
+| **PlatformToken** | Governance token | Stake for voting power in the DAO |
+
+## Rate Limits
+
+Each token type has an independent cooldown period. After requesting a token, you must wait before requesting it again:
+
+| Token | Cooldown |
+|-------|----------|
+| Gas (BNB) | Configurable (typically 24h) |
+| HOLD | Configurable (typically 24h) |
+| PlatformToken | Configurable (typically 24h) |
+
+You can [check your unlock times](/docs/api/testnet-faucet/get-unlock-time) before making a request. A value of `0` means no previous request — you can request immediately.
+
+## Usage
+
+### Request Gas Tokens
+
+[Request BNB](/docs/api/testnet-faucet/request-gas) for transaction fees — provide your wallet address and desired amount.
+
+### Request HOLD Tokens
+
+[Request HOLD](/docs/api/testnet-faucet/request-hold) for pool participation and fee payments.
+
+### Request PlatformTokens
+
+[Request PlatformToken](/docs/api/testnet-faucet/request-platform) for staking and governance testing.
+
+### View Request History
+
+[View your faucet history](/docs/api/testnet-faucet/get-history) — all past requests with token type, amount, and transaction hash.
+
+## How It Works
+
+```
+User Request → Faucet Service → Blockchain Client → On-Chain Transfer
+                                        │
+                                        ▼
+                              Request Recorded in DB
+                                        │
+                                        ▼
+                              Cooldown Enforced for Next Request
+```
+
+1. The user sends a request with their wallet address and desired amount
+2. The faucet service checks the cooldown period
+3. If allowed, the blockchain client sends the tokens from the faucet wallet
+4. The request is recorded in the database for history and rate limiting
+5. The transaction hash is returned to the user
+
+## Network
+
+The faucet operates on **BSC Testnet**:
+
+- **Chain ID:** 97
+- **RPC URL:** `https://data-seed-prebsc-1-s1.binance.org:8545`
+- **Explorer:** [https://testnet.bscscan.com](https://testnet.bscscan.com)

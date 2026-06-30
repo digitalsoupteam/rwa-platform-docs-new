@@ -1,0 +1,10 @@
+{
+  "title": "Galleries",
+  "pages": [
+    "get-gallery",
+    "get-galleries",
+    "create-gallery",
+    "update-gallery",
+    "delete-gallery"
+  ]
+}

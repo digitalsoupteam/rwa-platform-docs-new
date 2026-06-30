@@ -1,0 +1,11 @@
+{
+  "title": "Loyalty & Referrals",
+  "pages": [
+    "get-fees",
+    "get-referrals",
+    "get-referrer-withdraws",
+    "get-referrer-claim-history",
+    "register-referral",
+    "create-referrer-withdraw-task"
+  ]
+}

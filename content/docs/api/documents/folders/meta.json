@@ -1,0 +1,10 @@
+{
+  "title": "Folders",
+  "pages": [
+    "get-folder",
+    "get-folders",
+    "create-folder",
+    "update-folder",
+    "delete-folder"
+  ]
+}

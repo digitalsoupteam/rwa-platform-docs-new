@@ -1,0 +1,52 @@
+---
+title: AI Assistant
+description: Conversational AI for user support, investment guidance, and portfolio insights
+---
+
+# AI Assistant
+
+The AI Assistant is a backend service that provides conversational AI support to platform users. It helps investors navigate RWA investment opportunities and assists product owners with tokenization. Each user can create multiple assistants with different context configurations.
+
+## How It Works
+
+```
+User sends message → AI Assistant Service → Context Service (builds prompt) → LLM → Response
+```
+
+1. The user creates an assistant with a name and context preferences
+2. When the user sends a message, the service builds a system prompt from the assistant's context preferences
+3. Recent message history (last 5 messages) is included for conversation continuity
+4. The combined prompt + history is sent to the LLM
+5. The response is stored and returned to the user
+
+## Context Modes
+
+Each assistant has context preferences that determine what information the AI has access to. There are two categories: **base prompts** (persona) and **dynamic data** (live platform data).
+
+| Context Mode | Type | What It Provides |
+|---|---|---|
+| `investor_base` | Base prompt | Assistant acts as an investment guide — explains pools, analyzes options, warns about risks |
+| `product_owner_base` | Base prompt | Assistant acts as a tokenization advisor — explains the process, helps with pool creation, compliance guidance |
+| `popular_pools` | Dynamic data | Injects current active pools data (names, parameters, funding progress) into the context |
+| `user_portfolio` | Dynamic data | Injects the user's token balances across pools into the context |
+
+An assistant can combine multiple context modes — for example, `investor_base` + `popular_pools` + `user_portfolio` gives an investment assistant that knows about available pools and the user's current holdings.
+
+## Managing Assistants
+
+- [Create an assistant](/docs/api/ai-assistant/assistants/create-assistant) — set name and context preferences
+- [Update an assistant](/docs/api/ai-assistant/assistants/update-assistant) — change name or context preferences
+- [Delete an assistant](/docs/api/ai-assistant/assistants/delete-assistant)
+- [Get a single assistant](/docs/api/ai-assistant/assistants/get-assistant)
+- [List user's assistants](/docs/api/ai-assistant/assistants/get-user-assistants)
+
+## Messages
+
+- [Send a message](/docs/api/ai-assistant/messages/create-message) — the assistant processes it with context and responds. Returns both the user message and AI response.
+- [Get message history](/docs/api/ai-assistant/messages/get-message-history) — retrieve conversation history for an assistant
+- [Update a message](/docs/api/ai-assistant/messages/update-message)
+- [Delete a message](/docs/api/ai-assistant/messages/delete-message)
+
+## AI Model
+
+The assistant uses OpenRouter to access LLM models. The context is built dynamically per request — base prompts are static, while dynamic data (pools, portfolio) is fetched from the RWA and Portfolio services in real time.

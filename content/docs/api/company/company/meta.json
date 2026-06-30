@@ -1,0 +1,10 @@
+{
+  "title": "Companies",
+  "pages": [
+    "get-company",
+    "get-companies",
+    "create-company",
+    "update-company",
+    "delete-company"
+  ]
+}

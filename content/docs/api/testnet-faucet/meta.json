@@ -1,0 +1,10 @@
+{
+  "title": "Testnet Faucet",
+  "pages": [
+    "get-history",
+    "get-unlock-time",
+    "request-gas",
+    "request-hold",
+    "request-platform"
+  ]
+}

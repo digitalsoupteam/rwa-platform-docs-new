@@ -1,0 +1,68 @@
+---
+title: Token Creation
+description: How to mint RWA tokens for your asset
+---
+
+# Token Creation
+
+Creating RWA tokens involves deploying a token contract through the Factory and then minting tokens through a pool.
+
+## Step 1: Deploy the RWA Contract
+
+The `Factory.deployRWA()` function creates a new RWA token contract:
+
+```solidity
+function deployRWA(
+    uint256 createRWAFee,       // Fee in HOLD tokens
+    string calldata entityId,    // Business ID from the platform
+    string calldata entityOwnerId,
+    string calldata entityOwnerType,
+    address owner,               // Business owner address
+    address[] calldata signers,  // Authorized signers
+    bytes[] calldata signatures,  // Multi-signatures
+    uint256 expired              // Request deadline
+) external nonReentrant returns (address)
+```
+
+Requirements:
+
+- **Multi-signature approval** — at least `minSignersRequired` authorized signers must sign
+- **Fee payment** — the caller pays `createRWAFee` in HOLD tokens (within the configured range)
+- **Unique entity ID** — each business can only deploy one RWA contract
+
+## Step 2: Create a Token ID
+
+When a pool is deployed, the Factory calls `RWA.createToken(address pool)` to create a new token ID linked to that pool:
+
+```solidity
+function createToken(address pool) external returns (uint256)
+```
+
+This is only callable by the Factory. Each token ID is associated with exactly one pool.
+
+## Step 3: Mint Tokens
+
+Tokens are minted automatically when participants call `Pool.mint()`:
+
+```solidity
+function mint(
+    uint256 rwaAmount,      // Amount of RWA tokens to mint
+    uint256 maxHoldAmount,  // Maximum HOLD to spend
+    uint256 validUntil,     // Transaction deadline
+    bool allowPartial       // Allow partial mint if supply is limited
+) external nonReentrant
+```
+
+The pool calculates the required HOLD amount using the AMM constant product formula, transfers HOLD from the participant, and mints RWA tokens.
+
+## Token Supply
+
+If `fixedSell` is enabled on the pool, the total RWA supply is capped at `expectedRwaAmount`. Once all tokens are minted, no more can be created. If `fixedSell` is disabled, the AMM determines the available supply dynamically.
+
+## Verifying Your Token
+
+You can verify your token on-chain by:
+
+1. Checking the RWA contract's `uri(tokenId)` for metadata
+2. Querying `balanceOf(address, tokenId)` for your balance
+3. Viewing the pool's state via `getOutgoingTranches()` and `getIncomingTranches()`

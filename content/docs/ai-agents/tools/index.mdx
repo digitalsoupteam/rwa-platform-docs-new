@@ -1,0 +1,141 @@
+---
+title: MCP
+description: Tools and interfaces available to AI agents interacting with the Slices platform
+---
+
+# Tools
+
+AI agents interact with Slices through several interfaces. This page describes what's available and how to use each one.
+
+## GraphQL API
+
+The primary interface for all off-chain operations — creating businesses, pools, companies, uploading content, querying indexed data, triggering AI evaluations, coordinating multi-sig approvals.
+
+**Endpoint:** `https://api.slices.xyz/graphql` (POST)
+
+**Authentication:** `Authorization: Bearer <key>` or `Authorization: Bearer <token>`
+
+### Modules
+
+The GraphQL API is organized into 19 modules:
+
+| Module | Key Operations |
+|---|---|
+| **auth** | `authenticate`, `refreshToken`, `revokeTokens`, `getUserTokens` |
+| **rwa** | `createBusiness`, `createBusinessWithAI`, `editBusiness`, `updateBusinessRiskScore`, `requestBusinessApprovalSignatures`, `rejectBusinessApprovalSignatures`, `createPool`, `createPoolWithAI`, `editPool`, `updatePoolRiskScore`, `requestPoolApprovalSignatures`, `rejectPoolApprovalSignatures`, `getBusiness`, `getBusinesses`, `getPool`, `getPools` |
+| **company** | `createCompany`, `updateCompany`, `deleteCompany`, `addMember`, `removeMember`, `grantPermission`, `revokePermission`, `getCompany`, `getCompanies` |
+| **documents** | `createFolder`, `createDocument` (file upload), `updateDocument`, `deleteDocument`, `getDocuments`, `getFolders` |
+| **gallery** | `createGallery`, `createImage` (file upload), `updateImage`, `deleteImage`, `getGalleries`, `getImages` |
+| **blog** | `createBlog`, `createPost`, `updatePost`, `deletePost`, `getBlogs`, `getPosts` |
+| **faq** | `createFaqTopic`, `createFaqAnswer`, `updateFaqAnswer`, `deleteFaqTopic`, `getFaqTopics`, `getFaqAnswers` |
+| **questions** | `createTopic`, `createQuestion`, `createQuestionAnswer`, `toggleQuestionLike`, `getTopics`, `getQuestions` |
+| **reactions** | `setReaction`, `resetReaction`, `getEntityReactions`, `getReactions` |
+| **charts** | `getRawPriceData`, `getOhlcPriceData`, `getPoolTransactions`, `getVolumeData` |
+| **portfolio** | `getBalances`, `getTransactions` |
+| **dao** | `getStaking`, `getProposals`, `getVotes`, `getStakingHistory`, `getTimelockTasks`, `getTreasuryWithdraws` |
+| **loyalty** | `registerReferral`, `createReferrerWithdrawTask`, `getFees`, `getReferrals`, `getReferrerWithdraws`, `getReferrerClaimHistory` |
+| **ai-assistant** | `createAssistant`, `createMessage`, `updateAssistant`, `deleteAssistant`, `getAssistant`, `getUserAssistants`, `getMessageHistory` |
+| **ai-evaluator** | `getEvaluation`, `getEvaluations` |
+| **testnet-faucet** | `requestGas`, `requestHold`, `requestPlatform`, `getUnlockTime`, `getHistory` |
+| **signers-manager** | `getSignatureTask` |
+| **api-keys** | `createApiKey`, `updateApiKey`, `deleteApiKey`, `getApiKeys`, `getApiKey` |
+| **webhooks** | `createWebhookEndpoint`, `updateWebhookEndpoint`, `deleteWebhookEndpoint`, `getWebhookEndpoints` |
+
+For the full list of queries, mutations, and subscriptions per module, see the [API Reference](/docs/api/rwa/pools/get-pools).
+
+### Subscriptions
+
+| Subscription | Description |
+|---|---|
+| `poolDeployed` | Fires when a pool deployment is indexed by the backend |
+| `priceUpdates(poolAddress)` | Real-time AMM price changes for a pool |
+| `transactionUpdates(poolAddress)` | Real-time mint/burn transactions in a pool |
+
+### Query Patterns
+
+Most list queries accept a `FilterInput` with MongoDB-style filtering:
+
+```graphql
+query {
+  getBusinesses(input: {
+    filter: { ownerId: { $eq: "company_id" }, ownerType: { $eq: "company" } }
+    sort: { createdAt: "desc" }
+    limit: 10
+    offset: 0
+  }) {
+    id name riskScore businessType country
+  }
+}
+```
+
+## Smart Contracts
+
+On-chain operations are performed by calling smart contracts directly via ethers.js / web3.js / viem. The backend does **not** proxy these calls.
+
+### Contract Addresses (BSC Testnet)
+
+See [Deployments](/docs/smart-contracts/deployments) for full addresses. Key contracts:
+
+| Contract | Purpose |
+|---|---|
+| **Factory** | Deploys RWA and Pool contracts (requires multi-sig) |
+| **Pool** | AMM trading (mint/burn), tranche claims/returns |
+| **RWA** | ERC1155 token contract (mint/burn by associated pool only) |
+| **DaoStaking** | Stake/unstake PlatformToken for governance |
+| **Governance** | Create/vote on proposals, auto-execute |
+| **Timelock** | Queue/execute/cancel delayed governance actions |
+| **Config** | Protocol parameter ranges (read-only for agents) |
+| **AddressBook** | Registry of all protocol contracts |
+| **ReferralTreasury** | Multi-sig withdrawal of referral rewards |
+
+### Key On-Chain Functions
+
+**Factory:**
+```solidity
+deployRWA(createRWAFee, entityId, entityOwnerId, entityOwnerType, owner, signers[], signatures[], expired)
+deployPool(createPoolFeeRatio, entityId, rwa, expectedHoldAmount, expectedRwaAmount, priceImpactPercent, rewardPercent, entryPeriodStart, entryPeriodExpired, completionPeriodExpired, entryFeePercent, exitFeePercent, fixedSell, allowEntryBurn, awaitCompletionExpired, floatingOutTranchesTimestamps, outgoingTranches[], outgoingTranchTimestamps[], incomingTranches[], incomingTrancheExpired[], signers[], signatures[], expired)
+```
+
+**Pool:**
+```solidity
+mint(rwaAmount, maxHoldAmount, validUntil, allowPartial)   // Buy RWA
+burn(rwaAmount, minHoldAmount, minBonusAmount, validUntil)  // Sell RWA
+estimateMint(rwaAmount, allowPartial)                       // Preview buy cost
+estimateBurn(rwaAmount)                                     // Preview sell return
+claimOutgoingTranches(trancheIndexes[])                     // Business: claim funds
+returnIncomingTranche(amount)                               // Business: return funds
+getOutgoingTranches() / getIncomingTranches()              // View tranche state
+checkBonusesUnlocked() / getBonusUnlockTimestamp()         // Bonus availability
+```
+
+**DaoStaking:**
+```solidity
+stake(amount)                          // Stake PlatformToken
+unstake(amount)                        // Unstake (after voting lock expires)
+calculatePendingRewards(user)          // View pending rewards
+getVotingPower(user)                   // View voting power
+```
+
+**Governance:**
+```solidity
+propose(target, data, description)     // Create proposal (needs votingPower >= threshold)
+vote(proposalId, support, reason)      // Vote (locks staked tokens)
+getProposal(proposalId)                // View proposal
+isActive(proposalId)                   // Check if active
+```
+
+## API Keys
+
+Create persistent API keys for agent authentication via the [`createApiKey`](/docs/api/auth/authenticate) mutation. The key is returned only once — store it securely.
+
+Use the key in subsequent requests: `Authorization: Bearer <key>`
+
+## Webhooks
+
+Register webhook endpoints to receive event deliveries via the [`createWebhookEndpoint`](/docs/api/rwa/pools/get-pools) mutation. Provide a URL, event types to subscribe to, and an optional rate limit. A `secret` is returned for verifying webhook payloads.
+
+## Testnet Faucet
+
+For testing, request testnet tokens via the [faucet mutations](/docs/testnet-faucet/overview): `requestGas`, `requestHold`, `requestPlatform`.
+
+Check cooldown via the [`getUnlockTime`](/docs/api/testnet-faucet/get-unlock-time) query.

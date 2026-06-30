@@ -1,0 +1,233 @@
+---
+title: Token Operations
+description: RWA (ERC1155), HOLD (ERC20), and PlatformToken (ERC20) — standards, roles, and on-chain operations
+---
+
+# Token Operations
+
+Slices uses three distinct tokens, each with a specific role. They are not interchangeable.
+
+## Token Overview
+
+| Token | Standard | Role | Mint | Burn |
+|---|---|---|---|---|
+| **HOLD** | ERC20 | Pool contributions, fees, RWA/Pool deployment fees | Fixed at constructor (1M) | No |
+| **RWA** | ERC1155 | Stake in a pool — represents participation | By associated Pool only | By associated Pool only |
+| **PlatformToken** | ERC20 (upgradeable) | Governance staking → voting power | By Governance only | No |
+
+---
+
+## HOLD Token
+
+**Contract:** `HoldToken.sol` — standalone ERC20 (not upgradeable).
+
+### Properties
+
+- Fixed supply of 1,000,000 tokens minted to deployer in constructor
+- Standard ERC20: `transfer`, `transferFrom`, `approve`, `balanceOf`, `totalSupply`, `allowance`
+- 18 decimals
+
+### Usage
+
+| Use Case | How |
+|---|---|
+| Buy RWA tokens in a pool | `Pool.mint()` — HOLD transferred from buyer to pool |
+| Sell RWA tokens | `Pool.burn()` — HOLD transferred from pool to seller |
+| Pay pool entry fee | Included in `mint()` call (transferred to Treasury) |
+| Pay pool exit fee | Included in `burn()` call (transferred to Treasury) |
+| Pay RWA deployment fee | `Factory.deployRWA()` — HOLD transferred to Treasury |
+| Pay pool deployment fee | `Factory.deployPool()` — fee ratio × expectedHoldAmount to Treasury |
+| Testnet faucet | `requestHold` GraphQL mutation |
+
+### Approvals
+
+Before any HOLD transfer via contract, the user must `approve` the spender:
+
+```javascript
+// Before minting RWA
+await holdToken.approve(poolAddress, holdAmountWithFee);
+
+// Before deploying RWA
+await holdToken.approve(factoryAddress, feeAmount);
+
+// Before returning incoming tranches
+await holdToken.approve(poolAddress, returnAmount);
+```
+
+---
+
+## RWA Token
+
+**Contract:** `RWA.sol` — ERC1155Upgradeable with ERC1155SupplyUpgradeable, UUPS proxy.
+
+### Properties
+
+- **Multi-token**: One RWA contract per business, manages multiple token IDs
+- **Pool-linked**: Each token ID is linked to exactly one pool via `pools[tokenId]`
+- **Controlled mint/burn**: Only the associated pool can mint or burn tokens
+- **Pausable**: Governance can pause (`enablePause`), Timelock can unpause (`disablePause`)
+- **Metadata**: `uri(tokenId)` returns `{baseMetadataUri}/{contractAddress}/{tokenId}`
+
+### Key Functions
+
+| Function | Access | Description |
+|---|---|---|
+| `balanceOf(address, tokenId)` | Anyone | ERC1155 balance query |
+| `balanceOfBatch(addresses, tokenIds)` | Anyone | Batch balance query |
+| `totalSupply(tokenId)` | Anyone | Supply of specific token ID |
+| `totalSupply()` | Anyone | Total supply across all token IDs |
+| `uri(tokenId)` | Anyone | Metadata URI |
+| `safeTransferFrom(from, to, id, amount, data)` | Token holder | ERC1155 transfer |
+| `safeBatchTransferFrom(...)` | Token holder | Batch transfer |
+| `setApprovalForAll(operator, approved)` | Token holder | Approve operator for all tokens |
+| `mint(account, tokenId, amount)` | Associated pool only | Mint tokens (called during `Pool.mint()`) |
+| `burn(account, tokenId, amount)` | Associated pool only | Burn tokens (called during `Pool.burn()`) |
+| `createToken(pool)` | Factory only | Create new token ID linked to a pool |
+| `enablePause()` | Governance | Pause all transfers/mint/burn |
+| `disablePause()` | Timelock | Unpause |
+
+### Token Lifecycle
+
+```
+1. Factory.deployRWA() → creates RWA contract for business
+2. Factory.deployPool() → calls RWA.createToken(pool) → creates new tokenId
+3. Pool.mint() → calls RWA.mint(buyer, tokenId, amount) → buyer receives RWA
+4. Participant holds RWA tokens (can transfer via safeTransferFrom)
+5. Pool.burn() → calls RWA.burn(seller, tokenId, amount) → tokens destroyed
+6. When all funds returned, pool is fully settled
+```
+
+### Transfers
+
+RWA tokens can be transferred between wallets using standard ERC1155 functions. Transfers are blocked when the contract is paused.
+
+```javascript
+// Transfer RWA tokens
+await rwaToken.safeTransferFrom(
+  fromAddress,
+  toAddress,
+  tokenId,
+  amount,
+  "0x"  // empty data
+);
+```
+
+---
+
+## PlatformToken
+
+**Contract:** `PlatformToken.sol` — ERC20Upgradeable, UUPS proxy.
+
+### Properties
+
+- Upgradeable ERC20
+- Mintable by Governance only (`mint(addresses[], amounts[])` — batch mint)
+- Used exclusively for staking in DaoStaking to gain governance voting power
+- No on-chain conversion to/from HOLD
+- 18 decimals
+
+### Key Functions
+
+| Function | Access | Description |
+|---|---|---|
+| `transfer`, `transferFrom`, `approve` | Standard ERC20 | Token transfers |
+| `balanceOf`, `totalSupply`, `allowance` | Anyone | View functions |
+| `mint(addresses[], amounts[])` | Governance | Batch mint to multiple addresses |
+
+### Distribution
+
+PlatformTokens are distributed by Governance through proposals. Common methods:
+- Retroactive rewards for early participants
+- Airdrops to targeted communities
+- Staking incentives (deposited into DaoStaking contract for reward distribution)
+
+### Getting PlatformTokens
+
+On testnet, use the faucet:
+
+```graphql
+mutation {
+  requestPlatform(input: { amount: 100 }) {
+    transactionHash
+  }
+}
+```
+
+On mainnet, tokens are distributed via Governance proposals only.
+
+---
+
+## Fee Structure
+
+| Fee | Where | Amount | Recipient |
+|---|---|---|---|
+| RWA deployment fee | `Factory.deployRWA()` | `createRWAFee` (within Config range) | Treasury |
+| Pool deployment fee | `Factory.deployPool()` | `expectedHoldAmount × createPoolFeeRatio / 10000` | Treasury |
+| Pool entry fee | `Pool.mint()` | `holdAmount × entryFeePercent / 10000` | Treasury |
+| Pool exit fee (on HOLD) | `Pool.burn()` | `holdOutput × exitFeePercent / 10000` | Treasury |
+| Pool exit fee (on bonus) | `Pool.burn()` | `bonusOutput × exitFeePercent / 10000` | Treasury |
+
+All fees are in basis points (100 = 1%, 10000 = 100%). Fee ranges are set in Config and can be updated by Governance.
+
+---
+
+## Querying Token Data
+
+### RWA Balances (GraphQL — indexed)
+
+```graphql
+query {
+  getBalances(input: {
+    filter: { owner: { $eq: "0x..." } }
+  }) {
+    tokenAddress tokenId poolAddress balance
+  }
+}
+```
+
+### Transaction History (GraphQL — indexed)
+
+```graphql
+query {
+  getTransactions(input: {
+    filter: { owner: { $eq: "0x..." } }
+    sort: { createdAt: "desc" }
+    limit: 20
+  }) {
+    from to tokenAddress tokenId amount transactionHash
+  }
+}
+```
+
+### Direct On-Chain Read
+
+```javascript
+// RWA balance
+const balance = await rwaToken.balanceOf(userAddress, tokenId);
+
+// HOLD balance
+const holdBalance = await holdToken.balanceOf(userAddress);
+
+// PlatformToken balance
+const ptBalance = await platformToken.balanceOf(userAddress);
+
+// Pool AMM state
+const realHold = await pool.realHoldReserve();
+const virtualHold = await pool.virtualHoldReserve();
+const virtualRwa = await pool.virtualRwaReserve();
+```
+
+---
+
+## Token Comparison
+
+| | HOLD | RWA | PlatformToken |
+|---|---|---|---|
+| **Standard** | ERC20 | ERC1155 | ERC20 (upgradeable) |
+| **Purpose** | Exchange & fees | Pool participation | Governance staking |
+| **Supply** | Fixed (1M) | Per-token-ID (pool-configured) | Mintable by Governance |
+| **Upgradeable** | No | Yes (UUPS) | Yes (UUPS) |
+| **How to get** | Faucet (testnet) / DEX | `Pool.mint()` | Faucet (testnet) / Governance mint |
+| **Transferable** | Yes | Yes (ERC1155) | Yes |
+| **Pausable** | No | Yes (Governance pause, Timelock unpause) | No |
+| **Stakeable** | No | No | Yes (in DaoStaking) |

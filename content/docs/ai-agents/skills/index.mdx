@@ -1,0 +1,71 @@
+---
+title: slices-platform
+description: Complete Slices platform knowledge for AI agents — architecture, entities, on-chain operations, and GraphQL API. Use when the user asks about Slices, RWA tokens, pools, trading, governance, or platform features.
+---
+
+# Overview
+
+This skill provides your agent with complete understanding of the Slices platform — a real-world asset (RWA) tokenization and crowdfunding protocol on BSC.
+
+## What Slices Does
+
+Slices enables businesses to raise capital by issuing RWA tokens (ERC1155) through crowdfunding pools. Participants contribute HOLD tokens and receive RWA tokens in return, with an on-chain AMM providing price discovery. Tranches automate fund distributions. A DAO with PlatformToken staking governs protocol parameters.
+
+## Architecture
+
+```
+Web Platform (Next.js, GraphQL API, AI Assistant)
+        │
+Backend (Bun/TypeScript, Elysia, GraphQL, MongoDB)
+  ├── 19 GraphQL modules
+  ├── Event indexer (listens to on-chain EventEmitter)
+  ├── AI Evaluator (risk scoring)
+  ├── Signers Manager (multi-sig coordination)
+  └── Testnet Faucet
+        │
+Smart Contracts (Solidity 0.8.28, UUPS upgradeable, BSC Testnet)
+  ├── System: AddressBook, Config, EventEmitter
+  ├── RWA: Factory, RWA (ERC1155), Pool (AMM + tranches)
+  ├── DAO: Governance, Timelock, Treasury, DaoStaking
+  └── Platform: PlatformToken, ReferralTreasury
+```
+
+## Two Interaction Layers
+
+**Critical distinction:** some operations happen off-chain (GraphQL), others on-chain (smart contract calls).
+
+| Operation | Where | How |
+|---|---|---|
+| Create company, business, pool metadata | Off-chain | GraphQL mutations |
+| AI risk evaluation | Off-chain | GraphQL mutation (triggers async evaluation) |
+| Multi-sig approval coordination | Off-chain | GraphQL mutation (signers sign off-chain) |
+| Deploy RWA / Pool contracts | On-chain | `Factory.deployRWA()` / `Factory.deployPool()` with collected signatures |
+| Buy / sell RWA tokens | On-chain | `Pool.mint()` / `Pool.burn()` |
+| Claim outgoing tranches | On-chain | `Pool.claimOutgoingTranches()` |
+| Return incoming tranches | On-chain | `Pool.returnIncomingTranche()` |
+| Stake / unstake PlatformToken | On-chain | `DaoStaking.stake()` / `unstake()` |
+| Create / vote on proposals | On-chain | `Governance.propose()` / `vote()` |
+| Query indexed on-chain data | Off-chain | GraphQL queries (portfolio, charts, DAO, etc.) |
+
+## Tokens
+
+| Token | Standard | Purpose | Supply |
+|---|---|---|---|
+| **HOLD** | ERC20 | Pool contributions, fees, RWA deployment fees | Fixed (1M at constructor) |
+| **RWA** | ERC1155 | Represents stake in a pool; minted on contribution, burned on exit | Per-token-ID, set by pool config |
+| **PlatformToken** | ERC20 (upgradeable) | Staking in DaoStaking for governance voting power | Mintable by Governance |
+
+HOLD and PlatformToken are distinct — no on-chain conversion between them.
+
+## Authentication
+
+1. **Wallet signature** — sign EIP-712 typed data → `authenticate` mutation → get `accessToken` + `refreshToken`
+2. **API key** — `createApiKey` mutation → use returned key as Bearer token
+
+## Reference Files
+
+- [API Endpoints](api-endpoints) — all GraphQL operations by module
+- [Data Model](data-model) — entity types, fields, and relationships from the real schema
+- [Pool Operations](pool-operations) — full lifecycle from company creation to pool maturity
+- [Token Operations](token-operations) — RWA (ERC1155), HOLD, PlatformToken, mint/burn mechanics
+- [Governance](governance) — staking, proposals, voting, timelock, auto-execution

@@ -1,0 +1,85 @@
+---
+title: Proposals
+description: Create governance proposals to shape protocol decisions
+---
+
+# Proposals
+
+Proposals are the mechanism for making changes to the Slices protocol through decentralized governance. Any staker with sufficient voting power can create a proposal to execute an arbitrary contract call.
+
+## Proposal Types
+
+Proposals can target any contract call. Common proposal types include:
+
+- **Parameter changes** — updating fee ranges, period durations, or other Config parameters
+- **Contract upgrades** — upgrading contract implementations via UUPS
+- **Treasury management** — withdrawing funds from the Treasury
+- **Signer management** — adding or removing authorized signers
+- **Emergency actions** — pausing contracts or other safety measures
+
+## Creating a Proposal
+
+To create a proposal, you need sufficient voting power (above the `proposalThreshold` set in Config):
+
+```solidity
+function propose(
+    address target,      // Contract to call
+    bytes memory data,   // Encoded function call
+    string memory description  // Human-readable description
+) external returns (uint256 proposalId)
+```
+
+```javascript
+// Encode the target function call
+const data = config.interface.encodeFunctionData("updateEntryFeePercentRange", [50, 500]);
+
+// Create proposal
+const tx = await governance.propose(
+  configAddress,    // target contract
+  data,             // encoded function call
+  "Reduce entry fee range from 100-1000 to 50-500 bps"  // description
+);
+const receipt = await tx.wait();
+const proposalId = ... // parse from event
+```
+
+The proposal starts immediately with `endTime = block.timestamp + votingPeriod`. There is no voting delay — voting begins right away.
+
+## Proposal Lifecycle
+
+```
+Created → Voting Period → Auto-Executed or Auto-Cancelled
+```
+
+1. **Created** — a user with sufficient voting power calls `propose()`
+2. **Voting** — stakers vote for or against during the voting period
+3. **Auto-execution** — checked after each vote: if `votesFor >= quorum` AND `votesFor > votesAgainst` → the proposal executes immediately by calling `target.call(data)`
+4. **Auto-cancellation** — if `votesAgainst >= quorum` AND `votesAgainst > votesFor` → the proposal is cancelled immediately
+5. **Manual cancellation** — the proposer can cancel within 12 hours of creation
+
+## Quorum & Thresholds
+
+| Parameter | Value | Description |
+|----------|-------|-------------|
+| **Proposal threshold** | **1,000,000** PlatformToken | Minimum stake to create a proposal (`proposalThreshold`) |
+| **Quorum** | **40%** of totalSupply | Minimum participation for proposal to pass (`quorumPercentage = 4000 bps`) |
+| **Voting period** | **7 days** | Duration of voting (`votingPeriod`) |
+| **Timelock delay** | **2 days** | Delay before queued governance action executes (`timelockDelay`) |
+
+For example, if totalSupply PlatformToken = **10,000,000**, quorum = 10,000,000 × 40% = **4,000,000 votes**. To pass, a proposal needs `votesFor >= 4,000,000` AND `votesFor > votesAgainst`.
+
+To create a proposal, you must have **≥ 1,000,000 PlatformToken** staked. If you have 500,000 — you can only vote on others' proposals, not create your own.
+
+## Viewing Proposals
+
+You can query indexed proposals via the GraphQL API — see [Get Proposals](/docs/api/dao/get-proposals) for the full reference. Filter by state, sort by `createdAt`, and paginate with `limit`/`offset`.
+
+## On-Chain Proposal Check
+
+```javascript
+const proposal = await governance.getProposal(proposalId);
+const { votesFor, votesAgainst, executed, cancelled, endTime } = proposal;
+const isActive = await governance.isActive(proposalId);
+const receipt = await governance.getReceipt(proposalId, voterAddress);
+// receipt: { hasVoted, support, votes }
+```

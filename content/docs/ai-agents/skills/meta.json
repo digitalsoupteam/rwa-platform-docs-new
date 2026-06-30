@@ -1,0 +1,11 @@
+{
+  "title": "Skills",
+  "pages": [
+    "index",
+    "api-endpoints",
+    "data-model",
+    "pool-operations",
+    "token-operations",
+    "governance"
+  ]
+}

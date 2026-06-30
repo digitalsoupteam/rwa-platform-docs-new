@@ -1,0 +1,66 @@
+---
+title: Documentation
+description: Slices documentation — tokenization, pools, governance, and APIs
+---
+
+# Slices Documentation
+
+Slices is a platform for tokenizing real-world assets (RWAs) and launching crowdfunding pools on BSC (Binance Smart Chain). Businesses raise capital from participants who contribute HOLD tokens and receive RWA tokens in return. An on-chain AMM provides price discovery, tranches automate distributions, and a DAO governs protocol parameters.
+
+## Get Started
+
+New to Slices? Start here:
+
+- **[Quick Start](/docs/get-started/quickstart)** — Launch your first RWA pool end-to-end
+- **[Core Concepts](/docs/get-started/concepts)** — The building blocks of the platform: RWA tokens, pools, tranches, HOLD, governance
+- **[Architecture](/docs/get-started/architecture)** — How the system fits together: web platform, backend services, smart contracts
+
+## Explore by Domain
+
+- **[Tokenization](/docs/tokenization/overview)** — Turn real-world assets into on-chain instruments via ERC1155 tokens
+- **[Pools](/docs/pools/overview)** — Crowdfunding pools with AMM pricing, tranches, and returns
+- **[Trading](/docs/trading/overview)** — Secondary market for RWA tokens via the pool's built-in AMM
+- **[Governance](/docs/governance/platform-token)** — PlatformToken staking, proposals, voting, and timelock
+
+## Build & Integrate
+
+- **[Smart Contracts](/docs/smart-contracts/architecture)** — Contract architecture, access control, upgradeability (UUPS)
+- **[Contract Reference](/docs/smart-contracts/contract-reference)** — All functions, events, and access control per contract
+- **[Deployments](/docs/smart-contracts/deployments)** — Contract addresses on BSC Testnet
+- **[API Reference](/docs/api/rwa/pools/get-pools)** — Complete GraphQL API documentation
+- **[AI Agents](/docs/ai-agents)** — Documentation for AI agents interacting with the platform
+
+## Platform Services
+
+- **[AI Risk Evaluator](/docs/ai-evaluator/overview)** — Automated risk scoring for businesses and pools
+- **[AI Assistant](/docs/ai-assistant/overview)** — Conversational AI for investment guidance and portfolio insights
+- **[Signers Manager](/docs/signers-manager/overview)** — Multi-signature approval coordination
+- **[Charts & Real-Time Data](/docs/charts/overview)** — Price data, OHLC, volume, WebSocket updates
+- **[Referral & Loyalty](/docs/loyalty/overview)** — Earn rewards by referring users
+- **[Testnet Faucet](/docs/testnet-faucet/overview)** — Get test tokens on BSC Testnet
+
+## Integration
+
+- **[API Keys](/docs/api-keys/overview)** — Persistent authentication keys for programmatic access
+- **[Webhooks](/docs/webhooks/overview)** — Receive real-time event notifications via HTTP
+- **[API Reference](/docs/api/rwa/pools/get-pools)** — Complete GraphQL API documentation
+- **[AI Agents](/docs/ai-agents)** — Documentation for AI agents interacting with the platform
+
+## How It Works
+
+```
+Business → AI Evaluation → Multi-sig Approval →
+RWA Contract Deployed → Pool Created → Pool Deployed →
+Participants Buy RWA → Target Reached → Tranches Distributed → Returns
+```
+
+1. A business is created on the platform
+2. The AI evaluator analyzes the business and assigns a risk score (0-100)
+3. Authorized signers review and approve the RWA token deployment
+4. `Factory.deployRWA()` deploys an ERC1155 token contract for the business
+5. The business configures a pool — funding target, RWA supply, fees, tranches, AMM parameters
+6. Authorized signers approve the pool deployment
+7. `Factory.deployPool()` deploys the pool contract linked to the RWA token
+8. Participants contribute HOLD tokens and receive RWA tokens via the pool's AMM
+9. When the funding target is reached, tranches automate fund distribution to the business
+10. The business returns funds via incoming tranches, participants burn RWA tokens to claim returns + bonus

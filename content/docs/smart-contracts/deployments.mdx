@@ -1,0 +1,61 @@
+---
+title: Deployments
+description: Deployed contract addresses on BSC Testnet
+---
+
+# Deployments
+
+All Slices smart contracts are deployed on **BSC Testnet**. Below are the current contract addresses.
+
+## Proxy Contracts
+
+These are the main contract addresses you should use for interaction. Each proxy delegates calls to an upgradeable implementation.
+
+| Contract | Proxy Address |
+|---|---|
+| **AddressBook** | `0xBEDa607213b40f9934cc505ae1F66401f5C1803C` |
+| **Config** | `0xd1161a9EAaFF8009511fC17ED0fC2fA2deA839c8` |
+| **EventEmitter** | `0x45FD7Ac4D03d12077e3fE3206A19fc6FC31032a7` |
+| **Factory** | `0xF46A71cac8B1A8F734559Cc4367CD1546A1A29bF` |
+| **Governance** | `0x75CC95365B588D511A43776715c29c2fB8873e8c` |
+| **Timelock** | `0xEE4B4338E22c542967334E4C0098fc42869f4750` |
+| **Treasury** | `0x92d89379C79FD3Ad6127D841C8a36a98db4e05f0` |
+| **DaoStaking** | `0xAE7BdBAdF539123028De5b421D320DDD2B60d73F` |
+| **PlatformToken** | `0xb85c84e68Ed64eE497D6d8AD98811Da20a9C02ab` |
+| **ReferralTreasury** | `0xcf56E77069cC2aBfA6c1Df9bfD4155F782697B9D` |
+
+## Implementation Contracts
+
+These are the logic contracts behind the proxies. They are upgradeable and may change.
+
+| Contract | Implementation Address |
+|---|---|
+| **AddressBook** | `0xd7C92116AB928D6Dc83e5Df5afA9E1419075BE77` |
+| **Config** | `0xA85960bc22688728FC0043a27d168C401bfFf721` |
+| **EventEmitter** | `0x45D3da6A05df4e9EF049dA4B5A93e31246c1382C` |
+| **Factory** | `0x63D65B4773B4039D04f0A53BEde3FA53cA82b699` |
+| **Governance** | `0x64b31edA1b83E89ae591c36890aa84a70D2c8137` |
+| **Timelock** | `0x0C2061f381b7fA159a862FE174bb72f8863d4AA6` |
+| **Treasury** | `0x06897c53B979771A8cC58359A75Af3307c6fE5f1` |
+| **DaoStaking** | `0x1cCc96d564737382f693d420995eCDFcF661FFD7` |
+| **PlatformToken** | `0x8ed666d9b3f66baBEB6A2b1E1233C0B7B7AF1243` |
+| **ReferralTreasury** | `0xfB4f1d0AfAA8493437C777a0a9A342325439c234` |
+
+## Standalone Contracts
+
+These contracts are not behind proxies.
+
+| Contract | Address |
+|---|---|
+| **HoldToken** | `0x1c0e214bB702572E5582085d6E25c39A2B13510d` |
+| **RWA Implementation** | `0x7A3848376FD1295e4B1247Ea2d0992bbdCcccC26` |
+| **Pool Implementation** | `0xA1C8ebE0F3152C6A630dCa8E4560C0A42fBf41fD` |
+
+## Network Details
+
+- **Network:** BSC Testnet
+- **Chain ID:** 97
+- **RPC URL:** `https://data-seed-prebsc-1-s1.binance.org:8545`
+- **Explorer:** [https://testnet.bscscan.com](https://testnet.bscscan.com)
+
+

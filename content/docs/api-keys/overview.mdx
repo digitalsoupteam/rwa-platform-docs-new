@@ -1,0 +1,41 @@
+---
+title: API Keys
+description: Persistent authentication keys for GraphQL API access
+---
+
+# API Keys
+
+API Keys provide an alternative to wallet-signature authentication for the GraphQL API. They are designed for automated integrations, bots, and AI agents that need persistent access without interactive wallet signing.
+
+## How API Keys Work
+
+- Each API key is tied to a user and their wallet
+- The key is returned **only once** at creation — store it securely
+- A short `prefix` is stored and displayed for identification without exposing the full key
+- Use the key as a Bearer token: `Authorization: Bearer <apiKey>`
+
+API keys coexist with wallet-signature authentication (see [Authentication](/docs/api/auth/authenticate)). Both methods return the same access level — API keys are simply more convenient for programmatic access.
+
+## Managing API Keys
+
+- [Create an API key](/docs/api/api-keys/create-api-key) — provide a name, receive the full key + prefix. The key is shown only once.
+- [Update an API key](/docs/api/api-keys/update-api-key) — rename the key
+- [Delete an API key](/docs/api/api-keys/delete-api-key) — revoke access immediately
+- [List API keys](/docs/api/api-keys/get-api-keys) — view all keys (without full key values, only prefixes)
+- [Get a single API key](/docs/api/api-keys/get-api-key)
+
+## Usage
+
+```bash
+curl -X POST https://api.slices.xyz/graphql \
+  -H "Authorization: Bearer sk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ getBusinesses(input: { filter: {} }) { id name } }"}'
+```
+
+## Best Practices
+
+- **Store securely** — the full key is returned only at creation. If lost, delete the key and create a new one.
+- **Name meaningfully** — use descriptive names (e.g. "Trading Bot", "Analytics Dashboard") to track which key belongs to which integration.
+- **Rotate regularly** — delete old keys and create new ones periodically.
+- **Delete on compromise** — if a key is leaked, delete it immediately to revoke access.

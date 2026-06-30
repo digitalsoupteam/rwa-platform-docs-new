@@ -1,0 +1,73 @@
+---
+title: Webhooks
+description: Receive real-time event notifications when platform actions occur
+---
+
+# Webhooks
+
+Webhooks allow you to receive real-time HTTP notifications when events happen on the Slices platform — pools created, tokens minted/burned, proposals executed, and more. Instead of polling the GraphQL API, register a webhook endpoint and let the platform push events to your server.
+
+## How It Works
+
+```
+Platform Event → Webhooks Service → RabbitMQ → Delivery Daemon →
+HTTP POST to your URL (with HMAC signature) → Your server processes it
+```
+
+1. You register a webhook endpoint with a URL, event types, and optional rate limit
+2. A `secret` is generated for HMAC signature verification — store it securely
+3. When a subscribed event occurs, the webhooks service enqueues a delivery
+4. The delivery daemon sends an HTTP POST to your URL with the event payload
+5. The payload is signed with HMAC-SHA256 using your secret
+
+## Available Events
+
+| Event | Description |
+|---|---|
+| `pool.created` | A new pool was created |
+| `pool.staked` | A participant bought RWA tokens (mint) |
+| `business.created` | A new business was created |
+
+## Payload Verification
+
+Every webhook delivery includes headers for verification:
+
+| Header | Description |
+|---|---|
+| `X-Webhook-Id` | Unique event ID |
+| `X-Webhook-Timestamp` | Delivery timestamp (ms) |
+| `X-Webhook-Signature` | `sha256=` + HMAC-SHA256 of the request body, signed with your secret |
+
+Verify the signature on your server to confirm the payload is from Slices:
+
+```javascript
+import crypto from 'crypto';
+
+function verifyWebhook(rawBody, signature, secret) {
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  return `sha256=${expected}` === signature;
+}
+```
+
+## Delivery & Retries
+
+- **Timeout** — each delivery attempt has a 10-second timeout
+- **Retries** — failed deliveries are retried with exponential backoff (up to 128 seconds between retries)
+- **Dead letter** — if all retries fail, the delivery is marked as `dead_letter` and stops
+- **Rate limiting** — each endpoint has a configurable `rateLimitPerMinute`
+
+## Managing Webhook Endpoints
+
+- [Create a webhook endpoint](/docs/api/webhooks/create-webhook-endpoint) — provide URL, events, optional description and rate limit. Returns `secret` once.
+- [Update a webhook endpoint](/docs/api/webhooks/update-webhook-endpoint) — change URL, events, active status, rate limit
+- [Delete a webhook endpoint](/docs/api/webhooks/delete-webhook-endpoint)
+- [List webhook endpoints](/docs/api/webhooks/get-webhook-endpoints)
+- [Get a single webhook endpoint](/docs/api/webhooks/get-webhook-endpoint)
+
+## Best Practices
+
+- **Verify signatures** — always check the `X-Webhook-Signature` header to confirm authenticity
+- **Respond quickly** — return a 2xx status code fast; process the event asynchronously if needed
+- **Handle duplicates** — events may be delivered more than once; use `X-Webhook-Id` for deduplication
+- **Store the secret securely** — it is returned only once at creation
+- **Monitor delivery logs** — check the dead letter queue for failed deliveries

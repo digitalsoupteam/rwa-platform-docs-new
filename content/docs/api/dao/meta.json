@@ -1,0 +1,11 @@
+{
+  "title": "Governance (DAO)",
+  "pages": [
+    "get-staking",
+    "get-proposals",
+    "get-votes",
+    "get-staking-history",
+    "get-timelock-tasks",
+    "get-treasury-withdraws"
+  ]
+}

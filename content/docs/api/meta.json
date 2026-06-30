@@ -1,0 +1,24 @@
+{
+  "title": "API Reference",
+  "pages": [
+    "auth",
+    "rwa",
+    "company",
+    "documents",
+    "gallery",
+    "blog",
+    "faq",
+    "questions",
+    "reactions",
+    "charts",
+    "portfolio",
+    "dao",
+    "loyalty",
+    "ai-assistant",
+    "ai-evaluator",
+    "testnet-faucet",
+    "signers-manager",
+    "api-keys",
+    "webhooks"
+  ]
+}

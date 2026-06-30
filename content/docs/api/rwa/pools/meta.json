@@ -1,0 +1,15 @@
+{
+  "title": "Pools",
+  "pages": [
+    "get-pool",
+    "get-pools",
+    "create-pool-with-ai",
+    "create-pool",
+    "edit-pool",
+    "update-pool-risk-score",
+    "request-pool-approval-signatures",
+    "reject-pool-approval-signatures",
+    "pool-deployed",
+    "upload-pool-image"
+  ]
+}

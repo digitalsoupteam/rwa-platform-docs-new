@@ -1,0 +1,567 @@
+---
+title: API Endpoints
+description: Complete GraphQL API reference for Slices — all queries, mutations, and subscriptions by module
+---
+
+# API Endpoints
+
+## Base URL
+
+```
+https://api.slices.xyz/graphql
+```
+
+## Authentication
+
+All requests require authentication via `Authorization` header:
+
+```bash
+curl -X POST https://api.slices.xyz/graphql \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ getBusinesses(input: { filter: {} }) { id name } }"}'
+```
+
+Obtain an access token via wallet signature (`authenticate`) or use an API key (`createApiKey`).
+
+## Common Patterns
+
+### FilterInput
+
+Most list queries accept a `FilterInput` with MongoDB-style operators:
+
+```graphql
+input FilterInput {
+  filter: JSON    # e.g. { ownerId: { $eq: "..." }, riskScore: { $gte: 50 } }
+  sort: JSON      # e.g. { createdAt: "desc" }
+  limit: Int
+  offset: Int
+}
+```
+
+### Ownership Model
+
+Most entities have `ownerId`, `ownerType`, `creator`, `parentId`, and `grandParentId` fields:
+
+- `ownerType`: `"company"` (businesses/pools owned by companies)
+- `parentId`: immediate parent (business ID for pools, business/pool ID for content)
+- `grandParentId`: root parent (company ID)
+- `creator`: user ID who created the entity
+
+---
+
+## auth
+
+### Queries
+
+| Query | Description |
+|---|---|
+| `getUserTokens` | List user's refresh tokens |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `authenticate` | `AuthenticateInput { wallet, signature, timestamp }` | Sign EIP-712 typed data → get access + refresh tokens |
+| `refreshToken` | `RefreshTokenInput { refreshToken }` | Refresh expired access token |
+| `revokeTokens` | `RevokeTokensInput { tokenHashes }` | Revoke refresh tokens |
+
+### Types
+
+- `User { userId, wallet, createdAt, updatedAt }`
+- `AuthTokens { userId, wallet, accessToken, refreshToken }`
+
+---
+
+## rwa
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getBusiness` | `id: ID!` | Single business by ID |
+| `getBusinesses` | `FilterInput!` | List businesses with filter/sort/pagination |
+| `getPool` | `id: ID!` | Single pool by ID |
+| `getPools` | `FilterInput!` | List pools with filter/sort/pagination |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createBusiness` | `CreateBusinessInput` | Create a business under a company |
+| `createBusinessWithAI` | `CreateBusinessWithAIInput { description, ownerId, ownerType, chainId }` | AI generates business metadata from description |
+| `editBusiness` | `EditBusinessInput { id, updateData }` | Update business fields |
+| `updateBusinessRiskScore` | `id: ID!` | Trigger async AI risk evaluation (poll business to get result) |
+| `requestBusinessApprovalSignatures` | `RequestBusinessApprovalSignaturesInput { id, ownerWallet, deployerWallet, createRWAFee }` | Request multi-sig approval for RWA deployment → returns `taskId` |
+| `rejectBusinessApprovalSignatures` | `id: ID!` | Cancel approval request |
+| `createPool` | `CreatePoolInput` | Create a pool under a business |
+| `createPoolWithAI` | `CreatePoolWithAIInput { description, businessId }` | AI generates pool config from description |
+| `editPool` | `EditPoolInput { id, updateData }` | Update pool configuration |
+| `updatePoolRiskScore` | `id: ID!` | Trigger async AI risk evaluation for pool |
+| `requestPoolApprovalSignatures` | `RequestPoolApprovalSignaturesInput { id, ownerWallet, deployerWallet, createPoolFeeRatio }` | Request multi-sig approval for pool deployment → returns `taskId` |
+| `rejectPoolApprovalSignatures` | `id: ID!` | Cancel approval request |
+
+### Subscriptions
+
+| Subscription | Description |
+|---|---|
+| `poolDeployed` | Fires when pool contract deployment is indexed |
+
+### CreateBusinessInput
+
+```graphql
+input CreateBusinessInput {
+  name: String!
+  ownerId: String!          # Company ID
+  ownerType: BusinessOwnerType!  # "company"
+  chainId: String!          # "97" for BSC Testnet
+  description: String
+  tags: [String!]
+  country: String           # ISO 3166-1 alpha-2 code
+  businessType: BusinessType  # growth | startup | franchise
+  socials: [SocialLinkInput!]  # { type, url } — validates URL per type
+}
+```
+
+### CreatePoolInput
+
+```graphql
+input CreatePoolInput {
+  name: String!
+  businessId: String!
+  entryFeePercent: String       # basis points (e.g. "100" = 1%)
+  exitFeePercent: String
+  expectedHoldAmount: String    # in wei
+  expectedRwaAmount: String
+  rewardPercent: String         # basis points (e.g. "2000" = 20%)
+  entryPeriodStart: Float       # unix timestamp
+  entryPeriodExpired: Float
+  completionPeriodExpired: Float
+  awaitCompletionExpired: Boolean
+  floatingOutTranchesTimestamps: Boolean
+  fixedSell: Boolean
+  allowEntryBurn: Boolean
+  priceImpactPercent: String
+  outgoingTranches: [OutgoingTrancheInput!]   # { amount, timestamp, executedAmount: "0" }
+  incomingTranches: [IncomingTrancheInput!]   # { amount, expiredAt, returnedAmount: "0" }
+  description: String
+  tags: [String!]
+}
+```
+
+### Approval Signatures Flow
+
+```graphql
+# 1. Request signatures
+mutation {
+  requestBusinessApprovalSignatures(input: {
+    id: "business_id"
+    ownerWallet: "0x..."
+    deployerWallet: "0x..."
+    createRWAFee: "100"
+  }) { taskId }
+}
+
+# 2. Poll for completion (signers sign off-chain)
+query {
+  getSignatureTask(input: { taskId: "task_id" }) {
+    completed
+    signatures { signer signature }
+    expired
+  }
+}
+
+# 3. Call Factory.deployRWA() on-chain with collected signatures
+```
+
+---
+
+## company
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getCompany` | `id: ID!` | Company with members and permissions |
+| `getCompanies` | `GetCompaniesInput` | List companies |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createCompany` | `CreateCompanyInput { name, description, country, socials }` | Create a company |
+| `updateCompany` | `UpdateCompanyInput { id, updateData }` | Update company |
+| `deleteCompany` | `id: ID!` | Delete company |
+| `addMember` | `AddMemberInput { companyId, userId, name }` | Add member to company |
+| `removeMember` | `RemoveMemberInput { id, companyId }` | Remove member |
+| `grantPermission` | `GrantPermissionInput { companyId, memberId, userId, permission, entity }` | Grant permission to member |
+| `revokePermission` | `RevokePermissionInput { id, companyId }` | Revoke permission |
+
+---
+
+## documents
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getDocument` | `id: ID!` | Single document |
+| `getDocuments` | `GetDocumentsFilterInput` | List documents |
+| `getFolder` | `id: ID!` | Single folder |
+| `getFolders` | `GetFoldersFilterInput` | List folders |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createFolder` | `CreateFolderInput { name, parentId, type }` | Create folder under business/pool |
+| `createDocument` | `CreateDocumentInput { folderId, name, file: Upload }` | Upload document |
+| `updateDocument` | `UpdateDocumentInput { id, updateData: { name } }` | Rename document |
+| `deleteDocument` | `id: ID!` | Delete document |
+| `updateFolder` | `UpdateFolderInput { id, updateData: { name } }` | Rename folder |
+| `deleteFolder` | `id: ID!` | Delete folder |
+
+`type` enum: `business` | `pool`
+
+---
+
+## gallery
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getGallery` | `id: ID!` | Single gallery |
+| `getGalleries` | `GetGalleriesFilterInput` | List galleries |
+| `getImage` | `id: ID!` | Single image |
+| `getImages` | `GetImagesFilterInput` | List images |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createGallery` | `CreateGalleryInput { name, parentId, type }` | Create gallery under business/pool/user |
+| `createImage` | `CreateImageInput { galleryId, name, description, file: Upload }` | Upload image |
+| `updateImage` | `UpdateImageInput { id, updateData }` | Update image name/description |
+| `deleteImage` | `id: ID!` | Delete image |
+| `updateGallery` | `UpdateGalleryInput { id, updateData: { name } }` | Rename gallery |
+| `deleteGallery` | `id: ID!` | Delete gallery |
+
+`type` enum: `business` | `pool` | `user`
+
+---
+
+## blog
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getBlog` | `id: ID!` | Single blog |
+| `getBlogs` | `GetBlogsFilterInput` | List blogs |
+| `getPost` | `id: ID!` | Single post |
+| `getPosts` | `GetPostsFilterInput` | List posts |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createBlog` | `CreateBlogInput { name, parentId, type }` | Create blog under business/pool |
+| `createPost` | `CreatePostInput { blogId, title, content, images, documents }` | Create post |
+| `updatePost` | `UpdatePostInput { id, updateData }` | Update post |
+| `deletePost` | `id: ID!` | Delete post |
+| `updateBlog` | `UpdateBlogInput { id, updateData: { name } }` | Rename blog |
+| `deleteBlog` | `id: ID!` | Delete blog |
+
+---
+
+## faq
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getFaqTopic` | `id: ID!` | Single FAQ topic |
+| `getFaqTopics` | `GetFaqTopicsFilterInput` | List FAQ topics |
+| `getFaqAnswer` | `id: ID!` | Single FAQ answer |
+| `getFaqAnswers` | `GetFaqAnswersFilterInput` | List FAQ answers |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createFaqTopic` | `CreateFaqTopicInput { name, parentId, type }` | Create FAQ topic |
+| `createFaqAnswer` | `CreateFaqAnswerInput { topicId, question, answer, order }` | Create answer |
+| `updateFaqTopic` | `UpdateFaqTopicInput { id, updateData: { name } }` | Rename topic |
+| `deleteFaqTopic` | `id: ID!` | Delete topic |
+| `updateFaqAnswer` | `UpdateFaqAnswerInput { id, updateData }` | Update answer |
+| `deleteFaqAnswer` | `id: ID!` | Delete answer |
+
+---
+
+## questions
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getTopic` | `id: ID!` | Single Q&A topic |
+| `getTopics` | `GetTopicsFilterInput` | List Q&A topics |
+| `getQuestion` | `id: ID!` | Single question |
+| `getQuestions` | `GetQuestionsFilterInput` | List questions |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createTopic` | `CreateTopicInput { name, parentId, type }` | Create topic |
+| `createQuestion` | `CreateQuestionInput { topicId, text }` | Ask a question |
+| `createQuestionAnswer` | `CreateQuestionAnswerInput { id, text }` | Answer a question |
+| `updateQuestionText` | `UpdateQuestionTextInput { id, updateData: { text } }` | Edit question |
+| `updateQuestionAnswer` | `UpdateQuestionAnswerInput { id, updateData: { text } }` | Edit answer |
+| `toggleQuestionLike` | `questionId: ID!` | Like/unlike a question |
+| `deleteTopic` | `id: ID!` | Delete topic |
+| `deleteQuestion` | `id: ID!` | Delete question |
+
+---
+
+## reactions
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getEntityReactions` | `parentId, parentType` | Reaction counts + user's reactions for an entity |
+| `getReactions` | `GetReactionsFilterInput!` | List all reactions with filter |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `setReaction` | `SetReactionInput { parentId, parentType, reaction }` | Set or change reaction |
+| `resetReaction` | `SetReactionInput { parentId, parentType, reaction }` | Remove reaction |
+
+`parentType` enum: `post` | `business` | `pool` | `blog` | `company` | `document` | `image`
+
+`reaction` enum: `like` | `dislike` | `love` | `angry` | `sad` | `wow` | `haha`
+
+---
+
+## charts
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getRawPriceData` | `GetRawPriceDataInput { poolAddress, startTime, endTime, limit, offset, sort }` | Raw AMM reserve/price snapshots |
+| `getOhlcPriceData` | `GetOhlcPriceDataInput { poolAddress, interval, startTime, endTime, limit }` | OHLC candles for charts |
+| `getPoolTransactions` | `GetPoolTransactionsInput { filter, sort, limit, offset }` | Mint/burn transactions for a pool |
+| `getVolumeData` | `GetVolumeDataInput { poolAddress, interval, startTime, endTime, limit }` | Volume data (mint/burn volume) |
+
+### Subscriptions
+
+| Subscription | Input | Description |
+|---|---|---|
+| `priceUpdates` | `poolAddress: String!` | Real-time AMM price changes |
+| `transactionUpdates` | `poolAddress: String!` | Real-time mint/burn events |
+
+---
+
+## portfolio
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getBalances` | `GetBalancesInput!` | User's RWA token balances across pools |
+| `getTransactions` | `GetTransactionsInput!` | User's mint/burn/transfer history |
+
+### Types
+
+```graphql
+type TokenBalance {
+  id, owner, tokenAddress, tokenId, poolAddress, chainId
+  balance: Int!       # RWA token balance
+  lastUpdateBlock: Int!
+}
+
+type Transaction {
+  id, from, to, tokenAddress, tokenId, poolAddress, chainId
+  transactionHash, blockNumber, amount: Int!
+}
+```
+
+---
+
+## dao
+
+All DAO data is indexed from on-chain events. These are **read-only** queries.
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getStaking` | `GetStakingFilterInput` | Current staking positions |
+| `getStakingHistory` | `GetStakingHistoryFilterInput` | Stake/unstake events |
+| `getProposals` | `GetProposalsFilterInput` | Governance proposals |
+| `getVotes` | `GetVotesFilterInput` | Votes on proposals |
+| `getTimelockTasks` | `GetTimelockTasksFilterInput` | Queued timelock transactions |
+| `getTreasuryWithdraws` | `GetTreasuryWithdrawsFilterInput` | Treasury withdrawal events |
+
+---
+
+## loyalty
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getFees` | `GetFeesFilterInput` | Commission/fee records per user |
+| `getReferrals` | `GetReferralsFilterInput` | Referral relationships |
+| `getReferrerWithdraws` | `GetReferrerWithdrawsFilterInput` | Referrer withdrawal status |
+| `getReferrerClaimHistory` | `GetReferrerClaimHistoryFilterInput` | Referral reward claim history |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `registerReferral` | `RegisterReferralInput { referrerId }` | Register a referrer |
+| `createReferrerWithdrawTask` | `CreateReferrerWithdrawTaskInput { chainId, tokenAddress, amount }` | Request multi-sig withdrawal of referral rewards |
+
+---
+
+## ai-assistant
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getAssistant` | `id: ID!` | Single assistant |
+| `getUserAssistants` | `pagination: PaginationInput` | User's assistants |
+| `getMessage` | `id: ID!` | Single message |
+| `getMessageHistory` | `assistantId: ID!, pagination` | Chat history |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createAssistant` | `CreateAssistantInput { name, contextPreferences }` | Create AI assistant |
+| `updateAssistant` | `UpdateAssistantInput { id, name, contextPreferences }` | Update assistant |
+| `deleteAssistant` | `id: ID!` | Delete assistant |
+| `createMessage` | `CreateMessageInput { assistantId, text }` | Send message → returns AI response |
+| `updateMessage` | `UpdateMessageInput { id, text }` | Edit message |
+| `deleteMessage` | `id: ID!` | Delete message |
+
+`contextPreferences` enum: `investor_base` | `product_owner_base` | `popular_pools` | `user_portfolio`
+
+---
+
+## ai-evaluator
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getEvaluation` | `id: ID!` | Single AI risk evaluation |
+| `getEvaluations` | `GetEvaluationsInput { filter, sort, limit, offset }` | List evaluations |
+
+### Types
+
+```graphql
+type Evaluation {
+  id, entityType: EvaluationEntityType!  # business | pool
+  parentId: String!       # Business or pool ID
+  grandParentId: String!  # Company ID
+  ownerId, ownerType
+  status: String!         # evaluation status
+  riskScore: Int          # 0-100
+  reasoning: String       # AI explanation
+  factors: [EvaluationFactor!]!  # { name, impact, detail }
+  stage1Response: String  # raw AI stage 1 output
+  stage2Response: String  # raw AI stage 2 output
+  evaluatedDocuments: [EvaluationDocumentRef!]!
+  evaluatedImages: [EvaluationImageRef!]!
+  modelUsed: String
+  createdAt, updatedAt
+}
+```
+
+---
+
+## testnet-faucet
+
+### Queries
+
+| Query | Description |
+|---|---|
+| `getHistory` | User's faucet request history |
+| `getUnlockTime` | Cooldown timestamps for gas/hold/platform requests |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `requestGas` | `RequestTokenInput { amount: Float! }` | Request BNB for gas |
+| `requestHold` | `RequestTokenInput { amount: Float! }` | Request HOLD tokens |
+| `requestPlatform` | `RequestTokenInput { amount: Float! }` | Request PlatformToken |
+
+---
+
+## signers-manager
+
+### Queries
+
+| Query | Input | Description |
+|---|---|---|
+| `getSignatureTask` | `GetSignatureTaskInput { taskId }` | Get multi-sig task status and collected signatures |
+
+### Types
+
+```graphql
+type SignatureTask {
+  id, ownerId, ownerType
+  hash: String!              # EIP-712 message hash that signers sign
+  requiredSignatures: Int!
+  expired: Float!
+  completed: Boolean!
+  signatures: [Signature!]   # { signer, signature } — null until signed
+}
+```
+
+---
+
+## api-keys
+
+### Queries
+
+| Query | Description |
+|---|---|
+| `getApiKeys` | List user's API keys (without full key value) |
+| `getApiKey(id)` | Single API key |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createApiKey` | `CreateApiKeyInput { name }` | Create API key — returns full key **once** |
+| `updateApiKey` | `UpdateApiKeyInput { id, name }` | Rename API key |
+| `deleteApiKey` | `id: ID!` | Delete API key |
+
+---
+
+## webhooks
+
+### Queries
+
+| Query | Description |
+|---|---|
+| `getWebhookEndpoints` | List webhook endpoints |
+| `getWebhookEndpoint(id)` | Single webhook endpoint |
+
+### Mutations
+
+| Mutation | Input | Description |
+|---|---|---|
+| `createWebhookEndpoint` | `CreateWebhookEndpointInput { url, events, description, rateLimitPerMinute }` | Register webhook — returns `secret` once |
+| `updateWebhookEndpoint` | `UpdateWebhookEndpointInput { id, url, events, active, ... }` | Update webhook |
+| `deleteWebhookEndpoint` | `id: ID!` | Delete webhook |

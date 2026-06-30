@@ -1,0 +1,9 @@
+{
+  "title": "Authentication",
+  "pages": [
+    "get-user-tokens",
+    "authenticate",
+    "refresh-token",
+    "revoke-tokens"
+  ]
+}

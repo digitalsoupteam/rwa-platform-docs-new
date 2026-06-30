@@ -1,0 +1,10 @@
+{
+  "title": "Topics",
+  "pages": [
+    "get-faq-topic",
+    "get-faq-topics",
+    "create-faq-topic",
+    "update-faq-topic",
+    "delete-faq-topic"
+  ]
+}

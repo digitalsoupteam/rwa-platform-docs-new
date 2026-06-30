@@ -1,0 +1,90 @@
+---
+title: PlatformToken
+description: The governance token of the Slices protocol — staking, voting power, and distribution
+---
+
+# PlatformToken
+
+PlatformToken is the governance token of the Slices protocol. It is an upgradeable ERC20 token used exclusively for staking and voting in the DAO.
+
+> **Note:** PlatformToken is distinct from HOLD (the platform's utility token). There is no on-chain conversion between them. HOLD is used for pool operations and fees, while PlatformToken is used for staking and governance.
+
+## Contract Details
+
+- **Standard:** ERC20 (upgradeable via UUPS proxy)
+- **Supply:** Mintable — controlled by Governance
+- **Contract:** `PlatformToken` — deployed behind an ERC1967 proxy
+
+## Purpose
+
+PlatformToken serves one primary role: **governance participation**. Holders stake PlatformTokens in the `DaoStaking` contract to gain voting power in the Slices DAO.
+
+| Role | Token | Description |
+|------|-------|-------------|
+| **Governance** | PlatformToken | Staking, voting power, governance rewards |
+| **Exchange** | HOLD | Pool contributions, fees, returns |
+
+## Getting PlatformTokens
+
+PlatformTokens are distributed by **Governance** through the `mint()` function, which can mint tokens to multiple addresses in a single transaction:
+
+```solidity
+function mint(address[] calldata holders, uint256[] calldata amounts) external {
+    addressBook.requireGovernance(msg.sender);
+    // Mints tokens to each holder
+}
+```
+
+Common distribution methods include:
+- **Retroactive rewards** — for early platform participants
+- **Airdrops** — to targeted communities
+- **Staking incentives** — additional rewards deposited into the staking contract
+- **Governance proposals** — the DAO can vote to mint tokens for any purpose
+
+On testnet, you can also get PlatformTokens via the [Testnet Faucet](/docs/testnet-faucet/overview).
+
+## Staking
+
+PlatformTokens must be staked to be used in governance. See [Staking](/docs/governance/staking) for the full guide.
+
+Key points:
+- Stake PlatformTokens in `DaoStaking` to gain voting power (1:1 ratio)
+- Staking earns rewards based on duration and the annual reward rate set by Governance
+- When you vote, your staked tokens are locked until the proposal ends
+- You cannot unstake while your tokens are locked
+
+## Voting Power
+
+Your voting power equals your staked PlatformToken balance (1:1 ratio):
+
+```solidity
+function getVotingPower(address user) external view returns (uint256) {
+    return stakedAmount[user];
+}
+```
+
+For example, if you stake 50,000 PlatformToken, your voting weight is 50,000. To create a proposal, you need **1,000,000 PlatformToken** staked (`proposalThreshold`).
+
+Quorum is calculated from the **total PlatformToken supply** (`totalSupply`), not just the staked amount. See [Voting](/docs/governance/voting).
+
+## Key Parameters (from Config)
+
+| Parameter | Value | Description |
+|----------|-------|-------------|
+| `proposalThreshold` | **1,000,000** PlatformToken | Minimum stake to create a proposal |
+| `quorumPercentage` | **40%** (4000 bps) | Of totalSupply PlatformToken |
+| `votingPeriod` | **7 days** | Duration of voting |
+| `timelockDelay` | **2 days** | Delay before queued governance action executes |
+| `daoStakingAnnualRewardRate` | **10%** (1000 bps) | Annual staking reward |
+
+All parameters are adjustable via Governance proposals (calling `Config.update*` functions).
+
+## Key Differences from HOLD
+
+| | PlatformToken | HOLD |
+|---|---|---|
+| **Type** | Upgradeable ERC20 | Simple ERC20 |
+| **Supply** | Mintable by Governance | Fixed (1 quadrillion) |
+| **Purpose** | Staking & governance | Pool operations & fees |
+| **Can buy RWA?** | No | Yes |
+| **Stakeable?** | Yes (in DaoStaking) | No |

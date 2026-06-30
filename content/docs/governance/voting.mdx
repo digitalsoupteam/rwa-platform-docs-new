@@ -1,0 +1,96 @@
+---
+title: Voting
+description: Vote on active governance proposals
+---
+
+# Voting
+
+Voting allows PlatformToken stakers to participate in protocol governance. When you vote, your voting power is recorded and your staked tokens are locked until the proposal ends.
+
+## Voting Power
+
+Your voting power is equal to your staked PlatformToken balance:
+
+```solidity
+function getVotingPower(address user) external view returns (uint256) {
+    return stakedAmount[user];
+}
+```
+
+To have voting power, you must stake PlatformTokens in the `DaoStaking` contract first. See [Staking](/docs/governance/staking).
+
+## Voting Mechanism
+
+To vote on a proposal:
+
+```solidity
+function vote(
+    uint256 proposalId,  // The proposal to vote on
+    bool support,        // true = for, false = against
+    string memory reason // Optional reason for your vote
+) external nonReentrant
+```
+
+```javascript
+await governance.vote(proposalId, true, "I support this change");
+//                          ↑ support (true=for, false=against)
+//                                        ↑ optional reason
+```
+
+When you vote:
+
+1. Your voting power is recorded
+2. Your staked tokens are locked until the proposal's `endTime` (you cannot unstake)
+3. A `Governance_VoteCast` event is emitted
+4. The system checks for auto-execution or auto-cancellation
+
+## Vote Types
+
+- **For** — you support the proposal. Your voting power is added to `votesFor`.
+- **Against** — you oppose the proposal. Your voting power is added to `votesAgainst`.
+
+## Quorum
+
+A proposal passes when:
+
+```
+votesFor >= quorum AND votesFor > votesAgainst
+```
+
+Where `quorum = platformToken.totalSupply() × quorumPercentage / 10000`.
+
+**quorumPercentage = 40%** (4000 bps, from Config).
+
+For example, with totalSupply = 10,000,000:
+
+| Parameter | Value |
+|----------|-------|
+| totalSupply PlatformToken | 10,000,000 |
+| Quorum (40%) | 4,000,000 votes |
+| Voted "For" | 2,500,000 |
+| Voted "Against" | 1,200,000 |
+| Result | ❌ **FAILED** — 2.5M < 4M quorum |
+
+| Parameter | Value |
+|----------|-------|
+| totalSupply PlatformToken | 10,000,000 |
+| Quorum (40%) | 4,000,000 votes |
+| Voted "For" | 4,500,000 |
+| Voted "Against" | 2,000,000 |
+| Result | ✅ **PASSED** — 4.5M >= 4M and 4.5M > 2M |
+
+Quorum is calculated from the **total PlatformToken supply** (not just staked amount). This means if a large portion of the supply is unstaked, reaching quorum requires higher participation from active stakers.
+
+A proposal is cancelled when:
+
+```
+votesAgainst >= quorum AND votesAgainst > votesFor
+```
+
+## Viewing Votes
+
+You can query indexed votes via the GraphQL API — see [Get Votes](/docs/api/dao/get-votes) for the full reference. Filter by `proposalId` and paginate with `limit`.
+
+## Staking Lock
+
+When you vote, your staked tokens are locked until the proposal's end time. You cannot unstake while your tokens are locked. This prevents vote-buying and ensures voters have skin in the game. The lock only extends (if you vote on multiple proposals, it extends to the latest `endTime`) — it never shortens.

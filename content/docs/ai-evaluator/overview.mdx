@@ -1,0 +1,126 @@
+---
+title: AI Risk Evaluator
+description: How the AI Evaluator analyzes businesses and pools to assign risk scores
+---
+
+# AI Risk Evaluator
+
+The AI Evaluator is an automated system that analyzes businesses and pools on the Slices platform, assigning risk scores to help participants make informed decisions.
+
+## How Evaluation Works
+
+The evaluation process is **asynchronous** and **event-driven**. When a business or pool is created, a request is sent to the AI Evaluator via a message queue. The evaluator processes the request and publishes the result.
+
+```
+Business/Pool Created → Queue → AI Evaluator → Risk Score Published
+```
+
+### Evaluation Types
+
+The system supports two types of evaluations:
+
+| Type | What It Evaluates | When Triggered |
+|------|-------------------|----------------|
+| **Business Evaluation** | A business on the platform | After business creation |
+| **Pool Evaluation** | A crowdfunding pool | After pool creation |
+
+## What Data the AI Collects
+
+The evaluator gathers data from multiple sources to build a comprehensive picture:
+
+### For Business Evaluation
+
+| Data Source | What's Included |
+|-------------|-----------------|
+| **Business Profile** | Name, business type (Growth/Startup/Franchise), country, tags |
+| **Pools** | All pools belonging to this business — their names, risk scores, deployment status |
+| **Documents** | Uploaded documents (PDFs, Word files, etc.) |
+| **Gallery Images** | Uploaded images |
+| **Reactions** | Community reactions (likes, etc.) |
+| **Q&A** | Questions and answers about the business |
+
+### For Pool Evaluation
+
+| Data Source | What's Included |
+|-------------|-----------------|
+| **Pool Configuration** | Name, description, tags, entry/exit fees, expected HOLD/RWA amounts, reward percent |
+| **Business Profile** | The business behind the pool — name, type, country |
+| **Sibling Pools** | Other pools from the same business with their risk scores |
+| **Documents** | Pool-specific documents |
+| **Gallery Images** | Pool-specific images |
+| **Reactions** | Community reactions |
+| **Q&A** | Questions about the pool |
+| **Portfolio** | On-chain balance data (if pool is deployed) |
+
+## Two-Stage Evaluation Process
+
+### Stage 1: File Selection
+
+The AI first analyzes the summary of all available data and decides which documents and images are relevant for a detailed review. This prevents sending unnecessary files to the LLM, saving cost and focusing the analysis.
+
+The AI receives:
+- A summary of the entity (business or pool)
+- A list of available documents (name, type)
+- A list of available images (name)
+
+It returns a JSON with the IDs of files it wants to examine:
+
+```json
+{
+  "requestedDocuments": ["docId1", "docId3"],
+  "requestedImages": ["imgId2"]
+}
+```
+
+### Stage 2: Risk Evaluation
+
+The AI receives:
+- The full summary from Stage 1
+- The selected documents and images (as file content or base64)
+
+It returns a structured risk assessment:
+
+```json
+{
+  "riskScore": 72,
+  "reasoning": "The business has a solid track record...",
+  "factors": [
+    { "name": "Business Description", "impact": "positive", "detail": "Clear business model with defined revenue streams" },
+    { "name": "Market Context", "impact": "neutral", "detail": "Growing market but competitive landscape" },
+    { "name": "Documentation", "impact": "positive", "detail": "Comprehensive business plan and financial projections provided" }
+  ]
+}
+```
+
+## Risk Score
+
+The risk score is an **integer between 1 and 100**:
+
+| Range | Interpretation |
+|-------|----------------|
+| 1–33 | Low risk — well-established business, strong documentation |
+| 34–66 | Medium risk — some concerns, moderate documentation |
+| 67–100 | High risk — significant concerns, limited documentation |
+
+## Evaluation Status
+
+Each evaluation goes through these statuses:
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Evaluation requested, not yet processed |
+| `completed` | Evaluation finished with a risk score |
+| `failed` | Evaluation encountered an error |
+
+## Querying Evaluations
+
+- [Get a single evaluation](/docs/api/ai-evaluator/get-evaluation) — returns the risk score, reasoning, factors, model used, status, and lists of evaluated documents/images
+- [List evaluations](/docs/api/ai-evaluator/get-evaluations) — filter by `parentId` (business or pool ID), sort by `createdAt`, with pagination
+
+## Updating Risk Score
+
+Risk scores can be manually updated by authorized users via the [updatePoolRiskScore](/docs/api/rwa/pools/update-pool-risk-score) mutation (e.g., after additional due diligence). Provide the pool ID, new risk score, and optional reasoning.
+
+## AI Model
+
+The evaluator uses OpenRouter to access LLM models. The specific model is configurable per deployment. The model used for each evaluation is recorded in the `modelUsed` field.

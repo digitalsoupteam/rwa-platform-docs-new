@@ -1,0 +1,82 @@
+---
+title: Tranches & Distributions
+description: How tranche payments are structured and distributed
+---
+
+# Tranches & Distributions
+
+Tranches are scheduled payment installments that automate the flow of funds between the pool, the business owner, and participants. They are what make a Slices pool more than a simple token sale — the business doesn't receive all funds upfront, and participants don't just wait for a lump sum. Instead, funds flow on a schedule enforced by the smart contract.
+
+## Tranche Structure
+
+Each pool has two types of tranches:
+
+### Outgoing Tranches
+
+These are payments from the pool to the business owner. They become claimable after the pool reaches its funding target.
+
+```solidity
+// Outgoing tranche: amount + timestamp when it becomes claimable
+uint256[] public outgoingTranches;         // Amounts
+uint256[] public outgoingTranchTimestamps;  // Claimable timestamps
+uint256[] public outgoingTrancheStates;     // Claimed amounts (0 = unclaimed)
+```
+
+The business owner calls `claimOutgoingTranches(trancheIndexes)` to claim each tranche when its timestamp is reached.
+
+### Incoming Tranches
+
+These are expected returns from the business back to the pool. Each tranche has an amount and an expiration deadline.
+
+```solidity
+// Incoming tranche: amount + expiration deadline
+uint256[] public incomingTranches;          // Amounts
+uint256[] public incomingTrancheExpired;    // Expiration timestamps
+uint256[] public incomingTrancheStates;     // Returned amounts
+```
+
+Anyone can call `returnIncomingTranche(amount)` to return funds. The function automatically allocates returned funds to tranches in order.
+
+For the full function reference, see [Contract Reference — Pool](/docs/smart-contracts/contract-reference#pool).
+
+## Distribution Schedule
+
+When funds are returned, they are allocated in this order:
+
+1. **Debt repayment** — first, funds go toward repaying the `expectedHoldAmount` (the original funding target)
+2. **Bonus accumulation** — any excess funds go into `awaitingBonusAmount` for participant bonuses
+
+This means participants are paid back their principal first, and only after the full funding target is returned do bonuses start accumulating.
+
+## Floating Timestamps
+
+If `floatingOutTranchesTimestamps` is enabled and the target is reached before the entry period expires, outgoing tranche timestamps are adjusted forward:
+
+```
+timeSaved = entryPeriodExpired - block.timestamp
+floatingTimestampOffset = timeSaved - 1 day  // if timeSaved > 1 day
+effectiveTrancheTimestamp = originalTimestamp - floatingTimestampOffset
+```
+
+This means tranches become claimable sooner when the target is reached early — rewarding the business for quick fundraising.
+
+## Yield Calculation
+
+When you burn RWA tokens, your return is calculated as:
+
+```
+holdAmount = AMM output based on constant product formula
+bonusAmount = (awaitingBonusAmount × yourRwaAmount) / eligibleRwaAmount
+```
+
+Both amounts are subject to the exit fee.
+
+## Early Exit
+
+If `allowEntryBurn` is enabled, you can exit during the entry period. Otherwise, you must wait until the entry period expires before burning.
+
+## Learn More
+
+- [Pool Lifecycle](/docs/pools/lifecycle) — how tranches fit into the full pool lifecycle
+- [Launch a Pool](/docs/pools/launch-pool) — configuring tranches during pool creation
+- [Join a Pool](/docs/pools/join-pool) — how burning works for participants

@@ -1,0 +1,9 @@
+{
+  "title": "Reactions",
+  "pages": [
+    "get-entity-reactions",
+    "get-reactions",
+    "set-reaction",
+    "reset-reaction"
+  ]
+}

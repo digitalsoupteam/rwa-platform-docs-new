@@ -1,0 +1,296 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* ═══ Override fumadocs default colors to pure white background ═══ */
+@theme {
+  --color-fd-background: #fff;
+  --color-fd-foreground: hsl(0, 0%, 3.9%);
+  --color-fd-muted: hsl(0, 0%, 96.1%);
+  --color-fd-muted-foreground: hsl(0, 0%, 45.1%);
+  --color-fd-popover: #fff;
+  --color-fd-popover-foreground: hsl(0, 0%, 15.1%);
+  --color-fd-card: #fff;
+  --color-fd-card-foreground: hsl(0, 0%, 3.9%);
+  --color-fd-border: hsla(0, 0%, 80%, 50%);
+  --color-fd-primary: #2196f3;
+  --color-fd-primary-foreground: #fff;
+  --color-fd-secondary: hsl(0, 0%, 93.1%);
+  --color-fd-secondary-foreground: hsl(0, 0%, 9%);
+  --color-fd-accent: hsla(0, 0%, 82%, 50%);
+  --color-fd-accent-foreground: hsl(0, 0%, 9%);
+  --color-fd-ring: hsl(0, 0%, 63.9%);
+  --color-fd-overlay: hsla(0, 0%, 0%, 0.2);
+}
+
+.dark {
+  --color-fd-background: hsl(0, 0%, 7.04%);
+  --color-fd-foreground: hsl(0, 0%, 92%);
+  --color-fd-muted: hsl(0, 0%, 12.9%);
+  --color-fd-muted-foreground: hsla(0, 0%, 70%, 0.8);
+  --color-fd-popover: hsl(0, 0%, 11.6%);
+  --color-fd-popover-foreground: hsl(0, 0%, 86.9%);
+  --color-fd-card: hsl(0, 0%, 7.04%);
+  --color-fd-card-foreground: hsl(0, 0%, 98%);
+  --color-fd-border: hsla(0, 0%, 40%, 20%);
+  --color-fd-primary: #2196f3;
+  --color-fd-primary-foreground: #fff;
+  --color-fd-secondary: hsl(0, 0%, 12.9%);
+  --color-fd-secondary-foreground: hsl(0, 0%, 92%);
+  --color-fd-accent: hsla(0, 0%, 40.9%, 30%);
+  --color-fd-accent-foreground: hsl(0, 0%, 90%);
+  --color-fd-ring: hsl(0, 0%, 54.9%);
+  --color-fd-overlay: hsla(0, 0%, 0%, 0.2);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* ═══ Sidebar: custom style ═══ */
+
+/* Narrower sidebar */
+:root {
+  --fd-sidebar-width: 250px;
+  --fd-layout-width: 1400px;
+}
+
+/* Wider article content — override Fumadocs default 900px cap */
+#nd-docs-layout article {
+  max-width: 1100px !important;
+}
+
+/* Remove border-right between sidebar and content */
+#nd-docs-layout [data-sidebar-placeholder] aside {
+  border-inline-end: none !important;
+}
+
+/* Make sidebar flush to the left edge */
+#nd-docs-layout {
+  grid-template-columns: 0px var(--fd-sidebar-width) 1fr 0px 0px !important;
+  /* Account for external navbar (h-14 = 56px) so sidebar sticks below it
+     and its height fills only the visible area, not the full viewport */
+  --fd-banner-height: 56px;
+}
+
+/* On mobile, collapse grid so sidebar doesn't squeeze content */
+@media (max-width: 767px) {
+  #nd-docs-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Sidebar content: left-aligned */
+#nd-docs-layout [data-sidebar-placeholder] aside {
+  align-items: flex-start !important;
+}
+
+/* Search bar */
+#nd-sidebar input[type="search"] {
+  border-radius: 6px;
+  border: 1px solid hsl(0 0% 90%);
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.dark #nd-sidebar input[type="search"] {
+  border-color: hsl(0 0% 20%);
+  background: hsl(0 0% 12%);
+}
+
+/* ── Top-level group headers: bold via component ── */
+/* CustomFolder handles bold + no-chevron via component */
+/* Add top margin between sections (first section: no margin) */
+#nd-sidebar [data-radix-scroll-area-viewport] > div > div > [data-state]:not(:first-child) > button,
+#nd-sidebar [data-radix-scroll-area-viewport] > div > div > [data-state]:not(:first-child) > div > div > button {
+  margin-top: 0.5rem;
+}
+
+/* ── Horizontal divider between top-level sections ── */
+/* Radix Collapsible renders div[data-state] for each top-level group */
+#nd-sidebar [data-radix-scroll-area-viewport] > div > div > [data-state] + [data-state]::before {
+  content: "";
+  display: block;
+  height: 1px;
+  background: hsl(0 0% 90%);
+  margin: 0.75rem 0.75rem 0;
+}
+
+.dark #nd-sidebar [data-radix-scroll-area-viewport] > div > div > [data-state] + [data-state]::before {
+  background: hsl(0 0% 20%);
+}
+
+/* ── All sidebar links: rounded, airy ── */
+#nd-sidebar a {
+  border-radius: 6px;
+  margin: 0.1rem 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: hsl(0 0% 40%);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.dark #nd-sidebar a {
+  color: hsl(0 0% 60%);
+}
+
+#nd-sidebar a:hover {
+  background: hsl(0 0% 95%);
+  color: hsl(0 0% 10%);
+}
+
+.dark #nd-sidebar a:hover {
+  background: hsl(0 0% 15%);
+  color: hsl(0 0% 90%);
+}
+
+#nd-sidebar a[data-active="true"] {
+  background: hsl(0 0% 95%);
+  font-weight: 600;
+  color: hsl(0 0% 10%);
+}
+
+.dark #nd-sidebar a[data-active="true"] {
+  background: hsl(0 0% 15%);
+  color: hsl(0 0% 90%);
+}
+
+/* ── Nested collapsible groups (level 2+) ── */
+/* Chevron styling for nested folders */
+#nd-sidebar [data-radix-scroll-area-viewport] > div > div > [data-state] > div [data-state] > button svg {
+  opacity: 0.4;
+}
+
+/* Auto-fade scrollbar */
+#nd-sidebar {
+  scrollbar-width: none;
+}
+#nd-sidebar:hover {
+  scrollbar-width: thin;
+}
+#nd-sidebar::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+#nd-sidebar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+#nd-sidebar:hover::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 70%);
+}
+#nd-sidebar:hover::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 60%);
+}
+
+/* Hide Next.js dev indicator badge (black "N" circle) */
+nextjs-portal {
+  display: none !important;
+}
+
+/* ═══ Mobile: custom 720px breakpoint helpers ═══ */
+/*
+ * Tailwind's sm = 640px, md = 768px. We need a 720px breakpoint.
+ * .mobile-only-flex  → display:flex on ≤720px, display:none on >720px
+ * .desktop-only-flex → display:flex on >720px, display:none on ≤720px
+ * .desktop-only-none  → display:none on >720px, visible on ≤720px (used as spacer)
+ */
+
+/* Default (desktop, >720px): show desktop elements, hide mobile elements */
+.mobile-only-flex {
+  display: none;
+}
+.desktop-only-flex {
+  display: flex;
+}
+.desktop-only-none {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .mobile-only-flex {
+    display: flex;
+  }
+  .desktop-only-flex {
+    display: none;
+  }
+  .desktop-only-none {
+    display: block;
+  }
+
+  /* Shrink search trigger on mobile */
+  #nd-subnav .fd-search-trigger,
+  header .fd-search-trigger {
+    width: auto !important;
+  }
+
+  /* Push search dialog below our sticky navbar (h-14 = 56px + 4px gap) */
+  /* Only Radix dialogs (Fumadocs search) have data-state; our mobile sheet does not */
+  [role='dialog'][data-state='open'] {
+    top: 60px;
+  }
+
+  /* Hide Fumadocs native mobile sub-nav header entirely — our MainNavbar replaces it */
+  #nd-subnav {
+    display: none !important;
+  }
+
+  /* Hide the Fumadocs mobile sidebar drawer entirely — we replace it */
+  #nd-sidebar-mobile {
+    display: none !important;
+  }
+}
+
+/* ═══ Inline code: strip Fumadocs default border/bg/color ═══ */
+/* Only inline `code` — `pre > code` handled separately below */
+.prose :where(code):not(pre > code) {
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* ═══ Code blocks inside prose: strip Fumadocs white bg/border/padding ═══ */
+/* Fumadocs applies background+border to ALL code in .prose, including pre>code */
+.prose :where(pre) :where(code) {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* ═══ API code block syntax highlighting tokens ═══ */
+.tok-keyword { color: #cba6f7; }      /* purple — keywords */
+.tok-string { color: #a6e3a1; }       /* green — strings */
+.tok-type { color: #89b4fa; }         /* blue — types */
+.tok-property { color: #f9e2af; }     /* yellow — properties/fields */
+.tok-number { color: #fab387; }       /* orange — numbers */
+.tok-comment { color: #6c7086; font-style: italic; } /* gray — comments */
+.tok-directive { color: #f5c2e7; }   /* pink — directives */
+.tok-flag { color: #89dceb; }         /* cyan — CLI flags */
+
+/* ═══ Mobile bottom sheet animation ═══ */
+@keyframes mobile-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-mobile-sheet-up {
+  animation: mobile-sheet-up 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+

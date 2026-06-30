@@ -1,0 +1,11 @@
+{
+  "title": "Charts",
+  "pages": [
+    "get-raw-price-data",
+    "get-ohlc-price-data",
+    "get-pool-transactions",
+    "get-volume-data",
+    "price-updates",
+    "transaction-updates"
+  ]
+}

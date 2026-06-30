@@ -1,0 +1,10 @@
+{
+  "title": "Blogs",
+  "pages": [
+    "get-blog",
+    "get-blogs",
+    "create-blog",
+    "update-blog",
+    "delete-blog"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Businesses",
+  "pages": [
+    "get-business",
+    "get-businesses",
+    "create-business-with-ai",
+    "create-business",
+    "edit-business",
+    "update-business-risk-score",
+    "request-business-approval-signatures",
+    "reject-business-approval-signatures",
+    "upload-business-image"
+  ]
+}

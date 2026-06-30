@@ -1,0 +1,285 @@
+---
+title: Governance
+description: PlatformToken staking, proposals, voting, auto-execution, and timelock
+---
+
+# Governance
+
+Slices governance allows PlatformToken stakers to create and vote on proposals that execute arbitrary contract calls. Proposals auto-execute when quorum is reached — no separate execution step.
+
+## Governance Parameters (Config)
+
+| Parameter | Description | Config Field |
+|---|---|---|
+| Proposal threshold | Minimum staked PlatformToken to create a proposal | `proposalThreshold` |
+| Quorum percentage | Min voting power for proposal to pass (of totalSupply) | `quorumPercentage` (basis points) |
+| Voting period | Duration of voting | `votingPeriod` (seconds) |
+| Voting delay | Delay before proposal starts | `votingDelay` (seconds) |
+| Timelock delay | Delay before queued governance action executes | `timelockDelay` (seconds) |
+| Staking reward rate | Annual reward for staking | `daoStakingAnnualRewardRate` (basis points) |
+
+All parameters are adjustable via Governance proposals (calling `Config.update*` functions).
+
+---
+
+## Staking (DaoStaking)
+
+### Stake PlatformToken
+
+```javascript
+// Approve PlatformToken for DaoStaking contract
+await platformToken.approve(daoStakingAddress, amount);
+
+// Stake
+await daoStaking.stake(amount);
+```
+
+When you stake:
+1. PlatformTokens transfer from your wallet to DaoStaking contract
+2. Your staked amount is recorded → becomes voting power (1:1 ratio)
+3. Staking timestamp is set → reward accrual begins
+4. If you already have staked tokens, pending rewards are auto-reinvested
+
+### Unstake
+
+```javascript
+await daoStaking.unstake(amount);
+```
+
+**Constraints:**
+- Cannot unstake while voting lock is active (tokens locked until voted proposal ends)
+- Full unstake: receive staked tokens + all accrued rewards
+- Partial unstake: receive requested amount, remaining + rewards are auto-reinvested
+
+### Staking Rewards
+
+```
+annualReward = stakedAmount × daoStakingAnnualRewardRate / 10000
+pendingReward = annualReward × stakingDuration / 365 days
+```
+
+Rewards are capped by available rewards in the contract (balance minus total deposits).
+
+### View Functions
+
+```javascript
+const staked = await daoStaking.stakedAmount(user);
+const votingPower = await daoStaking.getVotingPower(user);
+const totalVotingPower = await daoStaking.getTotalVotingPower();  // totalSupply
+const pendingRewards = await daoStaking.calculatePendingRewards(user);
+const availableRewards = await daoStaking.getAvailableRewards();
+```
+
+---
+
+## Proposals (Governance)
+
+### Create a Proposal
+
+```javascript
+// Encode the target function call
+const data = config.interface.encodeFunctionData("updateEntryFeePercentRange", [50, 500]);
+
+// Create proposal
+const tx = await governance.propose(
+  configAddress,    // target contract
+  data,             // encoded function call
+  "Reduce entry fee range from 100-1000 to 50-500 bps"  // description
+);
+const receipt = await tx.wait();
+const proposalId = ... // parse from event
+```
+
+**Requirement:** `getVotingPower(msg.sender) >= proposalThreshold`
+
+### Proposal Types
+
+Proposals can target any contract call. Common types:
+
+| Type | Target | Example |
+|---|---|---|
+| Parameter changes | Config | `updateEntryFeePercentRange`, `updateVotingPeriod`, `updateQuorumPercentage` |
+| Contract upgrades | Any protocol contract | `upgradeToAndCall(newImpl, initData)` |
+| Signer management | AddressBook | `addSigner(address)`, `removeSigner(address)` |
+| Treasury withdrawal | Timelock | `queueTransaction(treasury, withdrawData, eta)` |
+| Token mint | PlatformToken | `mint([addresses], [amounts])` |
+| Emergency pause | Pool / RWA | `enablePause()` |
+
+### Proposal Lifecycle
+
+```
+Created → Voting Period → Auto-Executed or Auto-Cancelled
+```
+
+1. **Created** — `propose()` creates proposal with `endTime = block.timestamp + votingPeriod`
+2. **Voting** — stakers vote for/against during voting period
+3. **Auto-execution** — checked after each vote: if `votesFor >= quorum` AND `votesFor > votesAgainst` → `target.call(data)` executes immediately
+4. **Auto-cancellation** — if `votesAgainst >= quorum` AND `votesAgainst > votesFor` → proposal cancelled
+5. **Manual cancel** — proposer can cancel within 12 hours of creation
+
+### Query Proposals (GraphQL — indexed)
+
+```graphql
+query {
+  getProposals(input: {
+    filter: { state: { $eq: "active" } }
+    sort: { createdAt: "desc" }
+    limit: 10
+  }) {
+    id proposalId proposer target description
+    startTime endTime state
+  }
+}
+```
+
+---
+
+## Voting
+
+### Cast a Vote
+
+```javascript
+await governance.vote(proposalId, true, "I support this change");
+//                          ↑ support (true=for, false=against)
+//                                        ↑ optional reason
+```
+
+When you vote:
+1. Your voting power (= staked amount) is recorded
+2. Your staked tokens are **locked** until proposal `endTime` (cannot unstake)
+3. Vote is recorded in `receipts[proposalId][voter]`
+4. System checks for auto-execution or auto-cancellation
+
+### Quorum
+
+```
+quorum = platformToken.totalSupply() × quorumPercentage / 10000
+```
+
+**Important:** Quorum is calculated from **total PlatformToken supply**, not just staked amount. This means if much of the supply is unstaked, reaching quorum requires high participation from active stakers.
+
+### Vote Query (GraphQL — indexed)
+
+```graphql
+query {
+  getVotes(input: {
+    filter: { proposalId: { $eq: "1" } }
+    limit: 20
+  }) {
+    voterWallet support weight reason
+    transactionHash blockNumber
+  }
+}
+```
+
+### On-Chain Vote Check
+
+```javascript
+const proposal = await governance.getProposal(proposalId);
+const { votesFor, votesAgainst, executed, cancelled, endTime } = proposal;
+const isActive = await governance.isActive(proposalId);
+const receipt = await governance.getReceipt(proposalId, voterAddress);
+// receipt: { hasVoted, support, votes }
+```
+
+---
+
+## Timelock
+
+The Timelock contract enforces a delay on governance-executed actions that need a security window. Not all governance actions go through Timelock — only those that explicitly queue through it.
+
+### Queue a Transaction
+
+```javascript
+const eta = Math.floor(Date.now() / 1000) + timelockDelay + 3600;
+const data = targetContract.interface.encodeFunctionData("someFunction", args);
+
+await timelock.queueTransaction(targetAddress, data, eta);
+```
+
+Only Governance can queue. ETA must be >= `block.timestamp + timelockDelay`.
+
+### Execute a Queued Transaction
+
+```javascript
+// Anyone can execute once ready
+await timelock.executeTransaction(targetAddress, data, eta);
+```
+
+Must be within `[eta, eta + GRACE_PERIOD]` where `GRACE_PERIOD = 7 days`.
+
+### Cancel
+
+```javascript
+// Only Governance can cancel
+await timelock.cancelTransaction(targetAddress, data, eta);
+```
+
+### Query Timelock Tasks (GraphQL — indexed)
+
+```graphql
+query {
+  getTimelockTasks(input: {
+    filter: { executed: { $eq: false } }
+    sort: { eta: "asc" }
+  }) {
+    id txHash target data eta executed
+  }
+}
+```
+
+---
+
+## Staking Lock Mechanism
+
+When you vote on a proposal, `Governance.vote()` calls `DaoStaking.lock(user, proposal.endTime)`:
+
+```solidity
+function lock(address user, uint256 unlockTimestamp) external {
+    addressBook.requireGovernance(msg.sender);
+    require(stakedAmount[user] > 0, "No staked tokens");
+    require(unlockTimestamp > block.timestamp, "Invalid unlock timestamp");
+
+    // Only extends — never shortens
+    if (unlockTimestamp > votingLockTimestamp[user]) {
+        votingLockTimestamp[user] = unlockTimestamp;
+    }
+}
+```
+
+This means:
+- After voting, you cannot unstake until the proposal's `endTime`
+- If you vote on multiple proposals, your lock extends to the latest `endTime`
+- The lock only extends, never shortens
+
+---
+
+## Treasury
+
+The Treasury contract holds collected fees (from RWA/pool deployment and pool entry/exit fees).
+
+### Query Treasury Withdrawals (GraphQL — indexed)
+
+```graphql
+query {
+  getTreasuryWithdraws(input: {
+    sort: { createdAt: "desc" }
+    limit: 10
+  }) {
+    recipient token amount transactionHash
+  }
+}
+```
+
+### On-Chain Treasury Read
+
+```javascript
+const balance = await treasury.getTokenBalance(tokenAddress);
+```
+
+### Treasury Withdrawal
+
+Withdrawals require a Timelock transaction:
+
+1. Governance proposal passes → calls `Timelock.queueTransaction(treasury, withdrawData, eta)`
+2. After `timelockDelay`, anyone calls `Timelock.executeTransaction()` → triggers `Treasury.withdrawERC20()` or `Treasury.withdrawETH()`

@@ -1,0 +1,52 @@
+---
+title: Compliance
+description: Regulatory and identity requirements for tokenized assets
+---
+
+# Compliance
+
+The Slices platform implements a multi-layered compliance system to ensure regulatory compliance and participant protection.
+
+## Multi-Signature Approval
+
+Every RWA token and pool deployment requires approval from authorized signers. This provides:
+
+- **Identity verification** — signers verify the business owner's identity
+- **Due diligence** — signers review the business before approving
+- **Fraud prevention** — multiple independent approvals reduce the risk of malicious deployments
+
+The approval process works as follows:
+
+1. Business requests approval signatures via the platform
+2. Authorized signers review the request
+3. Each signer independently signs the deployment parameters
+4. The deployment transaction includes all signatures for on-chain verification
+
+## AI Risk Evaluation
+
+Before deployment, each business undergoes an AI-powered risk evaluation:
+
+- **Stage 1** — initial analysis of the business description
+- **Stage 2** — deeper analysis incorporating documents and images
+- **Risk score** — a numerical score (0-100) indicating the assessed risk level
+- **Factors** — detailed breakdown of evaluation factors with impact ratings
+
+The evaluation considers the business description, supporting documents, and uploaded images.
+
+## Platform Controls
+
+The protocol includes several safety mechanisms:
+
+- **Emergency pause** — Governance can pause RWA contracts and pools in case of emergency. Note: unpause differs by contract type — RWA contracts require **Timelock** to unpause, while Pools can be unpaused directly by **Governance**.
+- **Fee controls** — all fee parameters are bounded by Governance-configured ranges
+- **Parameter validation** — all pool parameters are validated against Config limits at deployment
+- **Timelock** — critical operations (treasury withdrawals, contract unpausing) are delayed
+
+## Participant Responsibilities
+
+Participants should:
+
+- Review the business profile and risk score before contributing
+- Understand that tokenized assets carry inherent risks
+- Monitor pool performance through the platform's charts and portfolio tools
+- Be aware that returns depend on the business fulfilling its obligations

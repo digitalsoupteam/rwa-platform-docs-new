@@ -1,0 +1,11 @@
+{
+  "title": "Documents",
+  "pages": [
+    "get-document",
+    "get-documents",
+    "create-document",
+    "update-document",
+    "delete-document",
+    "upload-document"
+  ]
+}

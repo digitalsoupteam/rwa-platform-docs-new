@@ -1,0 +1,223 @@
+---
+title: Contract Reference
+description: Addresses, ABIs, and function signatures for all Slices smart contracts
+---
+
+# Contract Reference
+
+This page documents all smart contracts in the Slices protocol, their key functions, and access control.
+
+## System Contracts
+
+### AddressBook
+
+The central registry. Stores addresses of all protocol contracts and manages access control.
+
+| Function | Access | Description |
+|---|---|---|
+| `setGovernance(Governance)` | Governance | Update governance contract |
+| `setConfig(Config)` | Governance | Update config contract |
+| `setFactory(Factory)` | Governance | Update factory contract |
+| `setTimelock(Timelock)` | Governance | Update timelock contract |
+| `setTreasury(Treasury)` | Governance | Update treasury contract |
+| `setDaoStaking(DaoStaking)` | Governance | Update DAO staking contract |
+| `setPlatformToken(PlatformToken)` | Governance | Update platform token contract |
+| `setReferralTreasury(ReferralTreasury)` | Governance | Update referral treasury |
+| `setEventEmitter(EventEmitter)` | Governance | Update event emitter |
+| `setRWAImplementation(address)` | Governance | Update RWA implementation |
+| `setPoolImplementation(address)` | Governance | Update pool implementation |
+| `addSigner(address)` | Governance | Add authorized signer |
+| `removeSigner(address)` | Governance | Remove authorized signer |
+| `addPool(Pool)` | Factory | Register a pool |
+| `addRWA(RWA)` | Factory | Register an RWA token |
+| `getPoolByIndex(uint256)` | Anyone | Get pool by index |
+| `getRWAByIndex(uint256)` | Anyone | Get RWA by index |
+| `rwasLength()` | Anyone | Number of registered RWAs |
+| `poolsLength()` | Anyone | Number of registered pools |
+
+### Config
+
+Stores all configurable protocol parameters.
+
+| Function | Access | Description |
+|---|---|---|
+| `updateBaseMetadataUri(string)` | Governance | Update token metadata base URI |
+| `updateHoldToken(address)` | Governance | Update HOLD token address |
+| `updateMinSignersRequired(uint256)` | Governance | Update minimum signers |
+| `updateCreateRWAFeeRange(uint256,uint256)` | Governance | Update RWA creation fee range |
+| `updateCreatePoolFeeRatioRange(uint256,uint256)` | Governance | Update pool creation fee range |
+| `updateExpectedHoldAmountRange(uint256,uint256)` | Governance | Update HOLD amount range |
+| `updateExpectedRwaAmountRange(uint256,uint256)` | Governance | Update RWA amount range |
+| `updateEntryFeePercentRange(uint256,uint256)` | Governance | Update entry fee range |
+| `updateExitFeePercentRange(uint256,uint256)` | Governance | Update exit fee range |
+| `updateRewardPercentRange(uint256,uint256)` | Governance | Update reward range |
+| `updateEntryPeriodDurationRange(uint256,uint256)` | Governance | Update entry period duration range |
+| `updateCompletionPeriodDurationRange(uint256,uint256)` | Governance | Update completion period range |
+| `updateEntryPeriodConfig(uint256,uint256)` | Governance | Update entry start offsets |
+| `updateOutgoingTranchesConfig(...)` | Governance | Update outgoing tranche limits |
+| `updateIncomingTranchesConfig(...)` | Governance | Update incoming tranche limits |
+| `updateLiquidityCoefficients(uint256[],uint256[])` | Governance | Update AMM coefficients |
+| `updateVotingPeriod(uint256)` | Governance | Update voting period |
+| `updateVotingDelay(uint256)` | Governance | Update voting delay |
+| `updateQuorumPercentage(uint256)` | Governance | Update quorum percentage |
+| `updateProposalThreshold(uint256)` | Governance | Update proposal threshold |
+| `updateTimelockDelay(uint256)` | Governance | Update timelock delay |
+| `updateDaoStakingAnnualRewardRate(uint256)` | Governance | Update staking reward rate |
+
+### EventEmitter
+
+Centralized event logging. All functions restricted to protocol contracts.
+
+| Event | Description |
+|---|---|
+| `Pool_Deployed` | New pool deployed |
+| `Pool_RwaMinted` | RWA tokens minted |
+| `Pool_RwaBurned` | RWA tokens burned |
+| `Pool_TargetReached` | Pool funding target reached |
+| `Pool_FundsFullyReturned` | All funds returned |
+| `Pool_OutgoingTrancheClaimed` | Outgoing tranche claimed |
+| `Pool_IncomingTrancheUpdate` | Incoming tranche updated |
+| `Pool_BonusWithdrawn` | Bonus withdrawn |
+| `Pool_ReservesUpdated` | AMM reserves changed |
+| `Pool_PausedStateChanged` | Pool paused/unpaused |
+| `Governance_ProposalCreated` | New proposal created |
+| `Governance_VoteCast` | Vote cast |
+| `Governance_ProposalExecuted` | Proposal executed |
+| `Governance_ProposalCancelled` | Proposal cancelled |
+| `DaoStaking_TokensStaked` | Tokens staked |
+| `DaoStaking_TokensUnstaked` | Tokens unstaked |
+| `DaoStaking_TokensLocked` | Tokens locked |
+| `Timelock_TransactionQueued` | Transaction queued |
+| `Timelock_TransactionExecuted` | Transaction executed |
+| `Timelock_TransactionCancelled` | Transaction cancelled |
+| `Treasury_Withdrawal` | Treasury withdrawal |
+| `RWA_Deployed` | RWA contract deployed |
+| `RWA_Transfer` | RWA token transferred |
+| `RWA_PausedStateChanged` | RWA paused/unpaused |
+| `Factory_RwaDeployed` | RWA deployed by factory |
+| `Factory_PoolDeployed` | Pool deployed by factory |
+| `Factory_FeesCollected` | Fees collected by factory |
+
+## RWA Contracts
+
+### Factory
+
+Deploys RWA token and Pool contracts via ERC1967 proxy.
+
+| Function | Access | Description |
+|---|---|---|
+| `deployRWA(uint256,string,string,string,address,address[],bytes[],uint256)` | Anyone + signatures | Deploy RWA token |
+| `deployPool(uint256,string,string,string,address,RWA,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,uint256[],uint256[],uint256[],uint256[],address[],bytes[],uint256)` | Anyone + signatures | Deploy pool |
+
+### RWA
+
+ERC1155 multi-token contract for real-world assets.
+
+| Function | Access | Description |
+|---|---|---|
+| `createToken(address)` | Factory | Create new token ID |
+| `mint(address,uint256,uint256)` | Associated pool | Mint tokens |
+| `burn(address,uint256,uint256)` | Associated pool | Burn tokens |
+| `uri(uint256)` | Anyone | Get metadata URI |
+| `enablePause()` | Governance | Pause contract |
+| `disablePause()` | Timelock | Unpause contract |
+
+### Pool
+
+Crowdfunding pool with AMM and tranches.
+
+| Function | Access | Description |
+|---|---|---|
+| `mint(uint256,uint256,uint256,bool)` | Anyone | Buy RWA tokens |
+| `burn(uint256,uint256,uint256,uint256)` | Anyone | Sell RWA tokens |
+| `claimOutgoingTranches(uint256[])` | Pool owner | Claim outgoing tranches |
+| `returnIncomingTranche(uint256)` | Anyone | Return funds |
+| `estimateMint(uint256,bool)` | Anyone | Estimate mint cost |
+| `estimateBurn(uint256)` | Anyone | Estimate burn return |
+| `enablePause()` | Governance | Pause pool |
+| `disablePause()` | Governance | Unpause pool |
+| `getOutgoingTranches()` | Anyone | Get outgoing tranche data |
+| `getIncomingTranches()` | Anyone | Get incoming tranche data |
+| `getBonusUnlockTimestamp()` | Anyone | Get bonus unlock time |
+| `checkBonusesUnlocked()` | Anyone | Check if bonuses available |
+
+## DAO Contracts
+
+### Governance
+
+Manages proposals and voting.
+
+| Function | Access | Description |
+|---|---|---|
+| `propose(address,bytes,string)` | Voting power ≥ threshold | Create proposal |
+| `vote(uint256,bool,string)` | Staker with voting power | Vote on proposal |
+| `cancel(uint256)` | Proposer (≤12h) or contract | Cancel proposal |
+| `getProposal(uint256)` | Anyone | Get proposal details |
+| `getReceipt(uint256,address)` | Anyone | Get vote receipt |
+| `isActive(uint256)` | Anyone | Check if proposal active |
+
+### Timelock
+
+Enforces time delay on governance actions.
+
+| Function | Access | Description |
+|---|---|---|
+| `queueTransaction(address,bytes,uint256)` | Governance | Queue transaction |
+| `executeTransaction(address,bytes,uint256)` | Anyone | Execute queued transaction |
+| `cancelTransaction(address,bytes,uint256)` | Governance | Cancel queued transaction |
+| `withdrawERC20(address,address,uint256)` | Timelock | Withdraw ERC20 |
+| `withdrawETH(address,uint256)` | Timelock | Withdraw ETH |
+
+### Treasury
+
+Holds protocol fees.
+
+| Function | Access | Description |
+|---|---|---|
+| `withdrawERC20(address,address,uint256)` | Timelock | Withdraw ERC20 tokens |
+| `withdrawETH(address,uint256)` | Timelock | Withdraw ETH |
+| `getTokenBalance(address)` | Anyone | Get token balance |
+
+### DaoStaking
+
+Manages PlatformToken staking for governance.
+
+| Function | Access | Description |
+|---|---|---|
+| `stake(uint256)` | Anyone | Stake tokens |
+| `unstake(uint256)` | Anyone | Unstake tokens |
+| `lock(address,uint256)` | Governance | Lock user's stake |
+| `calculatePendingRewards(address)` | Anyone | Calculate pending rewards |
+| `getAvailableRewards()` | Anyone | Get available rewards |
+| `getVotingPower(address)` | Anyone | Get voting power |
+| `getTotalVotingPower()` | Anyone | Get total voting power |
+
+## Platform Contracts
+
+### PlatformToken
+
+Upgradeable ERC20 for staking and governance.
+
+| Function | Access | Description |
+|---|---|---|
+| `mint(address[],uint256[])` | Governance | Mint tokens to multiple addresses |
+
+### ReferralTreasury
+
+Manages referral rewards with multi-signature withdrawal.
+
+| Function | Access | Description |
+|---|---|---|
+| `withdraw(address,uint256,uint256,address[],bytes[])` | Anyone + signatures | Withdraw rewards |
+| `emergencyWithdraw(address,address,uint256)` | Governance | Emergency withdrawal |
+
+## UpgradeableContract
+
+Base contract for all upgradeable contracts (UUPS pattern).
+
+| Function | Access | Description |
+|---|---|---|
+| `upgradeTo(address)` | UpgradeRole | Upgrade implementation |
+| `upgradeToAndCall(address,bytes)` | UpgradeRole | Upgrade and call |
+| `uniqueContractId()` | Anyone | Get contract identifier |
+| `implementationVersion()` | Anyone | Get version number |

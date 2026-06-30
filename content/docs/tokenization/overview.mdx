@@ -1,0 +1,54 @@
+---
+title: Tokenization Overview
+description: What tokenization means on Slices and how assets become on-chain instruments
+---
+
+# Tokenization Overview
+
+Tokenization is the process of creating a digital representation of a real-world asset on the blockchain. On Slices, this is done through the **RWA (Real World Asset)** token contract.
+
+## What Can Be Tokenized
+
+The platform supports various business types:
+
+- **Growth** — established businesses seeking expansion capital
+- **Startup** — early-stage ventures with growth potential
+- **Franchise** — franchise operations looking to fund new locations
+
+Each business undergoes AI-based risk evaluation, then deploys an RWA token contract.
+
+## Token Standard: ERC1155
+
+RWA tokens use the **ERC1155** multi-token standard. This means a single contract can manage multiple token IDs, each representing a different pool or funding round.
+
+Benefits of ERC1155:
+
+- **Batch operations** — mint, burn, and transfer multiple token types in a single transaction
+- **Supply tracking** — each token ID has its own total supply
+- **Metadata** — each token ID has a unique metadata URI
+- **Efficiency** — lower gas costs compared to deploying separate ERC20 contracts
+
+## Tokenization Flow
+
+```
+Business → AI Evaluation → RWA Contract Deployed → Pool Created → Tokens Minted
+```
+
+1. **Business creation** — the business registers on the platform
+2. **AI evaluation** — the AI evaluator analyzes the business and assigns a risk score
+3. **Multi-signature approval** — authorized signers review and approve the deployment
+4. **RWA deployment** — `Factory.deployRWA()` creates a new RWA token contract via ERC1967 proxy
+5. **Pool deployment** — `Factory.deployPool()` creates a pool linked to the RWA token
+6. **Token minting** — when participants contribute HOLD, the pool mints RWA tokens to them
+
+## Compliance Layer
+
+Each deployment requires multi-signature approval from authorized signers. This ensures that only verified businesses can tokenize assets on the platform. The AI evaluator provides an additional layer of risk assessment.
+
+## Token Lifecycle
+
+- **Creation** — token ID is created when a pool is deployed
+- **Minting** — tokens are minted to participants when they contribute HOLD
+- **Holding** — participants hold tokens representing their stake
+- **Burning** — tokens are burned when participants exit the pool
+- **Completion** — when all funds are returned, the pool is fully settled

@@ -1,0 +1,117 @@
+---
+title: Join a Pool
+description: Contribute HOLD tokens to a pool and receive tranche payments
+---
+
+# Join a Pool
+
+Participating in a pool means contributing HOLD tokens in exchange for RWA tokens that represent your stake. The pool's AMM determines the exchange rate, and tranches automate the flow of returns back to you.
+
+## Find a Pool
+
+Browse available pools on the platform. Each pool shows:
+
+- **Business name and description** — who is raising funds
+- **Risk score** — AI-evaluated risk level
+- **Pool parameters** — target amount, current progress, fees
+- **Tranche schedule** — expected return timeline
+- **Charts** — price history and volume data
+
+You can also [query pools](/docs/api/rwa/pools/get-pools) via GraphQL with filters (e.g. by business, risk score, or deployment status).
+
+## Review Tranches
+
+Before contributing, review the pool's tranche structure — see [Tranches & Distributions](/docs/pools/tranches) for the full mechanics:
+
+- **Outgoing tranches** — when the business will claim funds (affects pool reserves)
+- **Incoming tranches** — when the business is expected to return funds
+- **Bonus** — additional rewards if the business exceeds its obligations
+
+## Contribute
+
+To contribute, call `Pool.mint()` on-chain:
+
+```solidity
+function mint(
+    uint256 rwaAmount,      // How many RWA tokens you want
+    uint256 maxHoldAmount,  // Maximum HOLD you're willing to spend
+    uint256 validUntil,     // Transaction deadline
+    bool allowPartial       // Accept partial fill if supply is limited
+) external nonReentrant
+```
+
+The pool calculates the cost using the AMM formula:
+
+```
+holdAmount = (k / (virtualRwaReserve - rwaAmount)) - (virtualHoldReserve + realHoldReserve)
+fee = holdAmount × entryFeePercent / 10000
+totalCost = holdAmount + fee
+```
+
+You need to approve the HOLD tokens first, then call `mint`:
+
+```javascript
+// Estimate cost first
+const [holdAmountWithFee, fee, actualRwaAmount] = await pool.estimateMint(
+  rwaAmount,    // how many RWA tokens you want
+  true          // allowPartial
+);
+
+// Approve HOLD for pool
+await holdToken.approve(poolAddress, holdAmountWithFee);
+
+// Mint
+const tx = await pool.mint(
+  rwaAmount,           // desired RWA amount
+  holdAmountWithFee,   // max HOLD to spend
+  Math.floor(Date.now() / 1000) + 600,  // validUntil (10 min)
+  true                 // allowPartial
+);
+await tx.wait();
+```
+
+For the full function reference, see [Contract Reference — Pool](/docs/smart-contracts/contract-reference#pool).
+
+## Track Returns
+
+Monitor your position through the platform:
+
+- **[Portfolio balances](/docs/api/portfolio/get-balances)** — view your RWA token balances across all pools
+- **[Portfolio transactions](/docs/api/portfolio/get-transactions)** — view your mint/burn history
+- **[Charts](/docs/charts/overview)** — track price movements and pool volume
+
+## Exit the Pool
+
+To exit, call `Pool.burn()`:
+
+```solidity
+function burn(
+    uint256 rwaAmount,       // RWA tokens to burn
+    uint256 minHoldAmount,   // Minimum HOLD to accept
+    uint256 minBonusAmount,  // Minimum bonus to accept
+    uint256 validUntil       // Transaction deadline
+) external nonReentrant
+```
+
+```javascript
+// Estimate return
+const [holdAmount, holdFee, bonusAmount, bonusFee, eligibleRwa] =
+  await pool.estimateBurn(rwaAmount);
+
+// Burn
+const tx = await pool.burn(
+  rwaAmount,
+  holdAmount,     // min HOLD to receive
+  bonusAmount,    // min bonus to receive
+  Math.floor(Date.now() / 1000) + 600  // validUntil
+);
+await tx.wait();
+```
+
+You receive your proportional share of returned funds plus any available bonus, minus exit fees.
+
+## Learn More
+
+- [Trading Overview](/docs/trading/overview) — how the AMM works for buying and selling
+- [Pool Lifecycle](/docs/pools/lifecycle) — when you can burn and when bonuses unlock
+- [Tranches & Distributions](/docs/pools/tranches) — how returns are calculated

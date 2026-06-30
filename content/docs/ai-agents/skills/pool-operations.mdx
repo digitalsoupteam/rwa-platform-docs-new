@@ -1,0 +1,501 @@
+---
+title: Pool Operations
+description: Full lifecycle from company creation to pool maturity — on-chain and off-chain steps
+---
+
+# Pool Operations
+
+## Complete Lifecycle
+
+```
+Company → Business → AI Evaluation → Multi-sig Approval → RWA Deployed →
+Pool Created → Pool Configured → Multi-sig Approval → Pool Deployed →
+Entry Period → Target Reached → Trading + Tranches → Completion → Returns
+```
+
+---
+
+## Phase 1: Company & Business Setup (Off-Chain)
+
+### Create a Company
+
+```graphql
+mutation {
+  createCompany(input: {
+    name: "Acme Corp"
+    description: "Manufacturing company"
+    country: "US"
+    socials: [
+      { type: "webpage", url: "https://acme.com" }
+      { type: "twitter", url: "https://x.com/acme" }
+    ]
+  }) {
+    id name
+  }
+}
+```
+
+### Create a Business
+
+```graphql
+mutation {
+  createBusiness(input: {
+    name: "Acme Expansion Project"
+    ownerId: "company_id"        # Company ID
+    ownerType: "company"
+    chainId: "97"                # BSC Testnet
+    description: "Opening a new manufacturing facility"
+    tags: ["manufacturing", "expansion"]
+    country: "US"
+    businessType: "growth"       # growth | startup | franchise
+  }) {
+    id name ownerWallet
+  }
+}
+```
+
+### AI-Assisted Business Creation
+
+```graphql
+mutation {
+  createBusinessWithAI(input: {
+    description: "A coffee shop chain expanding to 3 new locations in Dubai"
+    ownerId: "company_id"
+    ownerType: "company"
+    chainId: "97"
+  }) {
+    id name description businessType
+  }
+}
+```
+
+The AI generates name, tags, business type, and other metadata from the description.
+
+---
+
+## Phase 2: AI Risk Evaluation (Off-Chain)
+
+```graphql
+mutation {
+  updateBusinessRiskScore(id: "business_id") {
+    id riskScoreEvaluationProcess
+  }
+}
+```
+
+This triggers an **async** AI evaluation. Poll the business to check completion:
+
+```graphql
+query {
+  getBusiness(id: "business_id") {
+    riskScore          # 0-100 or null if still evaluating
+    riskScoreEvaluationProcess
+  }
+}
+```
+
+The evaluation analyzes business description, uploaded documents, and images. Results are available via:
+
+```graphql
+query {
+  getEvaluations(input: {
+    filter: { entityType: "business", parentId: "business_id" }
+    sort: { createdAt: "desc" }
+    limit: 1
+  }) {
+    id riskScore reasoning
+    factors { name impact detail }
+    modelUsed
+  }
+}
+```
+
+---
+
+## Phase 3: RWA Deployment (Off-Chain + On-Chain)
+
+### Step 1: Request Multi-Sig Approval
+
+```graphql
+mutation {
+  requestBusinessApprovalSignatures(input: {
+    id: "business_id"
+    ownerWallet: "0x..."       # Business owner's wallet
+    deployerWallet: "0x..."    # Who will call Factory.deployRWA()
+    createRWAFee: "100"        # Fee in HOLD (within Config range)
+  }) {
+    taskId
+  }
+}
+```
+
+### Step 2: Wait for Signers to Sign
+
+```graphql
+query {
+  getSignatureTask(input: { taskId: "task_id" }) {
+    completed
+    requiredSignatures
+    expired
+    signatures { signer signature }
+  }
+}
+```
+
+The backend coordinates with authorized signers off-chain. Each signer signs an EIP-712 message hash. Poll until `completed = true`.
+
+### Step 3: Deploy RWA Contract On-Chain
+
+The deployer calls `Factory.deployRWA()` with collected signatures:
+
+```javascript
+const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, wallet);
+
+// Approve HOLD for fee
+await holdToken.approve(FACTORY_ADDRESS, feeAmount);
+
+// Deploy
+const tx = await factory.deployRWA(
+  createRWAFee,        // "100"
+  businessId,          // entityId (from backend)
+  companyId,           // entityOwnerId
+  "company",           // entityOwnerType
+  ownerWallet,         // business owner address
+  signers,             // addresses from signature task
+  signatures,          // signature bytes from task
+  expired              // expiration from task
+);
+await tx.wait();
+```
+
+### Step 4: Backend Indexes Deployment
+
+After the on-chain `RWA_Deployed` event is indexed, the backend updates `business.tokenAddress`:
+
+```graphql
+query {
+  getBusiness(id: "business_id") {
+    tokenAddress    # Now populated with RWA contract address
+  }
+}
+```
+
+---
+
+## Phase 4: Pool Creation & Configuration (Off-Chain)
+
+### Create Pool
+
+```graphql
+mutation {
+  createPool(input: {
+    name: "Acme Expansion Pool"
+    businessId: "business_id"
+  }) {
+    id rwaAddress   # rwaAddress comes from business.tokenAddress
+  }
+}
+```
+
+### Configure Pool Parameters
+
+```graphql
+mutation {
+  editPool(input: {
+    id: "pool_id"
+    updateData: {
+      name: "Acme Expansion Pool"
+      entryFeePercent: "100"          # 1%
+      exitFeePercent: "50"            # 0.5%
+      expectedHoldAmount: "10000000000000000000000"  # 10,000 HOLD (in wei)
+      expectedRwaAmount: "100000"     # 100,000 RWA tokens
+      rewardPercent: "2000"           # 20% bonus
+      entryPeriodStart: 1700000000
+      entryPeriodExpired: 1702592000  # 30 days entry
+      completionPeriodExpired: 1707763200  # 60 days completion
+      awaitCompletionExpired: true
+      floatingOutTranchesTimestamps: true
+      fixedSell: true
+      allowEntryBurn: false
+      priceImpactPercent: "200"       # 2%
+      outgoingTranches: [
+        { amount: "2500000000000000000000", timestamp: 1703196800, executedAmount: "0" }
+        { amount: "2500000000000000000000", timestamp: 1705702400, executedAmount: "0" }
+        { amount: "2500000000000000000000", timestamp: 1708121600, executedAmount: "0" }
+        { amount: "2500000000000000000000", timestamp: 1710540800, executedAmount: "0" }
+      ]
+      incomingTranches: [
+        { amount: "3000000000000000000000", expiredAt: 1710540800, returnedAmount: "0" }
+        { amount: "3000000000000000000000", expiredAt: 1715712000, returnedAmount: "0" }
+        { amount: "3000000000000000000000", expiredAt: 1720883200, returnedAmount: "0" }
+        { amount: "3000000000000000000000", expiredAt: 1726054400, returnedAmount: "0" }
+      ]
+      description: "Funding for 3 new manufacturing locations"
+      tags: ["manufacturing", "expansion"]
+    }
+  }) {
+    id name
+  }
+}
+```
+
+**Validation rules** (enforced by `Factory.deployPool()` on-chain):
+- `outgoingTranches` total must equal `expectedHoldAmount`
+- `incomingTranches` total must equal `expectedHoldAmount + (expectedHoldAmount × rewardPercent / 10000)`
+- First outgoing tranche timestamp must be after `entryPeriodExpired`
+- Last incoming tranche expiration must be before `completionPeriodExpired`
+- All amounts, fees, periods must be within Config ranges
+
+---
+
+## Phase 5: Pool Deployment (Off-Chain + On-Chain)
+
+Same multi-sig flow as RWA deployment:
+
+### Step 1: Request Approval
+
+```graphql
+mutation {
+  requestPoolApprovalSignatures(input: {
+    id: "pool_id"
+    ownerWallet: "0x..."
+    deployerWallet: "0x..."
+    createPoolFeeRatio: "100"   # basis points
+  }) {
+    taskId
+  }
+}
+```
+
+### Step 2: Collect Signatures
+
+Poll `getSignatureTask` until `completed = true`.
+
+### Step 3: Deploy On-Chain
+
+```javascript
+const tx = await factory.deployPool(
+  createPoolFeeRatio,
+  poolId,                    // entityId
+  rwaContract,               // RWA address
+  expectedHoldAmount,
+  expectedRwaAmount,
+  priceImpactPercent,
+  rewardPercent,
+  entryPeriodStart,
+  entryPeriodExpired,
+  completionPeriodExpired,
+  entryFeePercent,
+  exitFeePercent,
+  fixedSell,
+  allowEntryBurn,
+  awaitCompletionExpired,
+  floatingOutTranchesTimestamps,
+  outgoingTranches,          // uint256[] amounts
+  outgoingTranchTimestamps,  // uint256[] timestamps
+  incomingTranches,          // uint256[] amounts
+  incomingTrancheExpired,    // uint256[] deadlines
+  signers,
+  signatures,
+  expired
+);
+await tx.wait();
+```
+
+### Step 4: Verify via Subscription
+
+```graphql
+subscription {
+  poolDeployed {
+    id poolAddress name
+  }
+}
+```
+
+Or poll the pool:
+
+```graphql
+query {
+  getPool(id: "pool_id") {
+    poolAddress    # Now populated
+    isTargetReached
+  }
+}
+```
+
+---
+
+## Phase 6: Trading (On-Chain)
+
+### Buy RWA Tokens (Mint)
+
+```javascript
+// Estimate cost first
+const [holdAmountWithFee, fee, actualRwaAmount] = await pool.estimateMint(
+  rwaAmount,    // how many RWA tokens you want
+  true          // allowPartial
+);
+
+// Approve HOLD for pool
+await holdToken.approve(poolAddress, holdAmountWithFee);
+
+// Mint
+const tx = await pool.mint(
+  rwaAmount,           // desired RWA amount
+  holdAmountWithFee,   // max HOLD to spend
+  Math.floor(Date.now() / 1000) + 600,  // validUntil (10 min)
+  true                 // allowPartial
+);
+await tx.wait();
+```
+
+### Sell RWA Tokens (Burn)
+
+```javascript
+// Estimate return
+const [holdAmount, holdFee, bonusAmount, bonusFee, eligibleRwa] =
+  await pool.estimateBurn(rwaAmount);
+
+// Burn
+const tx = await pool.burn(
+  rwaAmount,
+  holdAmount,     // min HOLD to receive
+  bonusAmount,    // min bonus to receive
+  Math.floor(Date.now() / 1000) + 600  // validUntil
+);
+await tx.wait();
+```
+
+### AMM Price Formula
+
+```
+k = virtualHoldReserve × virtualRwaReserve
+
+# Buy (mint):
+holdAmount = (k / (virtualRwaReserve - rwaAmount)) - (virtualHoldReserve + realHoldReserve)
+fee = holdAmount × entryFeePercent / 10000
+totalCost = holdAmount + fee
+
+# Sell (burn):
+totalHoldOut = (virtualHoldReserve + realHoldReserve) - (k / (virtualRwaReserve + rwaAmount))
+holdFee = totalHoldOut × exitFeePercent / 10000
+```
+
+### Check Pool State
+
+```javascript
+const isTargetReached = await pool.isTargetReached();
+const isFullyReturned = await pool.isFullyReturned();
+const bonusesUnlocked = await pool.checkBonusesUnlocked();
+const [amounts, timestamps, states] = await pool.getOutgoingTranches();
+const [incAmounts, incExpired, incStates] = await pool.getIncomingTranches();
+```
+
+---
+
+## Phase 7: Tranche Distribution (On-Chain)
+
+### Business Owner: Claim Outgoing Tranches
+
+```javascript
+// Only pool owner can claim
+// Tranche must be reached (timestamp passed)
+// Tranche must not be already claimed
+const tx = await pool.claimOutgoingTranches([0, 1]);  // claim tranches 0 and 1
+await tx.wait();
+```
+
+### Business: Return Incoming Tranches
+
+```javascript
+// Anyone can call this — typically the business owner
+// Approve HOLD first
+await holdToken.approve(poolAddress, amount);
+
+const tx = await pool.returnIncomingTranche(amount);
+await tx.wait();
+```
+
+Funds are allocated:
+1. **Debt repayment** — first goes toward `expectedHoldAmount`
+2. **Bonus accumulation** — excess goes to `awaitingBonusAmount`
+
+When `totalReturnedAmount >= expectedHoldAmount + expectedBonusAmount`, the pool is fully returned.
+
+---
+
+## Phase 8: Bonus Distribution
+
+Bonuses unlock based on `awaitCompletionExpired` flag:
+
+- **If `true`** — bonuses unlock 1 day after `completionPeriodExpired`
+- **If `false` and `isFullyReturned`** — bonuses unlock 1 day after `fullReturnTimestamp`
+- **If `false` and not fully returned** — bonuses unlock 1 day after `completionPeriodExpired` (fallback)
+
+```javascript
+const unlockTimestamp = await pool.getBonusUnlockTimestamp();
+const unlocked = await pool.checkBonusesUnlocked();
+```
+
+When bonuses are unlocked, participants who burn RWA tokens receive a proportional share of `awaitingBonusAmount` in addition to the AMM HOLD output.
+
+---
+
+## Querying Pool Data (Off-Chain)
+
+### Pool Details
+
+```graphql
+query {
+  getPool(id: "pool_id") {
+    name description riskScore
+    poolAddress isTargetReached isFullyReturned
+    realHoldReserve virtualHoldReserve virtualRwaReserve
+    outgoingTranches { amount timestamp executedAmount }
+    incomingTranches { amount expiredAt returnedAmount }
+  }
+}
+```
+
+### Price Charts
+
+```graphql
+query {
+  getOhlcPriceData(input: {
+    poolAddress: "0x..."
+    interval: "1h"
+    startTime: 1700000000
+    endTime: 1707763200
+    limit: 100
+  }) {
+    timestamp open high low close
+  }
+}
+```
+
+### Pool Transactions
+
+```graphql
+query {
+  getPoolTransactions(input: {
+    filter: { poolAddress: { $eq: "0x..." } }
+    sort: { timestamp: "desc" }
+    limit: 20
+  }) {
+    transactionType userAddress rwaAmount holdAmount bonusAmount
+    timestamp
+  }
+}
+```
+
+### Portfolio
+
+```graphql
+query {
+  getBalances(input: {
+    filter: { owner: { $eq: "0x..." } }
+  }) {
+    tokenAddress tokenId poolAddress balance
+  }
+}
+```

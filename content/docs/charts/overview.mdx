@@ -1,0 +1,93 @@
+---
+title: Charts & Real-Time Data
+description: Price charts, OHLC data, volume, and real-time WebSocket updates for RWA pools
+---
+
+# Charts & Real-Time Data
+
+The Slices platform provides comprehensive charting data for RWA pools, including historical price data, OHLC candles, volume tracking, and real-time updates via WebSocket subscriptions.
+
+## Price Data
+
+Every time a pool's reserves change (mint, burn, or return), the price is recorded:
+
+```
+price = (virtualHoldReserve + realHoldReserve) / virtualRwaReserve
+```
+
+Each price data point includes:
+- **Pool address** — which pool
+- **Timestamp** — when the trade occurred
+- **Block number** — on-chain block
+- **Reserves** — `realHoldReserve`, `virtualHoldReserve`, `virtualRwaReserve`
+- **Price** — calculated price
+
+## Historical Data
+
+### Raw Price Data
+
+[Query historical price points](/docs/api/charts/get-raw-price-data) for a pool — returns timestamp, price, and reserve snapshots. Filter by time range, sort ascending or descending, with pagination.
+
+### OHLC (Candlestick) Data
+
+[Get OHLC data](/docs/api/charts/get-ohlc-price-data) — aggregated open, high, low, close prices over configurable intervals:
+
+| Interval | Description |
+|----------|-------------|
+| `1m` | 1 minute |
+| `5m` | 5 minutes |
+| `15m` | 15 minutes |
+| `30m` | 30 minutes |
+| `1h` | 1 hour |
+| `2h` | 2 hours |
+| `4h` | 4 hours |
+| `6h` | 6 hours |
+| `12h` | 12 hours |
+| `1d` | 1 day |
+| `1w` | 1 week |
+
+### Volume Data
+
+[Track mint and burn volumes](/docs/api/charts/get-volume-data) over time — each data point includes mint volume, burn volume, and total volume for the period.
+
+### Pool Transactions
+
+[View all transactions](/docs/api/charts/get-pool-transactions) for a specific pool — each record shows transaction type (mint/burn), user address, RWA amount, HOLD amount, bonus amount, and timestamp.
+
+## Real-Time Updates
+
+The platform provides real-time updates via WebSocket subscriptions:
+
+| Subscription | Description |
+|---|---|
+| [`priceUpdates(poolAddress)`](/docs/api/charts/price-updates) | Notified when the pool's price changes — includes pool address, timestamp, price, and reserve snapshot |
+| [`transactionUpdates(poolAddress)`](/docs/api/charts/transaction-updates) | Notified when a mint or burn occurs — includes pool address, timestamp, transaction type, user, amounts, and fees |
+
+These subscriptions allow the frontend and external integrations to receive live data without polling.
+
+## Data Flow
+
+```
+On-Chain Event (mint/burn/return)
+        │
+        ▼
+Indexer (listens to events)
+        │
+        ▼
+Charts Service (records price data)
+        │
+        ├──► MongoDB (historical storage)
+        │
+        └──► Redis Pub/Sub (real-time updates)
+                │
+                ▼
+        Frontend / API Consumers
+```
+
+## Use Cases
+
+- **Price charts** — visualize pool price history with candlestick charts
+- **Volume analysis** — track trading activity over time
+- **Portfolio tracking** — monitor your positions in real-time
+- **Alert systems** — get notified when price reaches a threshold
+- **Market analysis** — compare pool performance across the platform

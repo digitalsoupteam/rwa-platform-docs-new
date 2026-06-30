@@ -1,0 +1,10 @@
+{
+  "title": "Webhooks",
+  "pages": [
+    "get-webhook-endpoints",
+    "get-webhook-endpoint",
+    "create-webhook-endpoint",
+    "update-webhook-endpoint",
+    "delete-webhook-endpoint"
+  ]
+}

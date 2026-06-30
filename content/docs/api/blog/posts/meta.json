@@ -1,0 +1,10 @@
+{
+  "title": "Posts",
+  "pages": [
+    "get-post",
+    "get-posts",
+    "create-post",
+    "update-post",
+    "delete-post"
+  ]
+}

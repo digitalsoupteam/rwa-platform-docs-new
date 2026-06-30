@@ -1,0 +1,377 @@
+---
+title: Data Model
+description: Slices platform data model — entity types, fields, and relationships from the real GraphQL schema
+---
+
+# Data Model
+
+All types below are from the actual GraphQL schema (`schema.graphql`) and on-chain contracts.
+
+## Core Entities
+
+### Business
+
+A tokenizable business entity owned by a company.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `ID!` | Unique identifier |
+| `chainId` | `String!` | Blockchain ID ("97" for BSC Testnet) |
+| `name` | `String!` | Business name |
+| `ownerId` | `String!` | Company ID that owns this business |
+| `ownerType` | `String!` | Always `"company"` |
+| `ownerWallet` | `String` | Business owner's wallet address |
+| `tokenAddress` | `String` | RWA contract address (set after on-chain deployment) |
+| `description` | `String` | Business description |
+| `tags` | `[String!]` | Categorization tags |
+| `riskScore` | `Int` | AI-evaluated risk score (0-100, null if not yet evaluated) |
+| `image` | `String` | Profile image URL |
+| `approvalSignaturesTaskId` | `String` | Multi-sig task ID for RWA deployment approval |
+| `approvalSignaturesTaskExpired` | `Float` | Approval task expiration timestamp |
+| `riskScoreEvaluationProcess` | `Boolean!` | True if AI evaluation is in progress |
+| `country` | `String` | ISO 3166-1 alpha-2 country code |
+| `businessType` | `String` | `growth` \| `startup` \| `franchise` |
+| `socials` | `[SocialLink!]!` | Social media links `{ type, url }` |
+| `paused` | `Boolean!` | True if RWA contract is paused on-chain |
+| `createdAt` | `Float!` | Creation timestamp |
+| `updatedAt` | `Float!` | Last update timestamp |
+
+### Pool
+
+A crowdfunding pool linked to a business. Has on-chain contract state (synced from events).
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `ID!` | Unique identifier |
+| `ownerId` | `String!` | Company ID |
+| `ownerType` | `String!` | `"company"` |
+| `ownerWallet` | `String` | Pool owner's wallet |
+| `name` | `String!` | Pool name |
+| `businessId` | `String!` | Parent business ID |
+| `description` | `String` | Pool description |
+| `chainId` | `String!` | Blockchain ID |
+| `tags` | `[String!]` | Categorization tags |
+| `riskScore` | `Int` | AI-evaluated risk score (0-100) |
+| `image` | `String` | Pool image URL |
+| **Contract Addresses** | | |
+| `rwaAddress` | `String!` | RWA ERC1155 contract address |
+| `poolAddress` | `String` | Pool contract address (null until deployed on-chain) |
+| `holdToken` | `String` | HOLD token address |
+| `tokenId` | `String` | RWA token ID within the RWA contract |
+| **Configuration** | | |
+| `entryFeePercent` | `String` | Entry fee in basis points |
+| `exitFeePercent` | `String` | Exit fee in basis points |
+| `expectedHoldAmount` | `String` | Funding target (in wei) |
+| `expectedRwaAmount` | `String` | Total RWA tokens to mint |
+| `expectedBonusAmount` | `String` | Expected bonus (expectedHold × rewardPercent) |
+| `rewardPercent` | `String` | Bonus rate in basis points |
+| `priceImpactPercent` | `String` | AMM price impact parameter |
+| `liquidityCoefficient` | `String` | AMM liquidity multiplier |
+| **Flags** | | |
+| `awaitCompletionExpired` | `Boolean!` | Bonus unlock timing mode |
+| `floatingOutTranchesTimestamps` | `Boolean!` | Float outgoing tranche timestamps if target reached early |
+| `fixedSell` | `Boolean!` | Fixed RWA supply cap |
+| `allowEntryBurn` | `Boolean!` | Allow burning during entry period |
+| `paused` | `Boolean!` | Pool paused on-chain |
+| **Time Periods** | | |
+| `entryPeriodStart` | `Float` | Entry period start timestamp |
+| `entryPeriodExpired` | `Float` | Entry period end timestamp |
+| `completionPeriodExpired` | `Float` | Completion deadline |
+| `floatingTimestampOffset` | `Float!` | Offset applied to outgoing tranche timestamps |
+| `fullReturnTimestamp` | `Float` | When all funds were returned |
+| **AMM State** | | |
+| `k` | `String` | Constant product (virtualHold × virtualRwa) |
+| `realHoldReserve` | `String` | Actual HOLD in pool |
+| `virtualHoldReserve` | `String` | Virtual HOLD for AMM |
+| `virtualRwaReserve` | `String` | Virtual RWA for AMM |
+| `isTargetReached` | `Boolean!` | Funding target reached |
+| `isFullyReturned` | `Boolean!` | All funds returned to pool |
+| **Amounts** | | |
+| `totalClaimedAmount` | `String` | Total HOLD claimed by business owner |
+| `totalReturnedAmount` | `String` | Total HOLD returned by business |
+| `awaitingBonusAmount` | `String` | Bonus HOLD awaiting participant claims |
+| `awaitingRwaAmount` | `String` | RWA tokens minted so far |
+| `outgoingTranchesBalance` | `String` | HOLD available for outgoing tranche claims |
+| **Tranches** | | |
+| `outgoingTranches` | `[OutgoingTranche!]!` | Payments to business owner |
+| `incomingTranches` | `[IncomingTranche!]!` | Expected returns from business |
+| `lastCompletedIncomingTranche` | `Int!` | Index of last fully returned incoming tranche |
+| **Approval & Evaluation** | | |
+| `approvalSignaturesTaskId` | `String` | Multi-sig task ID |
+| `approvalSignaturesTaskExpired` | `Float` | Task expiration |
+| `riskScoreEvaluationProcess` | `Boolean!` | AI evaluation in progress |
+| `createdAt` | `Float!` | Creation timestamp |
+| `updatedAt` | `Float!` | Last update timestamp |
+
+### OutgoingTranche
+
+```graphql
+type OutgoingTranche {
+  amount: String!         # HOLD to distribute
+  timestamp: Float!       # When it becomes claimable
+  executedAmount: String! # Claimed amount (0 = unclaimed)
+}
+```
+
+### IncomingTranche
+
+```graphql
+type IncomingTranche {
+  amount: String!       # Expected return
+  expiredAt: Float!     # Deadline
+  returnedAmount: String! # Returned so far
+}
+```
+
+---
+
+## Company
+
+```graphql
+type Company {
+  id: ID!
+  name: String!
+  description: String!
+  ownerId: String!       # User ID of creator
+  country: String
+  socials: [SocialLink!]!
+  createdAt: Int!
+  updatedAt: Int!
+}
+
+type CompanyWithDetails {
+  id, name, description, ownerId, country, socials
+  users: [UserWithPermissions!]!  # Members with their permissions
+}
+
+type Member { id, userId, name, createdAt, updatedAt }
+type UserPermission { id, permission: String!, entity: String }
+type Permission { id, permission, entity, createdAt, updatedAt }
+```
+
+---
+
+## Evaluation
+
+AI risk assessment result.
+
+```graphql
+type Evaluation {
+  id: ID!
+  entityType: EvaluationEntityType!  # business | pool
+  parentId: String!       # Business or pool ID
+  grandParentId: String!  # Company ID
+  ownerId: String!
+  ownerType: String!
+  status: String!
+  riskScore: Int          # 0-100
+  reasoning: String       # AI-generated explanation
+  factors: [EvaluationFactor!]!
+  stage1Response: String  # Raw AI stage 1 (document/image analysis)
+  stage2Response: String  # Raw AI stage 2 (risk scoring)
+  evaluatedDocuments: [EvaluationDocumentRef!]!
+  evaluatedImages: [EvaluationImageRef!]!
+  modelUsed: String
+  createdAt: Float!
+  updatedAt: Float!
+}
+
+type EvaluationFactor {
+  name: String!
+  impact: String!   # positive | negative | neutral
+  detail: String!
+}
+```
+
+---
+
+## Portfolio
+
+```graphql
+type TokenBalance {
+  id: String!
+  owner: String!          # Wallet address
+  tokenAddress: String!   # RWA contract address
+  tokenId: String!        # RWA token ID
+  poolAddress: String!
+  chainId: String!
+  balance: Int!           # RWA token balance
+  lastUpdateBlock: Int!
+  createdAt: Int!
+  updatedAt: Int!
+}
+
+type Transaction {
+  id: String!
+  from: String!
+  to: String!
+  tokenAddress: String!
+  tokenId: String!
+  poolAddress: String!
+  chainId: String!
+  transactionHash: String!
+  blockNumber: Int!
+  amount: Int!
+  createdAt: Int!
+  updatedAt: Int!
+}
+```
+
+---
+
+## DAO (Indexed On-Chain Data)
+
+```graphql
+type Staking {
+  id, staker: String!, amount: String!
+  lastStakeTimestamp: Float!, chainId: String!
+}
+
+type StakingHistory {
+  id, staker, amount, operation: String!  # "stake" | "unstake"
+  chainId, transactionHash, logIndex: Float!
+}
+
+type Proposal {
+  id, proposalId: String!, proposer: String!
+  target: String!, data: String!, description: String!
+  startTime: Float!, endTime: Float!
+  state: String!  # active | executed | cancelled
+  chainId, transactionHash, logIndex: Float!
+}
+
+type Vote {
+  id, proposalId: String!, chainId, governanceAddress: String!
+  voterWallet: String!, support: Boolean!, weight: String!
+  reason: String!, transactionHash, logIndex: Float!, blockNumber: Float!
+}
+
+type TimelockTask {
+  id, txHash: String!, target: String!, data: String!
+  eta: Float!, executed: Boolean!, chainId: String!
+}
+
+type TreasuryWithdraw {
+  id, recipient: String!, token: String!, amount: String!
+  chainId, transactionHash, logIndex: Float!
+}
+```
+
+---
+
+## Charts
+
+```graphql
+type PriceData {
+  id, poolAddress: String!, timestamp: Float!, blockNumber: Float!
+  realHoldReserve: String!, virtualHoldReserve: String!, virtualRwaReserve: String!
+  price: String!
+}
+
+type OhlcData {
+  timestamp: Float!, open: String!, high: String!, low: String!, close: String!
+}
+
+type VolumeData {
+  timestamp: Float!, mintVolume: String!, burnVolume: String!
+}
+
+type PoolTransaction {
+  id, poolAddress: String!, transactionType: String!  # "MINT" | "BURN"
+  userAddress: String!, timestamp: Float!
+  rwaAmount: String!, holdAmount: String!, bonusAmount: String!
+  holdFee: String!, bonusFee: String!
+}
+```
+
+---
+
+## Loyalty
+
+```graphql
+type Fees {
+  id, userWallet, userId, chainId, tokenAddress
+  buyCommissionAmount, sellCommissionAmount
+  tokenCreationCommissionAmount, poolCreationCommissionAmount
+  referralRewardAmount: String!
+  buyCommissionCount, sellCommissionCount
+  tokenCreationCommissionCount, poolCreationCommissionCount
+  referralRewardCount: Int!
+}
+
+type Referral {
+  id, userWallet, userId, referrerWallet, referrerId
+}
+
+type ReferrerWithdraw {
+  id, referrerWallet, referrerId, chainId, tokenAddress
+  totalWithdrawnAmount: String!
+  taskId: String        # Multi-sig withdrawal task
+  taskExpiredAt: Float
+  taskCooldown: Float
+}
+
+type ReferrerClaimHistory {
+  id, referrerWallet, referrerId, referralWallet
+  chainId, tokenAddress, amount: String!
+  transactionHash, logIndex: Int!, blockNumber: Int!
+}
+```
+
+---
+
+## Auxiliary Content Entities
+
+All content types follow the same pattern: owned by a company, attached to a business or pool via `parentId` + `parentType`.
+
+| Entity | Parent | Key Fields |
+|---|---|---|
+| **Folder** | business/pool | `name, parentId, type` |
+| **Document** | folder | `folderId, name, fileId, path, url, mimeType, size` |
+| **Gallery** | business/pool/user | `name, parentId, type` |
+| **Image** | gallery | `galleryId, name, description, fileId, path, url, mimeType, size` |
+| **Blog** | business/pool | `name, parentId, type` |
+| **Post** | blog | `blogId, title, content, images[], documents[]` |
+| **FaqTopic** | business/pool | `name, parentId, type` |
+| **FaqAnswer** | faq topic | `topicId, question, answer, order` |
+| **Topic** (Q&A) | business/pool | `name, parentId, type` |
+| **Question** | topic | `topicId, text, answer { text, userId }, answered, likesCount` |
+| **Reaction** | any entity | `parentId, parentType, userId, reaction` |
+
+---
+
+## Enums
+
+| Enum | Values |
+|---|---|
+| `BusinessOwnerType` | `company` |
+| `BusinessType` | `growth`, `startup`, `franchise` |
+| `EvaluationEntityType` | `business`, `pool` |
+| `FaucetTokenType` | `gas`, `hold`, `platform` |
+| `ReactionType` | `like`, `dislike`, `love`, `angry`, `sad`, `wow`, `haha` |
+| `ParentTypes` (documents/questions) | `business`, `pool` |
+| `GalleryParentTypes` | `business`, `pool`, `user` |
+| `BlogParentTypes` | `business`, `pool` |
+| `FaqParentTypes` | `business`, `pool` |
+| `ParentType` (reactions) | `post`, `business`, `pool`, `blog`, `company`, `document`, `image` |
+| `AssistantContext` | `investor_base`, `product_owner_base`, `popular_pools`, `user_portfolio` |
+
+---
+
+## Relationships
+
+```
+Company 1──* Business
+Company 1──* Member 1──* Permission
+Business 1──1 RWA Contract (on-chain, via Factory.deployRWA)
+Business 1──* Pool
+Pool 1──* OutgoingTranche
+Pool 1──* IncomingTranche
+Business/Pool 1──* Folder 1──* Document
+Business/Pool 1──* Gallery 1──* Image
+Business/Pool 1──* Blog 1──* Post
+Business/Pool 1──* FaqTopic 1──* FaqAnswer
+Business/Pool 1──* Topic (Q&A) 1──* Question
+Business/Pool 1──* Reaction
+Business/Pool 1──* Evaluation (AI risk score)
+```

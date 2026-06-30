@@ -1,0 +1,68 @@
+---
+title: Order Matching
+description: How the AMM matches and executes trades
+---
+
+# Order Matching
+
+Unlike traditional order book exchanges, Slices uses an Automated Market Maker (AMM) for all trading. There is no order matching — every trade executes instantly against the pool's reserves.
+
+## How the AMM Works
+
+The AMM uses the constant product formula:
+
+```
+k = virtualHoldReserve × virtualRwaReserve
+```
+
+When you buy RWA tokens, the pool's virtual RWA reserve decreases and the virtual HOLD reserve increases (plus the real HOLD reserve). The constant `k` ensures that the product of the two virtual reserves always remains the same.
+
+### Worked Example: Buy
+
+If `virtualHoldReserve = 200,000`, `virtualRwaReserve = 100,000`, and you buy 1,000 RWA:
+
+```
+newVirtualRwaReserve = 100,000 - 1,000 = 99,000
+newVirtualHoldReserve = k / 99,000 = 200,000 × 100,000 / 99,000 ≈ 202,020
+holdAmount = 202,020 - 200,000 = 2,020 HOLD
+```
+
+So buying 1,000 RWA tokens costs 2,020 HOLD at this price level.
+
+## Price Impact
+
+The `priceImpactPercent` parameter determines how much the price moves per trade. Combined with the `liquidityCoefficient`, it controls the depth of the virtual reserves. Higher liquidity coefficients mean larger virtual reserves, which dampen price movements for the same trade size.
+
+## Slippage Protection
+
+Both `mint()` and `burn()` include slippage protection parameters:
+
+- **`maxHoldAmount`** — the maximum HOLD you're willing to spend (for minting)
+- **`minHoldAmount`** — the minimum HOLD you're willing to receive (for burning)
+- **`validUntil`** — a deadline timestamp to prevent stale transactions
+
+If the actual price moves beyond your tolerance, the transaction reverts.
+
+## Fees
+
+Trading fees are applied to both mint and burn operations:
+
+- **Entry fee** — a percentage of the HOLD amount paid when minting (configured in basis points)
+- **Exit fee** — a percentage of the HOLD amount received when burning (configured in basis points)
+
+Fees are sent to the Treasury contract and are controlled by Governance.
+
+## Real-Time Updates
+
+You can subscribe to real-time trading events via WebSocket:
+
+- **[`priceUpdates(poolAddress)`](/docs/api/charts/price-updates)** — notified when the pool's price changes
+- **[`transactionUpdates(poolAddress)`](/docs/api/charts/transaction-updates)** — notified when a mint or burn occurs
+
+Each event includes the pool address, timestamp, and relevant state changes.
+
+## Learn More
+
+- [Secondary Market Overview](/docs/trading/overview) — high-level overview of trading
+- [Join a Pool](/docs/pools/join-pool) — full code examples for mint and burn
+- [Charts & Real-Time Data](/docs/charts/overview) — historical and real-time market data

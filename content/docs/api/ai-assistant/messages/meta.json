@@ -1,0 +1,10 @@
+{
+  "title": "Messages",
+  "pages": [
+    "get-message",
+    "get-message-history",
+    "create-message",
+    "update-message",
+    "delete-message"
+  ]
+}

@@ -1,0 +1,72 @@
+---
+title: Pool Overview
+description: What crowdfunding pools are and how they work
+---
+
+# Pool Overview
+
+A pool is the core crowdfunding mechanism on Slices. It connects businesses seeking capital with participants looking to support real-world assets. When you create a pool, you're deploying a smart contract that handles pricing, distributions, and returns automatically.
+
+## What is a Pool?
+
+A pool is a smart contract that:
+
+- **Accepts HOLD contributions** from participants
+- **Mints RWA tokens** in exchange for contributions
+- **Manages an AMM** for price discovery between HOLD and RWA
+- **Handles tranches** — automated distributions to the business and expected returns from the business
+- **Distributes bonuses** — additional rewards for participants when the business exceeds its obligations
+
+## Pool Configuration
+
+Each pool is configured with these parameters at deployment time. All parameters are validated against Config limits by the Factory contract — see [Launch a Pool](/docs/pools/launch-pool) for the full validation rules.
+
+| Parameter | Description |
+|---|---|
+| `expectedHoldAmount` | Funding target in HOLD tokens |
+| `expectedRwaAmount` | Total RWA tokens to be minted |
+| `rewardPercent` | Bonus rate (in basis points) |
+| `entryFeePercent` | Fee charged on contributions (basis points) |
+| `exitFeePercent` | Fee charged on exits (basis points) |
+| `priceImpactPercent` | AMM price impact parameter |
+| `liquidityCoefficient` | AMM liquidity multiplier |
+| `entryPeriodStart` | When contributions can begin |
+| `entryPeriodExpired` | When the entry period ends |
+| `completionPeriodExpired` | When the pool must be completed |
+
+For the full list of functions available on a deployed pool, see [Contract Reference — Pool](/docs/smart-contracts/contract-reference#pool).
+
+## Pool Flags
+
+Pools have several boolean flags that control behavior:
+
+- **`fixedSell`** — if true, the RWA supply is fixed and cannot be exceeded
+- **`allowEntryBurn`** — if true, participants can exit during the entry period
+- **`awaitCompletionExpired`** — determines when bonuses unlock (at completion expiry vs. 1 day after full return)
+- **`floatingOutTranchesTimestamps`** — if true, outgoing tranche timestamps float when target is reached early
+
+## Key Participants
+
+- **Business owner** — creates the pool, claims outgoing tranches, returns funds via incoming tranches
+- **Participants** — contribute HOLD, receive RWA tokens, earn returns
+- **Authorized signers** — approve pool deployment after due diligence
+- **Governance** — can pause pools in emergencies
+
+## AMM Mechanism
+
+The pool uses a constant product AMM (x × y = k) with virtual reserves:
+
+```
+virtualHoldReserve = expectedHoldAmount × liquidityCoefficient
+virtualRwaReserve = expectedRwaAmount × (liquidityCoefficient + 1)
+k = virtualHoldReserve × virtualRwaReserve
+```
+
+The AMM price adjusts based on supply and demand, with the virtual reserves providing price stability. When you buy RWA tokens, the price increases. When you sell, it decreases. See [Trading Overview](/docs/trading/overview) for details on buy/sell mechanics.
+
+## Learn More
+
+- [Launch a Pool](/docs/pools/launch-pool) — step-by-step guide to creating and deploying a pool
+- [Pool Lifecycle](/docs/pools/lifecycle) — every stage from creation to maturity
+- [Tranches & Distributions](/docs/pools/tranches) — how tranche payments work
+- [Join a Pool](/docs/pools/join-pool) — how participants contribute and exit

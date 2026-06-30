@@ -1,0 +1,10 @@
+{
+  "title": "Assistants",
+  "pages": [
+    "get-assistant",
+    "get-user-assistants",
+    "create-assistant",
+    "update-assistant",
+    "delete-assistant"
+  ]
+}

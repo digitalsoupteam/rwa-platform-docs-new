@@ -1,0 +1,149 @@
+---
+title: Launch a Pool
+description: Create a crowdfunding pool with automated tranches and returns
+---
+
+# Launch a Pool
+
+A pool is how a business raises capital on Slices. Participants contribute HOLD tokens and receive RWA tokens in return — the pool's AMM handles pricing, and tranches automate the flow of funds back to the business and to participants.
+
+Launching a pool is a two-phase process: first you configure the pool off-chain via the GraphQL API, then you deploy the pool contract on-chain via `Factory.deployPool()`. The on-chain deployment requires multi-signature approval and a fee paid in HOLD.
+
+## Prerequisites
+
+Before you can launch a pool, you need:
+
+- **A deployed RWA token contract** — created via `Factory.deployRWA()` (see [Token Creation](/docs/tokenization/token-creation))
+- **HOLD tokens** — to pay the pool creation fee, which is `expectedHoldAmount × createPoolFeeRatio / 10000`
+- **Multi-signature approval** — authorized signers must review and sign your pool parameters before deployment
+
+## How a Pool Is Structured
+
+A pool ties together several moving parts that work in concert:
+
+- **Funding target** (`expectedHoldAmount`) — the amount of HOLD the business aims to raise
+- **RWA supply** (`expectedRwaAmount`) — the number of RWA tokens participants will receive in exchange
+- **AMM parameters** — `priceImpactPercent` and `liquidityCoefficient` control the virtual reserves that determine the exchange rate between HOLD and RWA
+- **Tranches** — two schedules that automate fund distribution:
+  - **Outgoing tranches** — HOLD paid out to the business after the funding target is reached, each with a claimable timestamp
+  - **Incoming tranches** — expected returns from the business back to the pool, each with a deadline
+- **Fees** — `entryFeePercent` and `exitFeePercent` in basis points (100 = 1%), sent to the Treasury
+- **Flags** — behavioral switches: `fixedSell`, `allowEntryBurn`, `awaitCompletionExpired`, `floatingOutTranchesTimestamps`
+
+The key constraint is that outgoing tranches must sum to exactly `expectedHoldAmount`, and incoming tranches must sum to `expectedHoldAmount + (expectedHoldAmount × rewardPercent / 10000)`. The Factory enforces this on-chain.
+
+## Step 1: Configure Pool Parameters Off-Chain
+
+First, [create the pool](/docs/api/rwa/pools/create-pool) and link it to your business. This returns a pool ID and the RWA contract address.
+
+Then, [edit the pool](/docs/api/rwa/pools/edit-pool) to configure the full set of parameters: funding target, RWA supply, reward percent, fees, periods, AMM parameters, flags, and tranche schedules.
+
+### Understanding Tranches
+
+Tranches are what make a Slices pool more than a simple token sale — they automate the flow of funds on a schedule:
+
+- **Outgoing tranches** define when the business can claim funds. The first outgoing tranche timestamp must be after `entryPeriodExpired`. Each outgoing tranche has an `amount` and a `timestamp` when it becomes claimable. The business calls `Pool.claimOutgoingTranches(indexes)` to claim.
+
+- **Incoming tranches** define when the business is expected to return funds. Each has an `amount` and an `expiredAt` deadline. The last incoming tranche deadline must be before `completionPeriodExpired`. Anyone can call `Pool.returnIncomingTranche(amount)` — funds are allocated to debt repayment first, then to bonus accumulation.
+
+If `floatingOutTranchesTimestamps` is enabled and the funding target is reached early, outgoing tranche timestamps shift forward proportionally — so the business gets access to funds sooner.
+
+### Validation Rules (Enforced On-Chain)
+
+The Factory contract validates every parameter against Config limits at deployment time. If any check fails, the transaction reverts:
+
+- `expectedHoldAmount`, `expectedRwaAmount` — must be within Config ranges
+- `rewardPercent`, `entryFeePercent`, `exitFeePercent` — must be within Config ranges
+- `entryPeriodStart` — must be within the allowed past/future offset from `block.timestamp`
+- `entryPeriodStart < entryPeriodExpired < completionPeriodExpired`
+- Entry period and completion period durations — must be within Config min/max
+- Outgoing tranches: count, per-tranche percent, min interval, total = `expectedHoldAmount`
+- Incoming tranches: count, per-tranche percent, min interval, total = `expectedHoldAmount + bonus`
+- First outgoing tranche timestamp ≥ `entryPeriodExpired`
+- Last incoming tranche deadline ≤ `completionPeriodExpired`
+
+## Step 2: Request Multi-Signature Approval
+
+Once the pool is configured, [request approval signatures](/docs/api/rwa/pools/request-pool-approval-signatures) from authorized signers. This creates a signature task that the backend coordinates with authorized signers off-chain.
+
+Each signer reviews the pool parameters and signs an EIP-712 message hash. [Check the task status](/docs/api/signers-manager/get-signature-task) and poll until enough signatures are collected (`completed = true`).
+
+See [Signers Manager](/docs/signers-manager/overview) for the full multi-sig flow.
+
+## Step 3: Deploy the Pool Contract On-Chain
+
+Once you have the collected signatures, call `Factory.deployPool()` on-chain. The caller must approve the HOLD fee first, then submit the transaction with all parameters and signatures.
+
+```javascript
+const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, wallet);
+const holdToken = new ethers.Contract(HOLD_ADDRESS, erc20Abi, wallet);
+
+// Calculate the fee: expectedHoldAmount × createPoolFeeRatio / 10000
+const poolFee = (expectedHoldAmount * createPoolFeeRatio) / 10000n;
+
+// Approve HOLD for the fee
+await holdToken.approve(FACTORY_ADDRESS, poolFee);
+
+// Deploy the pool
+const tx = await factory.deployPool(
+  createPoolFeeRatio,
+  poolId,                      // entityId (from backend)
+  rwaContract,                // RWA address
+  expectedHoldAmount,
+  expectedRwaAmount,
+  priceImpactPercent,
+  rewardPercent,
+  entryPeriodStart,
+  entryPeriodExpired,
+  completionPeriodExpired,
+  entryFeePercent,
+  exitFeePercent,
+  fixedSell,
+  allowEntryBurn,
+  awaitCompletionExpired,
+  floatingOutTranchesTimestamps,
+  outgoingTrancheAmounts,      // uint256[] amounts
+  outgoingTrancheTimestamps,   // uint256[] timestamps
+  incomingTrancheAmounts,      // uint256[] amounts
+  incomingTrancheDeadlines,    // uint256[] deadlines
+  signers,                     // addresses from signature task
+  signatures,                  // signature bytes from task
+  expired                      // expiration from task
+);
+await tx.wait();
+```
+
+### What Happens Inside `deployPool()`
+
+The Factory contract performs the following steps in a single transaction:
+
+1. **Validates** that the request hasn't expired and the pool hasn't already been deployed
+2. **Checks** that the RWA contract is registered in AddressBook
+3. **Validates** every parameter against Config limits (amounts, fees, periods, tranches)
+4. **Collects the fee** — transfers `expectedHoldAmount × createPoolFeeRatio / 10000` HOLD from the caller to the Treasury
+5. **Verifies multi-signatures** — each signer must be authorized in AddressBook, each signature must be valid for the deployment parameters, no duplicates
+6. **Creates a token ID** in the RWA contract via `RWA.createToken(pool)`
+7. **Deploys the Pool** contract via an ERC1967 proxy and initializes it with all parameters
+8. **Registers the pool** in AddressBook
+9. **Emits** a `Pool_Deployed` event
+
+After the event is indexed by the backend, `pool.poolAddress` is populated and the [`poolDeployed`](/docs/api/rwa/pools/pool-deployed) GraphQL subscription fires.
+
+## Step 4: After Deployment
+
+Once the pool is live on-chain:
+
+1. **Share the pool link** with potential participants — they can review the business, risk score, and tranche schedule
+2. **Monitor contributions** in real-time via charts and portfolio queries
+3. **Claim outgoing tranches** — when the funding target is reached, call `Pool.claimOutgoingTranches(indexes)` as each tranche timestamp arrives
+4. **Return incoming tranches** — call `Pool.returnIncomingTranche(amount)` according to your incoming tranche schedule to fulfill your obligations to participants
+
+For the full pool lifecycle — entry period, target reached, trading, completion, bonus unlock — see [Pool Lifecycle](/docs/pools/lifecycle).
+
+## Learn More
+
+- [Pool Overview](/docs/pools/overview) — what pools are and how they work
+- [Tranches & Distributions](/docs/pools/tranches) — detailed tranche mechanics
+- [Pool Lifecycle](/docs/pools/lifecycle) — every stage from creation to maturity
+- [Join a Pool](/docs/pools/join-pool) — how participants contribute and exit
+- [Smart Contract Architecture](/docs/smart-contracts/architecture) — how the contracts fit together

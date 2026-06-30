@@ -1,0 +1,21 @@
+{
+  "pages": [
+    "get-started",
+    "tokenization",
+    "pools",
+    "trading",
+    "governance",
+    "smart-contracts",
+    "ai-evaluator",
+    "ai-assistant",
+    "signers-manager",
+    "charts",
+    "loyalty",
+    "testnet-faucet",
+    "api-keys",
+    "webhooks",
+    "api",
+    "ai-agents",
+    "resources"
+  ]
+}

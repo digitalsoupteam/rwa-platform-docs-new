@@ -1,0 +1,140 @@
+---
+title: AGENTS.md
+description: Slices platform documentation for AI agents — architecture, entities, flows, and interaction model
+---
+
+# Overview
+
+Slices is a platform for tokenizing real-world assets (RWAs) and launching crowdfunding pools on BSC (Binance Smart Chain). Businesses raise capital from participants who contribute HOLD tokens and receive RWA tokens in return. An on-chain AMM provides price discovery, tranches automate distributions, and a DAO governs protocol parameters.
+
+## Architecture
+
+Three layers work together:
+
+```
+Web Platform (Next.js, GraphQL API, AI Assistant, Dashboard)
+        │
+Backend Services (Bun/TypeScript, Elysia, GraphQL, MongoDB)
+        │
+Smart Contracts (Solidity 0.8.28, UUPS upgradeable, BSC)
+```
+
+**Smart contracts** handle on-chain state: token deployments, pool AMM math, tranche distributions, governance voting, staking. All contracts are upgradeable via UUPS proxy pattern.
+
+**Backend** is a gateway service that exposes a GraphQL API, indexes on-chain events into MongoDB, coordinates multi-signature approvals, runs AI risk evaluations, and provides auxiliary services (documents, galleries, blogs, FAQs, Q&A, reactions, charts, portfolio tracking, loyalty/referrals, testnet faucet).
+
+**Web platform** consumes the GraphQL API for all user-facing operations.
+
+## Key Entities
+
+| Entity | Layer | Description |
+||---|---|---|
+| **Company** | Backend | Organizational entity with members and permissions. Created via GraphQL. |
+| **Business** | Backend | A tokenizable business under a company. Has risk score, type (growth/startup/franchise), socials. Created via GraphQL. |
+| **RWA Token** | On-chain | ERC1155 contract deployed per business via `Factory.deployRWA()`. Each token ID corresponds to one pool. |
+| **Pool** | On-chain + Backend | Crowdfunding contract with AMM, tranches, fees. Deployed via `Factory.deployPool()`. Metadata stored in backend. |
+| **HOLD** | On-chain | ERC20 utility token. Used for pool contributions, fees, and RWA deployment fees. Fixed supply. |
+| **PlatformToken** | On-chain | ERC20 governance token. Staked in DaoStaking for voting power. Mintable by Governance. |
+| **Evaluation** | Backend | AI-generated risk assessment (0-100 score, factors, reasoning) for businesses and pools. |
+
+## Entity Relationships
+
+```
+Company 1──* Business
+Business 1──1 RWA Token Contract
+RWA Token 1──* Token ID (each linked to one Pool)
+Business 1──* Pool
+Pool 1──* Outgoing Tranche
+Pool 1──* Incoming Tranche
+Company 1──* Member 1──* Permission
+```
+
+Auxiliary content (documents, galleries, blogs, FAQs, questions, reactions) is attached to businesses or pools via `parentId` + `parentType`.
+
+## Core Flows
+
+### Business Onboarding → RWA Deployment
+
+1. **Create Company** — `createCompany` mutation (GraphQL)
+2. **Create Business** — `createBusiness` or `createBusinessWithAI` mutation under a company
+3. **AI Risk Evaluation** — `updateBusinessRiskScore` triggers async AI evaluation → produces risk score (0-100) with factors and reasoning
+4. **Request Approval Signatures** — `requestBusinessApprovalSignatures` → backend coordinates authorized signers to sign an EIP-712 message off-chain
+5. **Deploy RWA Contract** — caller submits `Factory.deployRWA()` on-chain with collected signatures + fee in HOLD
+6. **Indexing** — backend listens for `RWA_Deployed` event, updates `business.tokenAddress`
+
+### Pool Deployment
+
+1. **Create Pool** — `createPool` or `createPoolWithAI` mutation (links pool to business)
+2. **Configure** — set funding target, RWA supply, fees, periods, tranches, AMM parameters via `editPool`
+3. **Request Approval Signatures** — `requestPoolApprovalSignatures` → signers sign off-chain
+4. **Deploy Pool Contract** — caller submits `Factory.deployPool()` on-chain with signatures + fee in HOLD
+5. **Indexing** — backend listens for `Pool_Deployed` event, updates `pool.poolAddress`
+6. **Subscription** — `poolDeployed` GraphQL subscription fires when deployment is indexed
+
+### Pool Participation (On-Chain Trading)
+
+Trading happens **on-chain** by calling Pool contract functions directly — not via GraphQL mutations:
+
+- **Buy RWA** — `Pool.mint(rwaAmount, maxHoldAmount, validUntil, allowPartial)` → transfers HOLD from buyer, mints RWA tokens via AMM formula
+- **Sell RWA** — `Pool.burn(rwaAmount, minHoldAmount, minBonusAmount, validUntil)` → burns RWA tokens, transfers HOLD + bonus from pool reserves
+- **Estimate** — `Pool.estimateMint(rwaAmount, allowPartial)` and `Pool.estimateBurn(rwaAmount)` for price preview without execution
+
+The AMM uses a constant product formula with virtual reserves:
+```
+k = virtualHoldReserve × virtualRwaReserve
+holdAmount = (k / (virtualRwaReserve - rwaAmount)) - (virtualHoldReserve + realHoldReserve)
+```
+
+### Tranche Distribution
+
+After the pool reaches its funding target (`isTargetReached = true`):
+
+- **Outgoing tranches** — business owner claims HOLD via `Pool.claimOutgoingTranches(indexes)` when tranche timestamps are reached
+- **Incoming tranches** — anyone can return funds via `Pool.returnIncomingTranche(amount)`; funds are allocated to debt repayment first, then bonus accumulation
+- **Floating timestamps** — if `floatingOutTranchesTimestamps` is enabled and target reached early, outgoing tranche timestamps shift forward
+
+### Governance
+
+1. **Stake** — `DaoStaking.stake(amount)` with PlatformToken → gain voting power (1:1)
+2. **Propose** — `Governance.propose(target, data, description)` (requires voting power ≥ `proposalThreshold`)
+3. **Vote** — `Governance.vote(proposalId, support, reason)` → locks staked tokens until proposal end
+4. **Auto-execute** — if `votesFor ≥ quorum` AND `votesFor > votesAgainst` → proposal executes immediately (calls `target.call(data)`)
+5. **Auto-cancel** — if `votesAgainst ≥ quorum` AND `votesAgainst > votesFor` → proposal cancelled
+
+## Authentication
+
+Two methods:
+
+1. **Wallet signature** — `authenticate` mutation with wallet address + EIP-712 signature + timestamp → returns `accessToken` + `refreshToken`
+2. **API key** — create via `createApiKey` mutation, use as `Authorization: Bearer <key>` header
+
+All GraphQL requests (except `authenticate`) require authentication.
+
+## Interaction Model
+
+| What | How |
+|---|---|
+| Create/edit businesses, pools, companies | GraphQL mutations |
+| Upload documents, images | GraphQL mutations with file uploads |
+| AI risk evaluation | `updateBusinessRiskScore` / `updatePoolRiskScore` mutations (async) |
+| Multi-sig approval coordination | `requestBusinessApprovalSignatures` / `requestPoolApprovalSignatures` |
+| Deploy RWA / Pool contracts | On-chain: `Factory.deployRWA()` / `Factory.deployPool()` |
+| Buy / sell RWA tokens | On-chain: `Pool.mint()` / `Pool.burn()` |
+| Query indexed data | GraphQL queries (pools, businesses, portfolio, charts, DAO, etc.) |
+| Real-time updates | GraphQL subscriptions (`poolDeployed`, `priceUpdates`, `transactionUpdates`) |
+| Governance (stake, vote, propose) | On-chain: `DaoStaking`, `Governance` contract calls |
+| Webhooks | `createWebhookEndpoint` mutation → backend delivers event payloads to your URL |
+
+## Network
+
+- **Chain:** BSC Testnet (Chain ID: 97)
+- **RPC:** `https://data-seed-prebsc-1-s1.binance.org:8545`
+- **Explorer:** [testnet.bscscan.com](https://testnet.bscscan.com)
+- **Contract addresses:** see [Smart Contract Deployments](/docs/smart-contracts/deployments)
+
+## Next Steps
+
+- [Tools](/docs/ai-agents/tools) — available tools and interfaces for agent interaction
+- [Skills](/docs/ai-agents/skills) — detailed platform knowledge for agents
+- [API Reference](/docs/api) — complete GraphQL API documentation
+- [Smart Contract Reference](/docs/smart-contracts/contract-reference) — all contract functions and access control
