@@ -1,4 +1,4 @@
-import { getApiOperation, apiModuleMeta, apiSubgroupLabels, inputDefs, formatReturnType } from '@/lib/api-data';
+import { getApiOperation, apiModuleMeta, apiSubgroupLabels, formatReturnType } from '@/lib/api-data';
 import { ApiParamTable } from './api-param-table';
 import { ApiExamplePanel } from './api-example-panel';
 import { Lock, ArrowUpRight } from 'lucide-react';
@@ -33,10 +33,6 @@ export function ApiEndpoint({ module, operation }: ApiEndpointProps) {
     Subscription: 'bg-purple-500/10 text-purple-500',
     REST: 'bg-emerald-500/10 text-emerald-500',
   };
-
-  // Find input types from params
-  const inputParams = op.params.filter(p => p.name === 'input' && p.type.endsWith('!'));
-  const inputTypeName = op.params.find(p => p.name === 'input')?.type.replace(/[![\]]/g, '') ?? null;
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px] xl:gap-12">
@@ -119,25 +115,6 @@ export function ApiEndpoint({ module, operation }: ApiEndpointProps) {
           />
         )}
 
-        {/* Input Type section — shows expanded fields for GraphQL input types */}
-        {inputTypeName && inputDefs[inputTypeName] && (
-          <section className="mt-8">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-fd-foreground">Input Type</h2>
-              <code className="rounded-md bg-fd-primary/10 px-1.5 py-0.5 text-xs font-mono text-fd-primary">
-                {inputTypeName}
-              </code>
-            </div>
-            <div className="rounded-lg border border-fd-border">
-              <div className="p-3">
-                <pre className="overflow-x-auto font-mono text-sm leading-relaxed text-fd-foreground">
-                  <code>{renderInputTypeFields(inputTypeName, inputDefs, 0)}</code>
-                </pre>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Headers section (for REST) */}
         {op.headers && op.headers.length > 0 && (
           <ApiParamTable title="Headers" params={op.headers} />
@@ -169,28 +146,4 @@ export function ApiEndpoint({ module, operation }: ApiEndpointProps) {
       </div>
     </div>
   );
-}
-
-// Recursively render input type fields with proper indentation
-function renderInputTypeFields(typeName: string, defs: Record<string, string>, depth: number): string {
-  const fieldsStr = defs[typeName];
-  if (!fieldsStr) return `  // ${typeName} — type not found`;
-
-  const indent = '  '.repeat(depth + 1);
-  const closeIndent = '  '.repeat(depth);
-
-  const fields = fieldsStr.split(', ').map(f => {
-    const [name, type] = f.split(': ');
-    if (!type) return `${indent}${f}`;
-    // Check if the type references another input type
-    const baseType = type.replace(/[![\]]/g, '');
-    if (defs[baseType]) {
-      // Nested input type
-      const nestedFields = renderInputTypeFields(baseType, defs, depth + 1);
-      return `${indent}${name}: ${type} {\n${nestedFields}${indent}}`;
-    }
-    return `${indent}${f}`;
-  });
-
-  return fields.join('\n');
 }

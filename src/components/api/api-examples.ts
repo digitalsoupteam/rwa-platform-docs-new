@@ -1,5 +1,4 @@
-import type { ApiOperation } from '@/lib/api-data';
-import { inputDefs } from '@/lib/api-data';
+import type { ApiOperation, ApiParam } from '@/lib/api-data';
 
 // ── Generate example GraphQL query/mutation/subscription string ──
 
@@ -9,7 +8,7 @@ function generateGraphqlExample(op: ApiOperation): string {
   // Build args string
   const args = params
     .map((p) => {
-      const exampleVal = getExampleValue(p.name, p.type);
+      const exampleVal = getExampleValue(p.name, p.type, p);
       return `${p.name}: ${exampleVal}`;
     })
     .join(', ');
@@ -21,23 +20,17 @@ function generateGraphqlExample(op: ApiOperation): string {
 
   if (type === 'Query' || type === 'Mutation' || type === 'Subscription') {
     const argsPart = args ? `(${args})` : '';
-    return `${opType} ${name} {
-  ${name}${argsPart} {
-    ${selection}
-  }
-}`;
+    return `${opType} ${name} {\n  ${name}${argsPart} {\n    ${selection}\n  }\n}`;
   }
 
   return '';
 }
 
 // Generate example value for a parameter
-function getExampleValue(paramName: string, paramType: string): string {
-  const baseType = paramType.replace(/[!\[\]]/g, '');
+function getExampleValue(paramName: string, paramType: string, param?: ApiParam): string {
+  const baseType = paramType.replace(/[![\]]/g, '');
 
   if (paramName === 'id') return '"0x123..."';
-  if (paramName === 'input') return '{}';
-  if (paramName === 'pagination') return '{ limit: 10, offset: 0 }';
   if (paramName === 'poolAddress') return '"0xPoolContractAddress..."';
   if (paramName === 'startTime') return '1704067200000';
   if (paramName === 'endTime') return '1735689600000';
@@ -53,6 +46,20 @@ function getExampleValue(paramName: string, paramType: string): string {
   if (baseType === 'Boolean') return 'false';
   if (baseType === 'ID') return '"0x123..."';
 
+  // Input types — expand children if available
+  if (param && param.children && param.children.length > 0) {
+    const fields = param.children
+      .map((child) => {
+        const val = getExampleValue(child.name, child.type, child);
+        return `${child.name}: ${val}`;
+      })
+      .join(', ');
+    return `{ ${fields} }`;
+  }
+
+  // PaginationInput without children
+  if (paramName === 'pagination') return '{ limit: 10, offset: 0 }';
+
   // Input types — show field stubs
   if (paramType.includes('Input') || paramType.includes('Filter')) {
     return '{}';
@@ -62,21 +69,47 @@ function getExampleValue(paramName: string, paramType: string): string {
   return paramType.endsWith('!') ? '"value"' : 'null';
 }
 
-// Generate a basic field selection from return type name
+// Generate a basic field selection from return type
 function generateSelection(returnType: string): string {
-  const baseType = returnType.replace(/[!\[\]]/g, '');
+  // The returnType is now a fully expanded literal with \\n for newlines.
+  // Extract field names from it for the selection.
+  // Pattern: "fieldName: Type" — we just want the fieldName
+  const lines = returnType.replace(/\\n/g, '\n').split('\n');
+  const fields: string[] = [];
 
-  // Common scalar returns
-  if (baseType === 'Boolean') return 'result';
-  if (baseType === 'String') return 'result';
-  if (baseType === 'Int' || baseType === 'Float') return 'value';
-  if (baseType === 'JSON') return 'data';
-  if (baseType === 'ID') return 'id';
+  for (const line of lines) {
+    const match = line.match(/^\s*(\w+):\s*(.+)/);
+    if (match) {
+      const [, fieldName, fieldType] = match;
+      // If the field type is a custom type with { ... }, include a sub-selection
+      if (fieldType.includes('{')) {
+        const subFields = extractSubFields(fieldType);
+        fields.push(`${fieldName} { ${subFields} }`);
+      } else {
+        fields.push(fieldName);
+      }
+    }
+  }
 
-  // For list types, show id + common fields
+  if (fields.length > 0) {
+    // Limit to reasonable number of fields for example
+    return fields.slice(0, 8).join('\n    ');
+  }
+
+  // Fallback: use type name based selection
+  const baseType = returnType.replace(/[![\]]/g, '');
+  return generateTypeSpecificSelection(baseType);
+}
+
+function extractSubFields(typeStr: string): string {
+  // Extract field names from a nested type literal
+  const matches = typeStr.match(/\w+:/g) || [];
+  return matches.slice(0, 4).map((m) => m.replace(':', '')).join(' ');
+}
+
+function generateTypeSpecificSelection(baseType: string): string {
   const commonFields = ['id', 'createdAt', 'updatedAt'];
 
-  // Type-specific fields
   const typeFields: Record<string, string[]> = {
     Business: ['id', 'name', 'ownerId', 'chainId', 'riskScore', 'createdAt'],
     Pool: ['id', 'name', 'businessId', 'chainId', 'poolAddress', 'riskScore', 'createdAt'],
@@ -141,7 +174,7 @@ function generateSelection(returnType: string): string {
 
 function generateJsonResponse(op: ApiOperation): string {
   const { returnType, type } = op;
-  const baseType = returnType.replace(/[!\[\]]/g, '');
+  const baseType = returnType.replace(/[![\]]/g, '');
 
   // For list types, wrap in array
   const isList = returnType.includes('[');
@@ -269,7 +302,9 @@ function buildExampleObject(typeName: string): Record<string, unknown> {
 function generateCurlExample(op: ApiOperation): string {
   if (op.type !== 'REST' || !op.path) return '';
 
-  const headerLines = (op.headers ?? []).map((h) => `  --header '${h.name}: ${h.name === 'Authorization' ? 'Bearer <token>' : h.description ?? '<value>'}'`);
+  const headerLines = (op.headers ?? []).map((h) =>
+    `  --header '${h.name}: ${h.name === 'Authorization' ? 'Bearer <token>' : h.description ?? '<value>'}'`,
+  );
 
   // Build form data
   const formFields = op.params
@@ -299,7 +334,20 @@ function generateCurlExample(op: ApiOperation): string {
 
 // ── Generate REST JSON response ──
 
-function generateRestJsonResponse(): string {
+function generateRestJsonResponse(op: ApiOperation): string {
+  // If returnType is a structured object string, try to parse it
+  if (op.returnType.startsWith('{')) {
+    // It's a literal object type — build example from it
+    const example: Record<string, unknown> = {};
+    const fieldRegex = /(\w+):\s*(\w+)(!?)/g;
+    let m;
+    while ((m = fieldRegex.exec(op.returnType)) !== null) {
+      const [, fieldName, fieldType] = m;
+      example[fieldName] = getExampleForType(fieldType);
+    }
+    return JSON.stringify(example, null, 2);
+  }
+
   return JSON.stringify(
     {
       id: '<ID>',
@@ -313,6 +361,13 @@ function generateRestJsonResponse(): string {
   );
 }
 
+function getExampleForType(typeName: string): unknown {
+  if (typeName === 'String') return '<String>';
+  if (typeName === 'Float' || typeName === 'Int') return 0;
+  if (typeName === 'Boolean') return false;
+  return null;
+}
+
 // ── Public API ──
 
 export function generateRequestExample(op: ApiOperation): { code: string; language: 'graphql' | 'bash' } {
@@ -324,7 +379,7 @@ export function generateRequestExample(op: ApiOperation): { code: string; langua
 
 export function generateResponseExample(op: ApiOperation): { code: string; language: 'json' } {
   if (op.type === 'REST') {
-    return { code: generateRestJsonResponse(), language: 'json' };
+    return { code: generateRestJsonResponse(op), language: 'json' };
   }
   return { code: generateJsonResponse(op), language: 'json' };
 }

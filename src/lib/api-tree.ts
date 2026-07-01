@@ -1,20 +1,32 @@
 import type { Root, Folder, Node } from 'fumadocs-core/page-tree';
 
 /**
+ * Check if a folder node contains any page whose URL starts with prefix.
+ * This is the stable way to identify folders in the page tree — it works
+ * identically in dev and build because page URLs are always plain strings.
+ *
+ * Do NOT rely on `child.$ref?.folder` (value is `"api"` without a leading
+ * slash in build, so `endsWith('/api')` fails) or `String(child.name)`
+ * (name is a ReactNode in build, so `String(...)` yields "[object Object]").
+ * Both were the root cause of the sidebar showing the wrong tree in build.
+ */
+function folderHasUrlPrefix(node: Folder, prefix: string): boolean {
+  return node.children.some((child) => {
+    if (child.type === 'page') return child.url.startsWith(prefix);
+    if (child.type === 'folder') return folderHasUrlPrefix(child, prefix);
+    return false;
+  });
+}
+
+/**
  * Extract the "API Reference" folder from the full page tree and return it as a new Root.
  * The API reference sidebar should only show API modules — not docs guides.
  */
 export function getApiPageTree(fullTree: Root): Root {
-  const byRef = fullTree.children.find(
+  const apiFolder = fullTree.children.find(
     (child): child is Folder =>
-      child.type === 'folder' && (child.$ref?.folder?.endsWith('/api') ?? false),
+      child.type === 'folder' && folderHasUrlPrefix(child, '/docs/api/'),
   );
-
-  const apiFolder =
-    byRef ??
-    fullTree.children.find(
-      (child): child is Folder => child.type === 'folder' && String(child.name) === 'API Reference',
-    );
 
   if (!apiFolder) {
     return fullTree;
@@ -32,16 +44,10 @@ export function getApiPageTree(fullTree: Root): Root {
  * The AI Agents sidebar should only show ai-agents pages.
  */
 export function getAgentsPageTree(fullTree: Root): Root {
-  const byRef = fullTree.children.find(
+  const agentsFolder = fullTree.children.find(
     (child): child is Folder =>
-      child.type === 'folder' && (child.$ref?.folder?.endsWith('/ai-agents') ?? false),
+      child.type === 'folder' && folderHasUrlPrefix(child, '/docs/ai-agents/'),
   );
-
-  const agentsFolder =
-    byRef ??
-    fullTree.children.find(
-      (child): child is Folder => child.type === 'folder' && String(child.name) === 'AI Agents',
-    );
 
   if (!agentsFolder) {
     return fullTree;
@@ -65,10 +71,8 @@ export function getDocsPageTree(fullTree: Root): Root {
       (child) =>
         !(
           child.type === 'folder' &&
-          ((child.$ref?.folder?.endsWith('/api') ?? false) ||
-            String(child.name) === 'API Reference' ||
-            (child.$ref?.folder?.endsWith('/ai-agents') ?? false) ||
-            String(child.name) === 'AI Agents')
+          (folderHasUrlPrefix(child, '/docs/api/') ||
+            folderHasUrlPrefix(child, '/docs/ai-agents/'))
         ),
     ),
   };
