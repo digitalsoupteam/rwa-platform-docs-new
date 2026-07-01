@@ -35,18 +35,23 @@ All contracts use the UUPS upgradeable proxy pattern, allowing logic updates wit
 
 ## Backend Services
 
-The backend is a monolith gateway service that provides:
+The backend consists of multiple independent services, each running as a separate Elysia process. A **GraphQL Gateway** service acts as the primary API facade, routing requests to the appropriate backend service:
 
-- **GraphQL API** — the primary interface for the web platform and external integrations
+- **GraphQL API** — the primary interface for the web platform and external integrations, powered by a gateway that proxies to specialized services
+- **RWA Service** — manages businesses, pools, token metadata, and coordinates multi-signature approvals
 - **AI Evaluator** — [risk scoring](/docs/ai-evaluator/overview) for businesses and pools using AI analysis
 - **AI Assistant** — [conversational AI](/docs/ai-assistant/overview) for user support and portfolio insights
 - **Signers Manager** — [coordinates multi-signature approvals](/docs/signers-manager/overview) for contract deployments
-- **Indexer** — listens to on-chain events and maintains a queryable database
+- **Blockchain Scanner** — listens to on-chain events and maintains a queryable database
 - **API Keys** — [persistent authentication](/docs/api-keys/overview) for programmatic access
 - **Webhooks** — [real-time event notifications](/docs/webhooks/overview) via HTTP
 - **Charts** — [price data, OHLC, volume](/docs/charts/overview), and WebSocket updates
 - **Loyalty** — [referral rewards](/docs/loyalty/overview) for bringing new users to the platform
 - **Testnet Faucet** — [free test tokens](/docs/testnet-faucet/overview) on BSC Testnet
+- **Auth** — wallet-based authentication and token management
+- **Company** — company profiles and member management
+- **DAO** — governance data indexing (proposals, votes, staking, treasury)
+- **Documents, Gallery, FAQ, Blog, Portfolio, Questions, Reactions, Files** — supporting services for platform features
 
 ## Data Layer
 

@@ -1,0 +1,103 @@
+---
+title: Airdrop Data
+description: What on-chain activity is tracked and can be used for future airdrop calculations
+---
+
+# Airdrop Data
+
+The loyalty service tracks every fee-paying interaction on the platform. This data can be used to calculate eligibility for future airdrops or reward distributions.
+
+## What Data Is Tracked
+
+### Fee Events (per user, per chain, per token)
+
+Every time a user pays a platform fee, the following is recorded:
+
+| Event | When It Happens | Data Stored |
+|-------|----------------|-------------|
+| **Buy commission** | User buys RWA tokens via `Pool.mint()` | Amount, count, token, transaction hash |
+| **Sell commission** | User sells RWA tokens via `Pool.burn()` | Amount (hold fee + bonus fee), count, token, transaction hash |
+| **RWA creation commission** | User deploys an RWA token contract | Amount, count, token, transaction hash |
+| **Pool creation commission** | User deploys a pool | Amount, count, token, transaction hash |
+
+Each event is stored in the **commission history** with:
+- `userWallet` — the wallet that paid the fee
+- `userId` — the user's platform ID
+- `chainId` — which blockchain
+- `tokenAddress` — which token (USDT)
+- `amount` — fee amount
+- `actionType` — one of: `buy_commission`, `sell_commission`, `token_creation_commission`, `pool_creation_commission`, `referral_reward`
+- `transactionHash` — on-chain proof
+- `relatedUserWallet` / `relatedUserId` — for referral rewards, the referred user
+
+### Referral Relationships
+
+The system tracks who referred whom:
+
+- `userWallet` / `userId` — the referred user
+- `referrerWallet` / `referrerId` — who referred them
+- Timestamp of when the referral was registered
+
+### Aggregated Fees
+
+Per user, per chain, per token, the system maintains running totals:
+
+| Field | Description |
+|-------|-------------|
+| `buyCommissionAmount` | Total USDT spent on buy fees |
+| `buyCommissionCount` | Number of buy operations |
+| `sellCommissionAmount` | Total USDT spent on sell fees |
+| `sellCommissionCount` | Number of sell operations |
+| `tokenCreationCommissionAmount` | Total USDT spent on RWA creation |
+| `tokenCreationCommissionCount` | Number of RWA tokens created |
+| `poolCreationCommissionAmount` | Total USDT spent on pool creation |
+| `poolCreationCommissionCount` | Number of pools created |
+| `referralRewardAmount` | Total USDT earned from referrals |
+| `referralRewardCount` | Number of referral rewards earned |
+
+## Possible Airdrop Criteria
+
+The tracked data enables various airdrop calculation strategies:
+
+### By Fee Volume
+
+Users who paid the most in fees across all operations. Weighted by:
+- Total `buyCommissionAmount` + `sellCommissionAmount`
+- Total `tokenCreationCommissionAmount` + `poolCreationCommissionAmount`
+
+### By Number of Operations
+
+Users who were most active, regardless of fee size:
+- Total `buyCommissionCount` + `sellCommissionCount`
+- Total `tokenCreationCommissionCount` + `poolCreationCommissionCount`
+
+### By Referral Impact
+
+Users who brought the most valuable referrers:
+- Total `referralRewardAmount` earned (reflects referred users' fee generation)
+- Number of successful referrals
+
+### By Token Creation
+
+Businesses that deployed RWA tokens and pools:
+- `tokenCreationCommissionCount` — number of RWA contracts deployed
+- `poolCreationCommissionCount` — number of pools launched
+
+### Composite Score
+
+A weighted combination of all factors:
+```
+score = w1 × feeVolume + w2 × operationCount + w3 × referralImpact + w4 × creationActivity
+```
+
+## Data Access
+
+All tracked data is queryable via GraphQL:
+
+- **[getFees](/docs/api/loyalty/get-fees)** — aggregated fee and reward totals per user
+- **[getCommissionHistory](/docs/api/loyalty/get-referrer-claim-history)** — full audit trail of every event
+- **[getReferrals](/docs/api/loyalty/get-referrals)** — referral relationships
+
+## Transparency
+
+Every commission history record includes an on-chain `transactionHash`, making the data fully auditable. Anyone can verify that a recorded fee event corresponds to a real on-chain transaction.

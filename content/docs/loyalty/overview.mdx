@@ -1,89 +1,41 @@
 ---
-title: Referral & Loyalty Program
-description: How the referral system works — earn rewards by referring users to the platform
+title: Loyalty Program
+description: How the Slices loyalty program works — referrals, rewards, and airdrop data
 ---
 
-# Referral & Loyalty Program
+# Loyalty Program
 
-The Slices referral program rewards users who bring new participants to the platform. When a referred user pays platform fees, the referrer earns a percentage of those fees.
+The Slices loyalty program rewards users who contribute to the platform's growth. It consists of two parts:
+
+- **[Referral Program](/docs/loyalty/referrals)** — earn rewards by referring new users
+- **[Airdrop Data](/docs/loyalty/airdrop)** — what on-chain activity is tracked for future distributions
 
 ## How It Works
 
-```
-User A (referrer) → refers → User B
-                              ↓
-User B pays fees (creation, buy, sell)
-                              ↓
-User A earns referral reward (% of fees)
-```
+The loyalty service listens to on-chain events and tracks every fee-paying action per user. When a user pays a fee (creation, buy, sell), the system:
 
-### 1. Register a Referral
+1. Checks if the user has a registered referrer
+2. Records the commission amount in the user's fee history
+3. Calculates a referral reward for the referrer (a percentage of the commission)
+4. Stores everything in a queryable database for transparency
 
-When a new user joins, they can register their referrer's ID via the [registerReferral](/docs/api/loyalty/register-referral) mutation. The input takes a single `referrerId` field — the user ID of the referrer.
+## ReferralTreasury Contract
 
-Rules:
-- A user can only register **one referrer** (cannot be changed)
-- Users **cannot refer themselves**
-- Referral is registered before any fee-generating activity
+All referral rewards are stored in the **ReferralTreasury** smart contract. This contract holds USDT and is funded **manually** by the protocol — there is no automatic minting or top-up. This means the total reward pool is limited by what has been deposited into the treasury.
 
-### 2. Fee Events That Generate Rewards
+Withdrawals from the treasury require **multi-signature approval** from authorized signers, the same system used for RWA and pool deployments.
 
-The referral system tracks four types of on-chain fee events:
+## Key Data Tracked
 
-| Event | Description | Fee Source |
-|-------|-------------|------------|
-| **RWA Creation** | Business deploys an RWA token | `createRWAFee` |
-| **Pool Creation** | Business deploys a pool | `createPoolFeeRatio` |
-| **Buy (mint)** | Participant buys RWA tokens | `entryFeePercent` |
-| **Sell (burn)** | Participant sells RWA tokens | `exitFeePercent` |
+The loyalty service tracks the following per user, per chain, per token:
 
-When any of these events occur on-chain, the indexer picks them up and the loyalty service:
+| Metric | Description |
+|--------|-------------|
+| Buy commissions | Total fees paid when buying RWA tokens |
+| Sell commissions | Total fees paid when selling RWA tokens |
+| RWA creation commissions | Fees paid when deploying RWA tokens |
+| Pool creation commissions | Fees paid when deploying pools |
+| Referral rewards | Rewards earned from referred users' fees |
+| Referral relationships | Who referred whom |
 
-1. Checks if the fee payer has a registered referrer
-2. Records the commission in the referrer's fee history
-3. Calculates the referral reward as a percentage of the commission
-
-### 3. Referral Reward Calculation
-
-The referral reward is a percentage of the commission amount:
-
-```
-rewardAmount = commissionAmount × referralRewardPercentage / 10000
-```
-
-The `referralRewardPercentage` is a protocol-level parameter configured in the loyalty service.
-
-### 4. Viewing Fees and Rewards
-
-Users can [query their accumulated fees](/docs/api/loyalty/get-fees) and rewards via GraphQL. The result includes commission amounts and counts for each fee type, plus the total referral reward.
-
-### 5. Withdrawing Rewards
-
-Referral rewards are held in the `ReferralTreasury` smart contract. To withdraw:
-
-1. **Create a withdraw task** — [createReferrerWithdrawTask](/docs/api/loyalty/create-referrer-withdraw-task) requests a multi-signature withdrawal from the treasury
-2. **Signers approve** — authorized signers review and sign the withdrawal
-3. **Execute on-chain** — once enough signatures are collected, the withdrawal is executed
-
-### 6. Track Withdrawals
-
-View your [withdrawal history](/docs/api/loyalty/get-referrer-withdraws) via GraphQL — each record shows the amount, status, and timestamp.
-
-## Commission History
-
-Every fee event and referral reward is recorded in the [commission history](/docs/api/loyalty/get-referrer-claim-history), providing a full audit trail. Each record includes the action type (`buy_commission`, `sell_commission`, `token_creation_commission`, `pool_creation_commission`, `referral_reward`), amount, transaction hash, and related user wallet.
-
-## Smart Contract
-
-The `ReferralTreasury` contract holds accumulated referral rewards. Withdrawals require multi-signature approval from authorized signers, with an emergency withdrawal function available to Governance.
-
-```solidity
-// ReferralTreasury — withdrawal with multi-signature
-function withdraw(
-    address to,
-    uint256 amount,
-    uint256 expired,
-    address[] calldata signers,
-    bytes[] calldata signatures
-) external
-```
+This data can be used for **future airdrop calculations** — see [Airdrop Data](/docs/loyalty/airdrop) for details.

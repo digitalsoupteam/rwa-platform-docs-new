@@ -11,10 +11,16 @@ The Slices platform is built around a few key concepts. Understanding these will
 
 RWA (Real World Asset) tokens are digital representations of real-world assets on the blockchain. Each token is an **ERC1155** token — a multi-token standard that allows a single contract to manage multiple token types.
 
+The hierarchy is: **User → Company → Business → Pool**
+
+- **Company** — an organizational entity that owns businesses
+- **Business** — an ERC1155 token contract representing a real-world asset. Each business belongs to a company
+- **Pool** — a crowdfunding contract that pairs a specific token ID from the business's ERC1155 contract with HOLD tokens via an AMM. A business can have multiple pools, each using a different token ID
+
 Key properties:
 
-- **Business-owned** — each RWA contract belongs to a specific business entity
-- **Pool-linked** — each token ID is linked to a specific crowdfunding pool
+- **Business-owned** — each ERC1155 contract belongs to a specific business entity
+- **Pool-linked** — each pool uses a specific token ID from the business's ERC1155 contract
 - **Supply-limited** — each token ID has a maximum supply set at creation
 - **Metadata** — each token has a metadata URI pointing to its description and documentation
 

@@ -53,8 +53,8 @@ export function MobileNavSheet({
 
   // Determine which tab to show based on pathname
   const getInitialTab = useCallback(() => {
-    if (pathname.startsWith("/docs/api")) return 1;
-    if (pathname.startsWith("/docs/ai-agents")) return 2;
+    if (pathname.startsWith("/docs/api/")) return 1;
+    if (pathname.startsWith("/docs/ai-agents/")) return 2;
     return 0;
   }, [pathname]);
 
@@ -66,8 +66,8 @@ export function MobileNavSheet({
       tree.children.filter((child) => {
         if (child.type !== "folder") return true;
         return (
-          !folderHasUrlPrefix(child, "/docs/api") &&
-          !folderHasUrlPrefix(child, "/docs/ai-agents")
+          !folderHasUrlPrefix(child, "/docs/api/") &&
+          !folderHasUrlPrefix(child, "/docs/ai-agents/")
         );
       }),
     [tree],
@@ -76,7 +76,7 @@ export function MobileNavSheet({
   const apiChildren = useMemo(() => {
     const apiFolder = tree.children.find(
       (child): child is PageTreeFolder =>
-        child.type === "folder" && folderHasUrlPrefix(child, "/docs/api"),
+        child.type === "folder" && folderHasUrlPrefix(child, "/docs/api/"),
     );
     return apiFolder?.children ?? [];
   }, [tree]);
@@ -84,7 +84,7 @@ export function MobileNavSheet({
   const agentsChildren = useMemo(() => {
     const agentsFolder = tree.children.find(
       (child): child is PageTreeFolder =>
-        child.type === "folder" && folderHasUrlPrefix(child, "/docs/ai-agents"),
+        child.type === "folder" && folderHasUrlPrefix(child, "/docs/ai-agents/"),
     );
     return agentsFolder?.children ?? [];
   }, [tree]);

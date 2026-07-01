@@ -1,0 +1,98 @@
+---
+title: Withdrawing Rewards
+description: How to withdraw accumulated referral rewards from the ReferralTreasury
+---
+
+# Withdrawing Rewards
+
+Referral rewards are held in the **ReferralTreasury** smart contract. To withdraw them, you need to go through a multi-signature approval process.
+
+## How the Treasury Works
+
+The ReferralTreasury is a smart contract that holds USDT allocated for referral rewards. Key characteristics:
+
+- **Manually funded** — the treasury is topped up manually by the protocol. There is no automatic minting. The total available reward pool is limited by what has been deposited
+- **Multi-sig withdrawal** — every withdrawal requires signatures from authorized signers (same system as RWA and pool deployments)
+- **Emergency withdrawal** — Governance can withdraw tokens in case of emergency
+
+## Withdrawal Flow
+
+```
+1. Create Withdraw Task (off-chain)
+2. Signers Review and Sign (off-chain)
+3. Execute On-Chain (anyone can execute)
+```
+
+### Step 1: Create a Withdraw Task
+
+Call [createReferrerWithdrawTask](/docs/api/loyalty/create-referrer-withdraw-task) with your wallet, the token address, and the amount you want to withdraw:
+
+```graphql
+mutation CreateReferrerWithdrawTask($input: CreateReferrerWithdrawTaskInput!) {
+  createReferrerWithdrawTask(input: $input) {
+    id
+    referrerWallet
+    chainId
+    tokenAddress
+    totalWithdrawnAmount
+    taskId
+    taskExpiredAt
+    taskCooldown
+  }
+}
+```
+
+The system:
+1. Checks your accumulated referral rewards for this token
+2. Subtracts any already withdrawn amount
+3. Verifies the requested amount doesn't exceed available rewards
+4. Checks the cooldown period (1 month between withdrawal tasks)
+5. Generates a message hash of the withdrawal parameters
+6. Creates a signature task via the Signers Manager
+7. Returns the task details
+
+### Step 2: Signers Approve
+
+The Signers Manager distributes the task to authorized signers. Each signer reviews the withdrawal and signs the message hash. Once enough signatures are collected (minimum 3), the task is marked as completed.
+
+Check the task status via [getSignatureTask](/docs/api/signers-manager/get-signature-task).
+
+### Step 3: Execute On-Chain
+
+Once you have the collected signatures, call `ReferralTreasury.withdraw()` on-chain:
+
+```solidity
+function withdraw(
+    address token,          // USDT address
+    uint256 amount,         // Amount to withdraw
+    uint256 deadline,       // Task expiration timestamp
+    address[] calldata signers,    // Signer addresses
+    bytes[] calldata signatures    // Collected signatures
+) external
+```
+
+The contract verifies:
+- The request hasn't expired (10-minute window)
+- Each signer is authorized in AddressBook
+- Each signature is valid for the withdrawal parameters
+- No duplicate signatures
+
+After successful withdrawal, the tokens are transferred to your wallet and a `ReferralTreasury_Withdrawn` event is emitted.
+
+## Constraints
+
+| Constraint | Value | Description |
+|------------|-------|-------------|
+| Task expiry | **10 minutes** | The signature task expires if not executed in time |
+| Cooldown | **1 month** | Must wait 1 month between withdrawal tasks |
+| Min signers | **3** | Minimum number of signatures required |
+| Available amount | `totalRewards - totalWithdrawn` | Cannot withdraw more than earned |
+
+## Viewing Withdrawals
+
+- **[getReferrerWithdraws](/docs/api/loyalty/get-referrer-withdraws)** — view your withdrawal history with amounts and status
+- **[getReferrerClaimHistory](/docs/api/loyalty/get-referrer-claim-history)** — view on-chain withdrawal events
+
+## Emergency
+
+If there's an issue with the treasury, Governance can call `emergencyWithdraw()` to transfer tokens to any address without multi-signature approval.

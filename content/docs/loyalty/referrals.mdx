@@ -1,0 +1,104 @@
+---
+title: Referral Program
+description: Earn rewards by referring new users to the Slices platform
+---
+
+# Referral Program
+
+The referral program rewards users who bring new participants to the platform. When a referred user pays platform fees, the referrer earns a percentage of those fees.
+
+## How Referrals Work
+
+```
+User A (referrer) → refers → User B
+                              ↓
+User B pays fees (creation, buy, sell)
+                              ↓
+User A earns referral reward (% of fees)
+```
+
+### 1. Register a Referral
+
+When a new user joins, they register their referrer via the [registerReferral](/docs/api/loyalty/register-referral) mutation:
+
+```graphql
+mutation RegisterReferral($input: RegisterReferralInput!) {
+  registerReferral(input: $input) {
+    id
+    userWallet
+    userId
+    referrerWallet
+    referrerId
+  }
+}
+```
+
+Rules:
+- A user can only register **one referrer** — cannot be changed
+- Users **cannot refer themselves**
+- Referral should be registered before any fee-generating activity
+
+### 2. Fee Events That Generate Rewards
+
+The system tracks **four types** of on-chain fee events:
+
+| Event | Description | Fee Source |
+|-------|-------------|------------|
+| **RWA Creation** | Business deploys an RWA token | `createRWAFee` |
+| **Pool Creation** | Business deploys a pool | `createPoolFeeRatio` |
+| **Buy (mint)** | Participant buys RWA tokens | `entryFeePercent` |
+| **Sell (burn)** | Participant sells RWA tokens | `exitFeePercent` |
+
+When any of these events occur on-chain, the blockchain scanner picks them up and publishes to a message queue. The loyalty service processes each event:
+
+1. Looks up the fee payer's wallet to find their referral record
+2. Records the commission in the payer's fee history
+3. If the payer has a referrer, calculates and records the referral reward
+
+### 3. Referral Reward Calculation
+
+The referral reward is a percentage of the commission amount:
+
+```
+rewardAmount = commissionAmount × referralRewardPercentage / 10000
+```
+
+The `referralRewardPercentage` is a protocol-level parameter configured in the loyalty service. For example, with a 10% referral reward rate and a 100 USDT commission:
+
+```
+rewardAmount = 100 × 1000 / 10000 = 10 USDT
+```
+
+### 4. Viewing Fees and Rewards
+
+Users can query their accumulated fees and rewards via GraphQL:
+
+- **[getFees](/docs/api/loyalty/get-fees)** — returns commission amounts and counts for each fee type, plus total referral reward
+- **[getCommissionHistory](/docs/api/loyalty/get-referrer-claim-history)** — full audit trail of every fee event and reward
+
+The fees response includes:
+
+| Field | Description |
+|-------|-------------|
+| `buyCommissionAmount` | Total fees paid on buy operations |
+| `sellCommissionAmount` | Total fees paid on sell operations |
+| `tokenCreationCommissionAmount` | Total fees paid on RWA creation |
+| `poolCreationCommissionAmount` | Total fees paid on pool creation |
+| `referralRewardAmount` | Total rewards earned from referrals |
+| `*Count` fields | Number of times each action occurred |
+
+### 5. Commission History
+
+Every fee event and referral reward is recorded in the commission history with:
+
+| Field | Description |
+|-------|-------------|
+| `actionType` | `buy_commission`, `sell_commission`, `token_creation_commission`, `pool_creation_commission`, or `referral_reward` |
+| `amount` | The commission or reward amount |
+| `transactionHash` | On-chain transaction that triggered the event |
+| `relatedUserWallet` | For referral rewards: the referred user who paid the fee |
+| `relatedUserId` | For referral rewards: the referred user's ID |
+
+### 6. Withdrawing Rewards
+
+Referral rewards are held in the **ReferralTreasury** smart contract. See [Withdrawing Rewards](/docs/loyalty/rewards) for the full withdrawal process.
