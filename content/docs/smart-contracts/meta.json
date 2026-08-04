@@ -3,6 +3,7 @@
   "pages": [
     "architecture",
     "contract-reference",
+    "platform-token",
     "deployments"
   ]
 }
