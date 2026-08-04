@@ -23,7 +23,7 @@ A pool ties together several moving parts that work in concert:
 
 - **Funding target** (`expectedHoldAmount`) — the amount of HOLD the business aims to raise
 - **RWA supply** (`expectedRwaAmount`) — the number of RWA tokens participants will receive in exchange
-- **AMM parameters** — `priceImpactPercent` and `liquidityCoefficient` control the virtual reserves that determine the exchange rate between HOLD and RWA
+- **AMM parameters** — `priceImpactPercent` and `liquidityCoefficient` control the virtual reserves that determine the exchange rate between HOLD and RWA. The `liquidityCoefficient` is looked up from a pre-configured mapping `liquidityCoefficients[priceImpactPercent]` in the Config contract — it is not computed by a formula.
 - **Tranches** — two schedules that automate fund distribution:
   - **Outgoing tranches** — HOLD paid out to the business after the funding target is reached, each with a claimable timestamp
   - **Incoming tranches** — expected returns from the business back to the pool, each with a deadline
@@ -66,7 +66,7 @@ The Factory contract validates every parameter against Config limits at deployme
 
 Once the pool is configured, [request approval signatures](/docs/api/rwa/pools/request-pool-approval-signatures) from authorized signers. This creates a signature task that the backend coordinates with authorized signers off-chain.
 
-Each signer reviews the pool parameters and signs an EIP-712 message hash. [Check the task status](/docs/api/signers-manager/get-signature-task) and poll until enough signatures are collected (`completed = true`).
+Each signer reviews the pool parameters and signs an EIP-191 (personal_sign) message hash. [Check the task status](/docs/api/signers-manager/get-signature-task) and poll until enough signatures are collected (`completed = true`).
 
 See [Signers Manager](/docs/signers-manager/overview) for the full multi-sig flow.
 
@@ -80,7 +80,7 @@ import { parseAbi } from 'viem';
 
 // ABI fragments
 const factoryAbi = parseAbi([
-  'function deployPool(uint256 createPoolFeeRatio,uint256 poolId,address rwaContract,uint256 expectedHoldAmount,uint256 expectedRwaAmount,uint256 priceImpactPercent,uint256 rewardPercent,uint256 entryPeriodStart,uint256 entryPeriodExpired,uint256 completionPeriodExpired,uint256 entryFeePercent,uint256 exitFeePercent,bool fixedSell,bool allowEntryBurn,bool awaitCompletionExpired,uint256[] memory floatingOutTranchesTimestamps,uint256[] memory outgoingTrancheAmounts,uint256[] memory outgoingTrancheTimestamps,uint256[] memory incomingTrancheAmounts,uint256[] memory incomingTrancheDeadlines,address[] memory signers,bytes memory signatures,uint256 expired)',
+  'function deployPool(uint256 createPoolFeeRatio,string poolId,address rwa,uint256 expectedHoldAmount,uint256 expectedRwaAmount,uint256 priceImpactPercent,uint256 rewardPercent,uint256 entryPeriodStart,uint256 entryPeriodExpired,uint256 completionPeriodExpired,uint256 entryFeePercent,uint256 exitFeePercent,bool fixedSell,bool allowEntryBurn,bool awaitCompletionExpired,bool floatingOutTranchesTimestamps,uint256[] outgoingTranches,uint256[] outgoingTranchTimestamps,uint256[] incomingTranches,uint256[] incomingTrancheExpired,address[] signers,bytes[] signatures,uint256 expired)',
 ]);
 const holdAbi = parseAbi([
   'function approve(address spender, uint256 amount) returns (bool)',
@@ -112,7 +112,7 @@ const handleDeploy = () => {
     args: [
       createPoolFeeRatio,
       poolId,
-      rwaContract,
+      rwa,
       expectedHoldAmount,
       expectedRwaAmount,
       priceImpactPercent,
@@ -126,10 +126,10 @@ const handleDeploy = () => {
       allowEntryBurn,
       awaitCompletionExpired,
       floatingOutTranchesTimestamps,
-      outgoingTrancheAmounts,
-      outgoingTrancheTimestamps,
-      incomingTrancheAmounts,
-      incomingTrancheDeadlines,
+      outgoingTranches,
+      outgoingTranchTimestamps,
+      incomingTranches,
+      incomingTrancheExpired,
       signers,
       signatures,
       expired,
@@ -144,7 +144,7 @@ const deployCalldata = encodeFunctionData({
   args: [
     createPoolFeeRatio,
     poolId,
-    rwaContract,
+    rwa,
     expectedHoldAmount,
     expectedRwaAmount,
     priceImpactPercent,
@@ -158,10 +158,10 @@ const deployCalldata = encodeFunctionData({
     allowEntryBurn,
     awaitCompletionExpired,
     floatingOutTranchesTimestamps,
-    outgoingTrancheAmounts,
-    outgoingTrancheTimestamps,
-    incomingTrancheAmounts,
-    incomingTrancheDeadlines,
+    outgoingTranches,
+    outgoingTranchTimestamps,
+    incomingTranches,
+    incomingTrancheExpired,
     signers,
     signatures,
     expired,
