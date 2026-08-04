@@ -11,29 +11,31 @@ The Slices platform consists of three layers that work together to enable real-w
 
 ```mermaid
 flowchart TB
-    subgraph Frontend["Web Platform"]
+    subgraph Frontend["🌐 Frontend — Web Platform"]
         NextJS["Next.js (Dashboard)"]
         GraphQL["GraphQL API Client"]
         AI["AI Assistant"]
     end
 
-    subgraph Backend["Backend Services"]
+    subgraph Backend["⚙️ Backend — API & Services"]
         Gateway["GraphQL Gateway"]
         Indexer["Indexer (Blockchain Scanner)"]
         Signers["Signers Manager"]
         RWA["RWA Service"]
         Auth["Auth Service"]
         Charts["Charts Service"]
+        Loyalty["Loyalty Service"]
+        Faucet["Testnet Faucet"]
     end
 
-    subgraph SmartContracts["Smart Contracts"]
-        System["System Layer<br/>(AddressBook, Config, EventEmitter)"]
-        RWA_Layer["RWA Layer<br/>(Factory, RWA, Pool)"]
-        DAO["DAO Layer<br/>(Governance, Timelock, Treasury)"]
-        Platform["Platform Layer<br/>(PlatformToken, HoldToken)"]
+    subgraph SmartContracts["📜 Smart Contracts"]
+        System["System Layer<br/>AddressBook · Config · EventEmitter"]
+        RWA_Layer["RWA Layer<br/>Factory · RWA · Pool"]
+        DAO["DAO Layer<br/>Governance · Timelock · Treasury"]
+        Platform["Platform Layer<br/>PlatformToken · HoldToken · ReferralTreasury"]
     end
 
-    subgraph Blockchain["Blockchain"]
+    subgraph Blockchain["⛓️ Blockchain"]
         EVM["EVM-compatible Chain<br/>(BSC / Testnet)"]
     end
 

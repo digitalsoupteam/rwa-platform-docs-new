@@ -20,48 +20,32 @@ The protocol consists of four layers:
 
 ```mermaid
 flowchart TB
-    subgraph System["System Layer"]
+    subgraph System["📦 System Layer"]
         AB[AddressBook<br/>Registry & Discovery]
-        CF[Config<br/>Parameters]
-        EE[EventEmitter<br/>Event Logging]
     end
 
-    subgraph RWA["RWA Layer"]
-        FX[Factory<br/>Deployment]
-        RWA_TOKEN[RWA Token<br/>ERC1155]
+    subgraph RWA["🏭 RWA Layer"]
+        FX[Factory<br/>Pool Deployment]
         PL[Pool<br/>AMM + Tranches]
+        RWA_TOKEN[RWA Token<br/>ERC1155]
     end
 
-    subgraph DAO["DAO Layer"]
+    subgraph DAO["🏛️ DAO Layer"]
         GV[Governance<br/>Proposals & Voting]
         TL[Timelock<br/>Time-delayed Execution]
         TR[Treasury<br/>Fee Collection]
-        DS[DaoStaking<br/>Voting Power]
     end
 
-    subgraph Platform["Platform Layer"]
-        PT[PlatformToken<br/>Staking Token]
-        HT[HoldToken<br/>Base Currency]
-        RT[ReferralTreasury<br/>Referral Rewards]
-    end
-
-    AB --> CF
-    AB --> EE
     AB --> FX
     AB --> GV
-    AB --> PT
 
     FX --> RWA_TOKEN
     FX --> PL
     RWA_TOKEN --> PL
 
     GV --> TL
-    GV --> DS
     TL --> TR
-
-    HT --> PL
-    HT --> DS
-    PT --> DS
+    PL --> TR
 ```
 
 All contracts use the **UUPS (Universal Upgradeable Proxy Standard)** pattern, which allows logic updates without changing the contract address. Upgrade rights are controlled by a dedicated `upgradeRole` address stored in `AddressBook`.

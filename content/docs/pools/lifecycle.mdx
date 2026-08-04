@@ -1,11 +1,76 @@
 ---
-title: Pool Lifecycle
-description: From creation to maturity — every stage of a pool
----
-
-# Pool Lifecycle
+title: Pool Lifecycledescription: From creation to maturity — every stage of a pool
+---cle
 
 A pool progresses through several stages from creation to completion.
+
+```mermaid
+flowchart TB
+    subgraph Entry["🟢 Entry Period"]
+        direction TB
+        E1["Pool Created"]
+        E2["Participants Buy RWA Tokens via Pool.mint()"]
+        E3["HOLD Contributions Accumulate"]
+        E4{isTargetReached?}
+        E1 --> E2 --> E3 --> E4
+    end
+
+    subgraph ActiveTarget["🎯 Active — Target Reached"]
+        direction TB
+        AT1["isTargetReached = true"]
+        AT2["HOLD → outgoingTranchesBalance"]
+        AT3["virtualHoldReserve Increases"]
+        AT1 --> AT2 --> AT3
+    end
+
+    subgraph ActiveTrading["📈 Active — Trading"]
+        direction TB
+        TR1["Participants Buy & Sell RWA Tokens"]
+        TR2["Business Claims Outgoing Tranches"]
+        TR3["AMM Price Fluctuates"]
+        TR1 --> TR2 --> TR3
+    end
+
+    subgraph Completion["⏳ Completion Period"]
+        direction TB
+        CP1["New Purchases Blocked"]
+        CP2["Participants Can Still Sell via burn()"]
+        CP3["Bonuses May Become Available"]
+        CP1 --> CP2 --> CP3
+    end
+
+    subgraph FullyReturned["✅ Fully Returned"]
+        direction TB
+        FR1["isFullyReturned = true"]
+        FR2["fullReturnTimestamp Recorded"]
+        FR3["Participants Can Burn RWA Tokens"]
+        FR1 --> FR2 --> FR3
+    end
+
+    subgraph Bonus["🎁 Bonus Unlock"]
+        direction TB
+        B1{"awaitCompletionExpired?"}
+        B2["1 Day After completionPeriodExpired"]
+        B3["1 Day After fullReturnTimestamp"]
+        B1 -- Yes --> B2
+        B1 -- No + Fully Returned --> B3
+    end
+
+    subgraph Failed["❌ Failed / Cancelled"]
+        direction TB
+        F1["Pool Paused by Governance"]
+        F2["Participants Can Withdraw"]
+        F1 --> F2
+    end
+
+    E4 -- Yes --> AT1
+    E4 -- No + Time Expired --> F1
+    AT3 --> TR1
+    TR3 --> CP1
+    CP3 --> FR1
+    FR3 --> B1
+    CP3 -.-> B1
+```
 
 ## Stage 1: Entry Period
 

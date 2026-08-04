@@ -17,6 +17,55 @@ The Slices protocol uses a role-based access control (RBAC) system managed by th
 | **Signers** | `AddressBook` | Manages the set of authorized signers for multi-sig operations |
 | **ProtocolContract** | `AddressBook` | Marks contracts as protocol-authorized for cross-contract calls |
 
+```mermaid
+flowchart TB
+    subgraph Governance["🏛️ Governance — DAO Management"]
+        G1["DAO Proposals"]
+        G2["Update Config Parameters"]
+        G3["Manage Roles"]
+        G4["Emergency Pause"]
+    end
+
+    subgraph Timelock["⏳ Timelock — Delayed Execution"]
+        T1["Queue Transaction"]
+        T2["Execute After Delay"]
+        T3["Treasury Withdrawals"]
+    end
+
+    subgraph UpgradeRole["🔧 UpgradeRole — Contract Upgrades"]
+        U1["UUPS Proxy"]
+        U2["Authorize Implementation Upgrade"]
+    end
+
+    subgraph Signers["✍️ Signers — Multi-Signature"]
+        S1["Manage Authorized Signers"]
+        S2["Approve Business Creation"]
+        S3["Approve Payouts"]
+    end
+
+    subgraph ProtocolContract["📜 ProtocolContract — Contract Registry"]
+        P1["AddressBook Registry"]
+        P2["Mark Contract as Protocol-Authorized"]
+    end
+
+    G1 --> G2
+    G1 --> G3
+    G1 --> G4
+
+    G3 -.->|assigns| U1
+    G3 -.->|assigns| S1
+    G3 -.->|assigns| P1
+
+    G1 -.->|creates proposal| T1
+    T1 --> T2
+    T2 --> T3
+
+    U1 --> U2
+    S1 --> S2
+    S1 --> S3
+    P1 --> P2
+```
+
 ## Governance
 
 The `Governance` role is the core of the Slices DAO. It is assigned to the `Governance` contract, which executes actions approved by PlatformToken stakers through proposals.

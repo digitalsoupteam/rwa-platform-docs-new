@@ -33,28 +33,28 @@ Benefits of ERC1155:
 ```mermaid
 flowchart TB
     subgraph AssetIntake["📋 Asset Intake"]
-        A1["Business Registration"]
-        A2["Document Submission"]
+        A1["Company Registers on Platform"]
+        A2["Business Details Submitted"]
     end
 
     subgraph AIEval["🤖 AI Evaluation"]
         B1["Off-Chain Risk Analysis"]
-        B2["Risk Score Assignment"]
+        B2["Risk Score Published to Contract"]
     end
 
-    subgraph Legal["⚖️ Legal Review"]
-        C1["Multi-Signature Review"]
-        C2["Approval Collection"]
+    subgraph Legal["⚖️ Legal & Signatures"]
+        C1["Multi-Sig Review by Signers"]
+        C2["Approvals Collected"]
     end
 
-    subgraph Minting["🪙 Minting"]
-        D1["RWA Contract Deployed"]
-        D2["ERC1967 Proxy Setup"]
+    subgraph Minting["🪙 RWA Token Creation"]
+        D1["Factory.deployRWA() Called"]
+        D2["RWA Contract Deployed via ERC1967 Proxy"]
     end
 
     subgraph PoolAssign["🏊 Pool Assignment"]
-        E1["Pool Deployment"]
-        E2["Token Minting on Contribution"]
+        E1["Pool Deployed for the RWA"]
+        E2["Tokens Minted on Contribution"]
     end
 
     A1 --> A2
