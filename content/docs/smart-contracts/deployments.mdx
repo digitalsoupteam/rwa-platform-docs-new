@@ -41,15 +41,22 @@ These are the logic contracts behind the proxies. They are upgradeable and may c
 | **PlatformToken** | `0x8ed666d9b3f66baBEB6A2b1E1233C0B7B7AF1243` |
 | **ReferralTreasury** | `0xfB4f1d0AfAA8493437C777a0a9A342325439c234` |
 
-## Standalone Contracts
+## UUPS Implementation Templates
 
-These contracts are not behind proxies.
+These contracts are implementation templates used for UUPS proxies. They are not deployed as standalone contracts but serve as logic templates for creating new proxy instances.
+
+| Contract | Address |
+|---|---|
+| **RWA Implementation** | `0x7A3848376FD1295e4B1247Ea2d0992bbdCcccC26` |
+| **Pool Implementation** | `0xA1C8ebE0F3152C6A630dCa8E4560C0A42fBf41fD` |
+
+## Other Contracts
+
+This contract is deployed standalone (not behind a proxy).
 
 | Contract | Address |
 |---|---|
 | **HoldToken** | `0x1c0e214bB702572E5582085d6E25c39A2B13510d` |
-| **RWA Implementation** | `0x7A3848376FD1295e4B1247Ea2d0992bbdCcccC26` |
-| **Pool Implementation** | `0xA1C8ebE0F3152C6A630dCa8E4560C0A42fBf41fD` |
 
 ## Network Details
 
@@ -58,4 +65,22 @@ These contracts are not behind proxies.
 - **RPC URL:** `https://data-seed-prebsc-1-s1.binance.org:8545`
 - **Explorer:** [https://testnet.bscscan.com](https://testnet.bscscan.com)
 
+## Protocol Governance
 
+The protocol uses an AddressBook as a central registry for all contract addresses. The `upgradeRole` is a single address authorized to perform upgrades. Signers use ECDSA multi-signature scheme through Factory and ReferralTreasury contracts. The following roles are defined: Governance, Timelock, Treasury, Factory.
+
+| Logical Contract | Description |
+|---|---|
+| governance | Governance contract |
+| timelock | Timelock contract |
+| treasury | Treasury contract |
+| factory | Factory contract |
+| upgradeRole | Upgrade role address |
+| config | Config contract |
+| daoStaking | DaoStaking contract |
+| platformToken | PlatformToken contract |
+| holdToken | HoldToken contract |
+| eventEmitter | EventEmitter contract |
+| referralTreasury | ReferralTreasury contract |
+
+*Note: The actual addresses for these logical contracts on BSC Testnet are defined in the AddressBook contract code.*
