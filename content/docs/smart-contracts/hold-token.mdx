@@ -8,7 +8,7 @@ sidebar_position: 4
 
 **HoldToken** is the native ERC20 utility token of the RWA Platform ecosystem. It implements the standard ERC20 interface with additional mint and burn capabilities, enabling flexible token management within the platform. HoldToken serves as the backbone for fee collection, staking rewards, and governance participation across all RWA Platform smart contracts.
 
-The contract inherits from OpenZeppelin's `ERC20Upgradeable` and `AccessControlUpgradeable`, ensuring both standard token functionality and role-based access control for privileged operations.
+The contract inherits from OpenZeppelin's `ERC20Upgradeable` and uses `AddressBook.upgradeRole()` for upgrade authorization, ensuring both standard token functionality and role-based access control for privileged operations.
 
 ## Token Details
 
@@ -153,13 +153,14 @@ The `burnFrom` function is restricted to addresses with the `BURNER_ROLE`. This 
 :::
 
 :::note Upgradeability
-HoldToken is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `DEFAULT_ADMIN_ROLE` holder. Always interact with HoldToken through its proxy address.
+HoldToken is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `AddressBook.upgradeRole()` holder. Always interact with HoldToken through its proxy address.
 :::
 
 ### Role Management
 
 | Role | Privileges | Recommended Holders |
 |------|------------|-------------------|
-| `DEFAULT_ADMIN_ROLE` | Admin management, upgrades | Platform multisig / DAO |
+| `DEFAULT_ADMIN_ROLE` | Admin management | Platform multisig / DAO |
+| `AddressBook.upgradeRole()` | Upgrades | Platform multisig / DAO |
 | `MINTER_ROLE` | Token minting | Staking contract, treasury |
 | `BURNER_ROLE` | Token burning from any account | Platform fee manager |

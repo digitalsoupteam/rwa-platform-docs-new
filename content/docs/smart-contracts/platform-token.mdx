@@ -272,18 +272,19 @@ const availableRewards = await daoStaking.getAvailableRewards();
 :::warning Access Control
 The `mint` function is restricted to the **Governance** contract via `addressBook.requireGovernance(msg.sender)`. Only the DAO — through approved proposals — can mint new PlatformTokens. Unrestricted minting could lead to token supply inflation and dilution of voting power.
 
-The `DEFAULT_ADMIN_ROLE` (or equivalent upgrade role) controls contract upgrades. This role should be held by the DAO's Timelock contract to ensure no single entity can unilaterally modify the token logic.
+The `AddressBook.upgradeRole()` controls contract upgrades. This role should be held by the DAO's Timelock contract to ensure no single entity can unilaterally modify the token logic.
 :::
 
 :::note Upgradeability
-PlatformToken is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the designated upgrade role. Always interact with PlatformToken through its proxy address. The implementation address can be updated only through a governance proposal.
+PlatformToken is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `AddressBook.upgradeRole()` holder. Always interact with PlatformToken through its proxy address. The implementation address can be updated only through a governance proposal.
 :::
 
 ### Role Management
 
 | Role | Privileges | Recommended Holder |
 |------|------------|-------------------|
-| `DEFAULT_ADMIN_ROLE` | Admin management, upgrades | DAO Timelock |
+| `DEFAULT_ADMIN_ROLE` | Admin management | DAO Timelock |
+| `AddressBook.upgradeRole()` | Upgrades | DAO Timelock |
 | Governance access (via AddressBook) | Token minting | Governance contract |
 
 ## See Also
