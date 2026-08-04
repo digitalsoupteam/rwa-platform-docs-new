@@ -30,10 +30,10 @@ The central registry. Stores addresses of all protocol contracts and manages acc
 | `removeSigner(address)` | Governance | Remove authorized signer |
 | `addPool(Pool)` | Factory | Register a pool |
 | `addRWA(RWA)` | Factory | Register an RWA token |
-| `getPoolByIndex(uint256)` | Anyone | Get pool by index |
-| `getRWAByIndex(uint256)` | Anyone | Get RWA by index |
-| `rwasLength()` | Anyone | Number of registered RWAs |
-| `poolsLength()` | Anyone | Number of registered pools |
+| `getPoolByIndex(uint256)` → `Pool` | Anyone | Get pool by index |
+| `getRWAByIndex(uint256)` → `RWA` | Anyone | Get RWA by index |
+| `rwasLength()` → `uint256` | Anyone | Number of registered RWAs |
+| `poolsLength()` → `uint256` | Anyone | Number of registered pools |
 
 ### Config
 
@@ -64,39 +64,93 @@ Stores all configurable protocol parameters.
 | `updateTimelockDelay(uint256)` | Governance | Update timelock delay |
 | `updateDaoStakingAnnualRewardRate(uint256)` | Governance | Update staking reward rate |
 
+### Config Getters
+
+Read-only functions to query current protocol parameters.
+
+| Getter | Returns |
+|---|---|
+| `addressBook()` | `AddressBook` |
+| `baseMetadataUri()` | `string` |
+| `holdToken()` | `IERC20` |
+| `minSignersRequired()` | `uint256` |
+| `createRWAFeeMin()` | `uint256` |
+| `createRWAFeeMax()` | `uint256` |
+| `createPoolFeeRatioMin()` | `uint256` |
+| `createPoolFeeRatioMax()` | `uint256` |
+| `expectedHoldAmountMin()` | `uint256` |
+| `expectedHoldAmountMax()` | `uint256` |
+| `expectedRwaAmountMin()` | `uint256` |
+| `expectedRwaAmountMax()` | `uint256` |
+| `entryFeePercentMin()` | `uint256` |
+| `entryFeePercentMax()` | `uint256` |
+| `exitFeePercentMin()` | `uint256` |
+| `exitFeePercentMax()` | `uint256` |
+| `rewardPercentMin()` | `uint256` |
+| `rewardPercentMax()` | `uint256` |
+| `entryPeriodMinDuration()` | `uint256` |
+| `entryPeriodMaxDuration()` | `uint256` |
+| `completionPeriodMinDuration()` | `uint256` |
+| `completionPeriodMaxDuration()` | `uint256` |
+| `maxEntryStartPastOffset()` | `uint256` |
+| `maxEntryStartFutureOffset()` | `uint256` |
+| `outgoingTranchesMinCount()` | `uint256` |
+| `outgoingTranchesMaxCount()` | `uint256` |
+| `outgoingTranchesMinPercent()` | `uint256` |
+| `outgoingTranchesMaxPercent()` | `uint256` |
+| `outgoingTranchesMinInterval()` | `uint256` |
+| `incomingTranchesMinCount()` | `uint256` |
+| `incomingTranchesMaxCount()` | `uint256` |
+| `incomingTranchesMinPercent()` | `uint256` |
+| `incomingTranchesMaxPercent()` | `uint256` |
+| `incomingTranchesMinInterval()` | `uint256` |
+| `votingPeriod()` | `uint256` |
+| `votingDelay()` | `uint256` |
+| `quorumPercentage()` | `uint256` |
+| `proposalThreshold()` | `uint256` |
+| `timelockDelay()` | `uint256` |
+| `daoStakingAnnualRewardRate()` | `uint256` |
+| `liquidityCoefficients(uint256)` | `uint256` |
+| `getLiquidityCoefficient(uint256)` → `uint256` | Get coefficient for a given percentage |
+
 ### EventEmitter
 
 Centralized event logging. All functions restricted to protocol contracts.
 
 | Event | Description |
 |---|---|
-| `Pool_Deployed` | New pool deployed |
-| `Pool_RwaMinted` | RWA tokens minted |
-| `Pool_RwaBurned` | RWA tokens burned |
-| `Pool_TargetReached` | Pool funding target reached |
-| `Pool_FundsFullyReturned` | All funds returned |
-| `Pool_OutgoingTrancheClaimed` | Outgoing tranche claimed |
-| `Pool_IncomingTrancheUpdate` | Incoming tranche updated |
-| `Pool_BonusWithdrawn` | Bonus withdrawn |
-| `Pool_ReservesUpdated` | AMM reserves changed |
-| `Pool_PausedStateChanged` | Pool paused/unpaused |
-| `Governance_ProposalCreated` | New proposal created |
-| `Governance_VoteCast` | Vote cast |
-| `Governance_ProposalExecuted` | Proposal executed |
-| `Governance_ProposalCancelled` | Proposal cancelled |
-| `DaoStaking_TokensStaked` | Tokens staked |
-| `DaoStaking_TokensUnstaked` | Tokens unstaked |
-| `DaoStaking_TokensLocked` | Tokens locked |
-| `Timelock_TransactionQueued` | Transaction queued |
-| `Timelock_TransactionExecuted` | Transaction executed |
-| `Timelock_TransactionCancelled` | Transaction cancelled |
-| `Treasury_Withdrawal` | Treasury withdrawal |
-| `RWA_Deployed` | RWA contract deployed |
-| `RWA_Transfer` | RWA token transferred |
-| `RWA_PausedStateChanged` | RWA paused/unpaused |
-| `Factory_RwaDeployed` | RWA deployed by factory |
-| `Factory_PoolDeployed` | Pool deployed by factory |
-| `Factory_FeesCollected` | Fees collected by factory |
+| `Pool_Deployed(address indexed emittedFrom, address indexed deployer, bool awaitCompletionExpired, bool floatingOutTranchesTimestamps, address holdToken, address rwaToken, uint256 tokenId, string entityId, string entityOwnerId, string entityOwnerType, address owner, uint256 expectedHoldAmount, uint256 expectedRwaAmount, uint256 expectedBonusAmount, uint256 rewardPercent, bool fixedSell, bool allowEntryBurn, uint256 entryPeriodStart, uint256 entryPeriodExpired, uint256 completionPeriodExpired, uint256 k, uint256 entryFeePercent, uint256 exitFeePercent, uint256[] outgoingTranches, uint256[] outgoingTranchTimestamps, uint256[] incomingTranches, uint256[] incomingTrancheExpired)` | New pool deployed |
+| `Pool_RwaMinted(address indexed emittedFrom, address indexed minter, uint256 rwaAmountMinted, uint256 holdAmountPaid, uint256 feePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, uint256 poolId, address holdToken)` | RWA tokens minted |
+| `Pool_RwaBurned(address indexed emittedFrom, address indexed burner, uint256 rwaAmountBurned, uint256 holdAmountReceived, uint256 bonusAmountReceived, uint256 holdFeePaid, uint256 bonusFeePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, uint256 poolId, address holdToken)` | RWA tokens burned |
+| `Pool_TargetReached(address indexed emittedFrom, uint256 outgoingTranchesBalance, uint256 floatingTimestampOffset, address owner)` | Pool funding target reached |
+| `Pool_FundsFullyReturned(address indexed emittedFrom, address indexed caller, address owner, uint256 timestamp)` | All funds returned |
+| `Pool_OutgoingTrancheClaimed(address indexed emittedFrom, address indexed claimer, uint256 trancheIndex, uint256 amountClaimed, address holdToken)` | Outgoing tranche claimed |
+| `Pool_OutgoingClaimSummary(address indexed emittedFrom, uint256 currentTotalClaimedAmount, uint256 currentOutgoingTranchesBalance)` | Outgoing claim summary updated |
+| `Pool_IncomingTrancheUpdate(address indexed emittedFrom, address indexed caller, address owner, uint256 trancheIndex, uint256 amountAppliedToTranche, bool isNowComplete, bool wasOnTime, address holdToken)` | Incoming tranche updated |
+| `Pool_IncomingReturnSummary(address indexed emittedFrom, uint256 currentTotalReturnedAmount, uint256 currentAwaitingBonusAmount, uint256 currentLastCompletedIncomingTranche)` | Incoming return summary updated |
+| `Pool_BonusWithdrawn(address indexed emittedFrom, uint256 currentAwaitingBonusAmount, uint256 currentRewardedRwaAmount)` | Bonus withdrawn |
+| `Pool_AwaitingRwaAmountUpdated(address indexed emittedFrom, uint256 awaitingRwaAmount)` | Awaiting RWA amount updated |
+| `Pool_ReservesUpdated(address indexed emittedFrom, uint256 realHoldReserve, uint256 virtualHoldReserve, uint256 virtualRwaReserve)` | AMM reserves changed |
+| `Pool_PausedStateChanged(address indexed emittedFrom, bool isPaused)` | Pool paused/unpaused |
+| `Governance_ProposalCreated(address indexed emittedFrom, uint256 indexed proposalId, address indexed proposer, address target, bytes data, string description, uint256 votesFor, uint256 votesAgainst, uint256 creationTime, uint256 endTime, bool executed, bool cancelled)` | New proposal created |
+| `Governance_VoteCast(address indexed emittedFrom, uint256 indexed proposalId, address indexed voter, bool support, uint256 weight, string reason)` | Vote cast |
+| `Governance_ProposalExecuted(address indexed emittedFrom, uint256 indexed proposalId, address indexed executor)` | Proposal executed |
+| `Governance_ProposalCancelled(address indexed emittedFrom, uint256 indexed proposalId, address indexed canceller)` | Proposal cancelled |
+| `DaoStaking_TokensStaked(address indexed emittedFrom, address indexed staker, uint256 amount, uint256 newVotingPower)` | Tokens staked |
+| `DaoStaking_TokensUnstaked(address indexed emittedFrom, address indexed staker, uint256 amount, uint256 rewardsReceived, uint256 newVotingPower)` | Tokens unstaked |
+| `DaoStaking_TokensLocked(address indexed emittedFrom, address indexed user, uint256 unlockTimestamp)` | Tokens locked |
+| `Timelock_TransactionQueued(address indexed emittedFrom, bytes32 indexed txHash, address target, bytes data, uint256 eta)` | Transaction queued |
+| `Timelock_TransactionExecuted(address indexed emittedFrom, bytes32 indexed txHash, address target, bytes data, uint256 eta)` | Transaction executed |
+| `Timelock_TransactionCancelled(address indexed emittedFrom, bytes32 indexed txHash, address target, bytes data, uint256 eta)` | Transaction cancelled |
+| `Treasury_Withdrawal(address indexed emittedFrom, address indexed to, address indexed token, uint256 amount)` | Treasury withdrawal |
+| `RWA_Deployed(address indexed emittedFrom, address indexed deployer, address owner, string entityId)` | RWA contract deployed |
+| `RWA_Transfer(address indexed emittedFrom, address indexed from, address indexed to, uint256 tokenId, uint256 amount, address pool)` | RWA token transferred |
+| `RWA_PausedStateChanged(address indexed emittedFrom, bool isPaused)` | RWA paused/unpaused |
+| `ReferralTreasury_Withdrawn(address indexed emittedFrom, address indexed user, address indexed token, uint256 amount)` | Referral rewards withdrawn |
+| `ReferralTreasury_EmergencyWithdrawn(address indexed emittedFrom, address indexed to, address indexed token, uint256 amount, address caller)` | Emergency withdrawal executed |
+| `Factory_CreateRWAFeeCollected(address indexed emittedFrom, address indexed sender, uint256 amount, address token)` | RWA creation fee collected |
+| `Factory_CreatePoolFeeCollected(address indexed emittedFrom, address indexed sender, uint256 amount, address token)` | Pool creation fee collected |
+| `PlatformToken_Transfer(address indexed emittedFrom, address indexed from, address indexed to, uint256 amount)` | Platform token transferred |
 
 ## RWA Contracts
 
@@ -106,8 +160,8 @@ Deploys RWA token and Pool contracts via ERC1967 proxy.
 
 | Function | Access | Description |
 |---|---|---|
-| `deployRWA(uint256,string,string,string,address,address[],bytes[],uint256)` | Anyone + signatures | Deploy RWA token |
-| `deployPool(uint256,string,string,string,address,RWA,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,uint256[],uint256[],uint256[],uint256[],address[],bytes[],uint256)` | Anyone + signatures | Deploy pool |
+| `deployRWA(uint256,string,string,string,address,address[],bytes[],uint256)` → `address` | Anyone + signatures | Deploy RWA token |
+| `deployPool(uint256,string,string,string,address,RWA,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,uint256[],uint256[],uint256[],uint256[],address[],bytes[],uint256)` → `address` | Anyone + signatures | Deploy pool |
 
 ### RWA
 
@@ -115,10 +169,10 @@ ERC1155 multi-token contract for real-world assets.
 
 | Function | Access | Description |
 |---|---|---|
-| `createToken(address)` | Factory | Create new token ID |
+| `createToken(address)` → `uint256` | Factory | Create new token ID |
 | `mint(address,uint256,uint256)` | Associated pool | Mint tokens |
 | `burn(address,uint256,uint256)` | Associated pool | Burn tokens |
-| `uri(uint256)` | Anyone | Get metadata URI |
+| `uri(uint256)` → `string` | Anyone | Get metadata URI |
 | `enablePause()` | Governance | Pause contract |
 | `disablePause()` | Timelock | Unpause contract |
 
@@ -132,14 +186,14 @@ Crowdfunding pool with AMM and tranches.
 | `burn(uint256,uint256,uint256,uint256)` | Anyone | Sell RWA tokens |
 | `claimOutgoingTranches(uint256[])` | Pool owner | Claim outgoing tranches |
 | `returnIncomingTranche(uint256)` | Anyone | Return funds |
-| `estimateMint(uint256,bool)` | Anyone | Estimate mint cost |
-| `estimateBurn(uint256)` | Anyone | Estimate burn return |
+| `estimateMint(uint256,bool)` → `(uint256,uint256,uint256)` | Anyone | Estimate mint cost |
+| `estimateBurn(uint256)` → `(uint256,uint256,uint256,uint256,uint256)` | Anyone | Estimate burn return |
 | `enablePause()` | Governance | Pause pool |
 | `disablePause()` | Governance | Unpause pool |
-| `getOutgoingTranches()` | Anyone | Get outgoing tranche data |
-| `getIncomingTranches()` | Anyone | Get incoming tranche data |
-| `getBonusUnlockTimestamp()` | Anyone | Get bonus unlock time |
-| `checkBonusesUnlocked()` | Anyone | Check if bonuses available |
+| `getOutgoingTranches()` → `(uint256[],uint256[],uint256[])` | Anyone | Get outgoing tranche data |
+| `getIncomingTranches()` → `(uint256[],uint256[],uint256[])` | Anyone | Get incoming tranche data |
+| `getBonusUnlockTimestamp()` → `uint256` | Anyone | Get bonus unlock time |
+| `checkBonusesUnlocked()` → `bool` | Anyone | Check if bonuses available |
 
 ## DAO Contracts
 
@@ -149,12 +203,12 @@ Manages proposals and voting.
 
 | Function | Access | Description |
 |---|---|---|
-| `propose(address,bytes,string)` | Voting power ≥ threshold | Create proposal |
+| `propose(address,bytes,string)` → `uint256` | Voting power ≥ threshold | Create proposal |
 | `vote(uint256,bool,string)` | Staker with voting power | Vote on proposal |
 | `cancel(uint256)` | Proposer (≤12h) or contract | Cancel proposal |
-| `getProposal(uint256)` | Anyone | Get proposal details |
-| `getReceipt(uint256,address)` | Anyone | Get vote receipt |
-| `isActive(uint256)` | Anyone | Check if proposal active |
+| `getProposal(uint256)` → `Proposal` | Anyone | Get proposal details |
+| `getReceipt(uint256,address)` → `Receipt` | Anyone | Get vote receipt |
+| `isActive(uint256)` → `bool` | Anyone | Check if proposal active |
 
 ### Timelock
 
@@ -162,11 +216,14 @@ Enforces time delay on governance actions.
 
 | Function | Access | Description |
 |---|---|---|
-| `queueTransaction(address,bytes,uint256)` | Governance | Queue transaction |
+| `queueTransaction(address,bytes,uint256)` → `bytes32` | Governance | Queue transaction |
 | `executeTransaction(address,bytes,uint256)` | Anyone | Execute queued transaction |
 | `cancelTransaction(address,bytes,uint256)` | Governance | Cancel queued transaction |
 | `withdrawERC20(address,address,uint256)` | Timelock | Withdraw ERC20 |
 | `withdrawETH(address,uint256)` | Timelock | Withdraw ETH |
+| `isTransactionQueued(address,bytes,uint256)` → `bool` | Anyone | Check if transaction is queued |
+| `getTransactionETA(address,bytes,uint256)` → `uint256` | Anyone | Get transaction execution time |
+| `isTransactionReady(address,bytes,uint256)` → `bool` | Anyone | Check if transaction is ready to execute |
 
 ### Treasury
 
@@ -176,7 +233,7 @@ Holds protocol fees.
 |---|---|---|
 | `withdrawERC20(address,address,uint256)` | Timelock | Withdraw ERC20 tokens |
 | `withdrawETH(address,uint256)` | Timelock | Withdraw ETH |
-| `getTokenBalance(address)` | Anyone | Get token balance |
+| `getTokenBalance(address)` → `uint256` | Anyone | Get token balance |
 
 ### DaoStaking
 
@@ -187,10 +244,10 @@ Manages PlatformToken staking for governance.
 | `stake(uint256)` | Anyone | Stake tokens |
 | `unstake(uint256)` | Anyone | Unstake tokens |
 | `lock(address,uint256)` | Governance | Lock user's stake |
-| `calculatePendingRewards(address)` | Anyone | Calculate pending rewards |
-| `getAvailableRewards()` | Anyone | Get available rewards |
-| `getVotingPower(address)` | Anyone | Get voting power |
-| `getTotalVotingPower()` | Anyone | Get total voting power |
+| `calculatePendingRewards(address)` → `uint256` | Anyone | Calculate pending rewards |
+| `getAvailableRewards()` → `uint256` | Anyone | Get available rewards |
+| `getVotingPower(address)` → `uint256` | Anyone | Get voting power |
+| `getTotalVotingPower()` → `uint256` | Anyone | Get total voting power |
 
 ## Platform Contracts
 
@@ -219,5 +276,5 @@ Base contract for all upgradeable contracts (UUPS pattern).
 |---|---|---|
 | `upgradeTo(address)` | UpgradeRole | Upgrade implementation |
 | `upgradeToAndCall(address,bytes)` | UpgradeRole | Upgrade and call |
-| `uniqueContractId()` | Anyone | Get contract identifier |
-| `implementationVersion()` | Anyone | Get version number |
+| `uniqueContractId()` → `bytes32` | Anyone | Get contract identifier |
+| `implementationVersion()` → `uint256` | Anyone | Get version number |
