@@ -50,22 +50,70 @@ totalCost = holdAmount + fee
 
 You need to approve the HOLD tokens first, then call `mint`:
 
-```javascript
-// Estimate cost first
-const [holdAmountWithFee, fee, actualRwaAmount] = await pool.estimateMint(
-  rwaAmount,    // how many RWA tokens you want
-  true          // allowPartial
-);
+```tsx
+import { useReadContract, useWriteContract, encodeFunctionData } from 'wagmi';
+import { parseAbi } from 'viem';
 
-// Approve HOLD for pool
-await holdToken.approve(poolAddress, holdAmountWithFee);
+// ABI fragments
+const poolAbi = parseAbi([
+  'function estimateMint(uint256 rwaAmount, bool allowPartial) view returns (uint256 holdAmountWithFee, uint256 fee, uint256 actualRwaAmount)',
+  'function mint(uint256 rwaAmount, uint256 maxHoldAmount, uint256 validUntil, bool allowPartial)',
+]);
+const holdAbi = parseAbi([
+  'function approve(address spender, uint256 amount) returns (bool)',
+]);
 
-// Mint
-const tx = await pool.mint(
-  rwaAmount,           // desired RWA amount
-  holdAmountWithFee,   // max HOLD to spend
-  Math.floor(Date.now() / 1000) + 600,  // validUntil (10 min)
-  true                 // allowPartial
+// 1. Estimate cost via useReadContract
+const { data: estimate } = useReadContract({
+  address: poolAddress,
+  abi: poolAbi,
+  functionName: 'estimateMint',
+  args: [rwaAmount, true],
+});
+
+const holdAmountWithFee = estimate?.[0] ?? 0n;
+
+// 2. Approve HOLD for pool via useWriteContract
+const { writeContract: approve } = useWriteContract();
+
+const handleApprove = () => {
+  approve({
+    address: holdTokenAddress,
+    abi: holdAbi,
+    functionName: 'approve',
+    args: [poolAddress, holdAmountWithFee],
+  });
+};
+
+// 3. Mint via useWriteContract
+const { writeContract: mint } = useWriteContract();
+
+const handleMint = () => {
+  mint({
+    address: poolAddress,
+    abi: poolAbi,
+    functionName: 'mint',
+    args: [
+      rwaAmount,
+      holdAmountWithFee,
+      BigInt(Math.floor(Date.now() / 1000) + 600), // validUntil (10 min)
+      true, // allowPartial
+    ],
+  });
+};
+
+// Prepare calldata with encodeFunctionData (alternative)
+const mintCalldata = encodeFunctionData({
+  abi: poolAbi,
+  functionName: 'mint',
+  args: [
+    rwaAmount,
+    holdAmountWithFee,
+    BigInt(Math.floor(Date.now() / 1000) + 600),
+    true,
+  ],
+});
+````          // allowPartial
 );
 await tx.wait();
 ```

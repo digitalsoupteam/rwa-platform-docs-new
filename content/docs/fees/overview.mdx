@@ -5,7 +5,7 @@ description: How fees work on Slices — creation fees, trading fees, and protoc
 
 # Fees
 
-The Slices protocol has several types of fees. All fees are paid in **USDT** (the platform's stablecoin) and collected by the **Treasury** contract, which is controlled by Governance through the Timelock.
+The Slices protocol has several types of fees. All fees are paid in **HOLD** (the platform's stablecoin) and collected by the **Treasury** contract, which is controlled by Governance through the Timelock.
 
 ## Fee Types
 
@@ -15,8 +15,8 @@ Paid when deploying a new RWA token contract via `Factory.deployRWA()`.
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `createRWAFeeMin` | **100 USDT** | Minimum fee |
-| `createRWAFeeMax` | **1,000 USDT** | Maximum fee |
+| `createRWAFeeMin` | **100 HOLD** | Minimum fee |
+| `createRWAFeeMax` | **1,000 HOLD** | Maximum fee |
 
 The caller chooses a fee within this range. The fee is transferred to the Treasury when `deployRWA()` is called.
 
@@ -33,9 +33,9 @@ poolFee = expectedHoldAmount × createPoolFeeRatio / 10000
 | `createPoolFeeRatioMin` | **100** (1%) | Minimum ratio |
 | `createPoolFeeRatioMax` | **1,000** (10%) | Maximum ratio |
 
-The caller chooses a ratio within this range. For example, with a funding target of 50,000 USDT and a ratio of 200 (2%):
+The caller chooses a ratio within this range. For example, with a funding target of 50,000 HOLD and a ratio of 200 (2%):
 ```
-poolFee = 50,000 × 200 / 10000 = 1,000 USDT
+poolFee = 50,000 × 200 / 10000 = 1,000 HOLD
 ```
 
 ### 3. Entry Fee (Buy)
@@ -43,7 +43,7 @@ poolFee = 50,000 × 200 / 10000 = 1,000 USDT
 Charged when a participant buys RWA tokens via `Pool.mint()`. Calculated on the HOLD amount determined by the AMM:
 
 ```
-holdAmount = AMM output (USDT)
+holdAmount = AMM output (HOLD)
 fee = holdAmount × entryFeePercent / 10000
 totalCost = holdAmount + fee
 ```
@@ -85,17 +85,18 @@ expectedBonusAmount = expectedHoldAmount × rewardPercent / 10000
 | `rewardPercentMin` | **100** (1%) | Minimum bonus rate |
 | `rewardPercentMax` | **10,000** (100%) | Maximum bonus rate |
 
-For example, with a funding target of 50,000 USDT and `rewardPercent = 2000` (20%):
+For example, with a funding target of 50,000 HOLD and `rewardPercent = 2000` (20%):
 ```
-expectedBonusAmount = 50,000 × 2000 / 10000 = 10,000 USDT
+expectedBonusAmount = 50,000 × 2000 / 10000 = 10,000 HOLD
 ```
 
-This means the business must return 60,000 USDT total (50,000 principal + 10,000 bonus) for the pool to be considered fully returned.
+This means the business must return 60,000 HOLD total (50,000 principal + 10,000 bonus) for the pool to be considered fully returned.
 
 ## Fee Flow
 
 ```
 User pays fee → Pool contract → Treasury contract
+User → Factory → Treasury (creation fees)
                               ↓
                     Controlled by Governance
                     (withdrawals via Timelock)
@@ -109,8 +110,8 @@ All fee ranges are stored in the **Config** contract and can be updated by Gover
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `createRWAFeeMin` | 100 USDT | Min RWA creation fee |
-| `createRWAFeeMax` | 1,000 USDT | Max RWA creation fee |
+| `createRWAFeeMin` | 100 HOLD | Min RWA creation fee |
+| `createRWAFeeMax` | 1,000 HOLD | Max RWA creation fee |
 | `createPoolFeeRatioMin` | 100 (1%) | Min pool creation ratio |
 | `createPoolFeeRatioMax` | 1,000 (10%) | Max pool creation ratio |
 | `entryFeePercentMin` | 100 (1%) | Min entry fee |
@@ -132,7 +133,7 @@ Every fee payment emits an event through the EventEmitter:
 ## Key Points
 
 - All fees are in **basis points** (100 = 1%, 10000 = 100%)
-- Fees are paid in **USDT** (the platform's stablecoin)
+- Fees are paid in **HOLD** (the platform's stablecoin)
 - All fees go to the **Treasury** contract
 - Fee ranges are set by **Governance** via Config updates
 - Entry/exit fees are set per-pool at deployment time, within the Config ranges
