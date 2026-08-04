@@ -1,0 +1,127 @@
+---
+title: Roles & Permissions
+description: The role-based access control system of the Slices protocol — Governance, Timelock, UpgradeRole, Signers, and ProtocolContract
+---
+
+# Roles & Permissions
+
+The Slices protocol uses a role-based access control (RBAC) system managed by the `AddressBook` contract. Each role grants specific permissions for protocol operations, ensuring that sensitive actions require appropriate authorization.
+
+## Role Overview
+
+| Role | Contract | Description |
+|------|----------|-------------|
+| **Governance** | `Governance` | Executes DAO-approved proposals — parameter changes, upgrades, treasury management |
+| **Timelock** | `TimelockController` | Delays and executes treasury withdrawals with a 2-day timelock delay |
+| **UpgradeRole** | UUPS Proxy | Authorizes contract implementation upgrades via the UUPS pattern |
+| **Signers** | `AddressBook` | Manages the set of authorized signers for multi-sig operations |
+| **ProtocolContract** | `AddressBook` | Marks contracts as protocol-authorized for cross-contract calls |
+
+## Governance
+
+The `Governance` role is the core of the Slices DAO. It is assigned to the `Governance` contract, which executes actions approved by PlatformToken stakers through proposals.
+
+```solidity
+function requireGovernance(address account) external view {
+    require(isGovernance[account], "AddressBook: not governance");
+}
+```
+
+**Permissions:**
+- Update protocol parameters in `Config` (fee ranges, period durations, thresholds)
+- Upgrade contract implementations via UUPS
+- Withdraw funds from the Treasury (via Timelock)
+- Add or remove authorized signers
+- Mint PlatformTokens
+- Pause or unpause contracts in emergencies
+
+## Timelock
+
+The `Timelock` role is assigned to the `TimelockController`, which acts as a safety mechanism for treasury operations. All treasury withdrawals must go through the timelock with a **2-day delay** (`timelockDelay`).
+
+```solidity
+function requireTimelock(address account) external view {
+    require(isTimelock[account], "AddressBook: not timelock");
+}
+```
+
+**Permissions:**
+- Execute treasury withdrawals after the timelock delay expires
+- Queue and cancel pending treasury operations
+
+> **Note:** The timelock delay applies only to Treasury operations. Regular governance proposals (parameter changes, upgrades) are executed immediately after passing.
+
+## UpgradeRole
+
+The `UpgradeRole` controls contract implementation upgrades via the UUPS (Universal Upgradeable Proxy Standard) pattern. Only authorized accounts can upgrade a proxy to a new implementation.
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal override {
+    addressBook.requireUpgradeRole(msg.sender);
+}
+```
+
+**Permissions:**
+- Upgrade any UUPS proxy contract to a new implementation address
+- This role is typically held by the `Governance` contract after a successful proposal
+
+## Signers
+
+The `Signers` role manages a set of authorized addresses that can perform multi-sig operations. Signers are added or removed by the `Governance` role through proposals.
+
+```solidity
+function addSigner(address signer) external {
+    addressBook.requireGovernance(msg.sender);
+    // Adds signer to the authorized set
+}
+
+function removeSigner(address signer) external {
+    addressBook.requireGovernance(msg.sender);
+    // Removes signer from the authorized set
+}
+```
+
+**Permissions:**
+- Participate in multi-sig approvals for critical operations
+- Sign transactions that require multiple confirmations
+
+## ProtocolContract
+
+The `ProtocolContract` role marks contracts as trusted within the protocol ecosystem. This allows authorized contracts to call restricted functions on other protocol contracts.
+
+```solidity
+function requireProtocolContract(address account) external view {
+    require(isProtocolContract[account], "AddressBook: not protocol contract");
+}
+```
+
+**Permissions:**
+- Call restricted cross-contract functions
+- Interact with other protocol contracts at the system level
+
+## Permission Matrix
+
+| Action | Governance | Timelock | UpgradeRole | Signers | ProtocolContract |
+|--------|:----------:|:--------:|:-----------:|:-------:|:----------------:|
+| Update Config parameters | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Upgrade contract implementation | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Treasury withdrawal | ✅ (via Timelock) | ✅ | ❌ | ❌ | ❌ |
+| Add/remove signers | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Mint PlatformTokens | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Pause/unpause contracts | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Cross-contract system calls | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Multi-sig signing | ❌ | ❌ | ❌ | ✅ | ❌ |
+
+## Role Assignment
+
+Roles are managed through the `AddressBook` contract. The `Governance` role is the root of authority — it can reassign other roles through DAO proposals.
+
+| Role | Assigned By | Current Holder |
+|------|-------------|----------------|
+| **Governance** | Initial deployment | `Governance` contract |
+| **Timelock** | Governance proposal | `TimelockController` contract |
+| **UpgradeRole** | Governance proposal | `Governance` contract |
+| **Signers** | Governance proposal | Set of authorized addresses |
+| **ProtocolContract** | Governance proposal | Set of protocol contracts |
+
+> **Note:** All role assignments are controlled by the DAO. No single entity has unilateral control over any role — changes require a successful governance proposal.
