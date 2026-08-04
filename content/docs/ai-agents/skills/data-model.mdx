@@ -24,17 +24,18 @@ A tokenizable business entity owned by a company.
 | `tokenAddress` | `String` | RWA contract address (set after on-chain deployment) |
 | `description` | `String` | Business description |
 | `tags` | `[String!]` | Categorization tags |
-| `riskScore` | `Int` | AI-evaluated risk score (0-100, null if not yet evaluated) |
+| `riskScore` | `Float!` | AI-evaluated risk score (0-100, null if not yet evaluated) |
 | `image` | `String` | Profile image URL |
 | `approvalSignaturesTaskId` | `String` | Multi-sig task ID for RWA deployment approval |
 | `approvalSignaturesTaskExpired` | `Float` | Approval task expiration timestamp |
-| `riskScoreEvaluationProcess` | `Boolean!` | True if AI evaluation is in progress |
 | `country` | `String` | ISO 3166-1 alpha-2 country code |
 | `businessType` | `String` | `growth` \| `startup` \| `franchise` |
 | `socials` | `[SocialLink!]!` | Social media links `{ type, url }` |
 | `paused` | `Boolean!` | True if RWA contract is paused on-chain |
 | `createdAt` | `Float!` | Creation timestamp |
 | `updatedAt` | `Float!` | Last update timestamp |
+
+**Source:** `rwa/schema.graphql` строки 14-34
 
 ### Pool
 
@@ -51,7 +52,7 @@ A crowdfunding pool linked to a business. Has on-chain contract state (synced fr
 | `description` | `String` | Pool description |
 | `chainId` | `String!` | Blockchain ID |
 | `tags` | `[String!]` | Categorization tags |
-| `riskScore` | `Int` | AI-evaluated risk score (0-100) |
+| `riskScore` | `Float!` | AI-evaluated risk score (0-100) |
 | `image` | `String` | Pool image URL |
 | **Contract Addresses** | | |
 | `rwaAddress` | `String!` | RWA ERC1155 contract address |
@@ -96,12 +97,13 @@ A crowdfunding pool linked to a business. Has on-chain contract state (synced fr
 | `outgoingTranches` | `[OutgoingTranche!]!` | Payments to business owner |
 | `incomingTranches` | `[IncomingTranche!]!` | Expected returns from business |
 | `lastCompletedIncomingTranche` | `Int!` | Index of last fully returned incoming tranche |
-| **Approval & Evaluation** | | |
+| **Approval** | | |
 | `approvalSignaturesTaskId` | `String` | Multi-sig task ID |
 | `approvalSignaturesTaskExpired` | `Float` | Task expiration |
-| `riskScoreEvaluationProcess` | `Boolean!` | AI evaluation in progress |
 | `createdAt` | `Float!` | Creation timestamp |
 | `updatedAt` | `Float!` | Last update timestamp |
+
+**Source:** `rwa/schema.graphql` строки 36-106
 
 ### OutgoingTranche
 
@@ -113,6 +115,8 @@ type OutgoingTranche {
 }
 ```
 
+**Source:** `rwa/schema.graphql` строки 108-112
+
 ### IncomingTranche
 
 ```graphql
@@ -122,6 +126,8 @@ type IncomingTranche {
   returnedAmount: String! # Returned so far
 }
 ```
+
+**Source:** `rwa/schema.graphql` строки 114-118
 
 ---
 
@@ -149,11 +155,13 @@ type UserPermission { id, permission: String!, entity: String }
 type Permission { id, permission, entity, createdAt, updatedAt }
 ```
 
+**Source:** `company/schema.graphql` строки 4-55
+
 ---
 
 ## Evaluation
 
-AI risk assessment result.
+AI risk assessment result. Part of the `rwa` module — `riskScore` field on `Business` and `Pool` types, with `updateBusinessRiskScore` and `updatePoolRiskScore` mutations.
 
 ```graphql
 type Evaluation {
@@ -217,6 +225,8 @@ type Transaction {
 }
 ```
 
+**Source:** `portfolio/schema.graphql` строки 4-31
+
 ---
 
 ## DAO (Indexed On-Chain Data)
@@ -257,6 +267,8 @@ type TreasuryWithdraw {
 }
 ```
 
+**Source:** `dao/schema.graphql` строки 3-80
+
 ---
 
 ## Charts
@@ -283,6 +295,8 @@ type PoolTransaction {
   holdFee: String!, bonusFee: String!
 }
 ```
+
+**Source:** `charts/schema.graphql` строки 1-41
 
 ---
 
@@ -318,6 +332,8 @@ type ReferrerClaimHistory {
 }
 ```
 
+**Source:** `loyalty/schema.graphql` строки 4-64
+
 ---
 
 ## Auxiliary Content Entities
@@ -327,9 +343,9 @@ All content types follow the same pattern: owned by a company, attached to a bus
 | Entity | Parent | Key Fields |
 |---|---|---|
 | **Folder** | business/pool | `name, parentId, type` |
-| **Document** | folder | `folderId, name, fileId, path, url, mimeType, size` |
+| **Document** | folder | `folderId, name, link, ownerId, ownerType, creator, parentId, grandParentId` |
 | **Gallery** | business/pool/user | `name, parentId, type` |
-| **Image** | gallery | `galleryId, name, description, fileId, path, url, mimeType, size` |
+| **Image** | gallery | `galleryId, name, description, link, ownerId, ownerType, creator, parentId, grandParentId` |
 | **Blog** | business/pool | `name, parentId, type` |
 | **Post** | blog | `blogId, title, content, images[], documents[]` |
 | **FaqTopic** | business/pool | `name, parentId, type` |
@@ -337,6 +353,19 @@ All content types follow the same pattern: owned by a company, attached to a bus
 | **Topic** (Q&A) | business/pool | `name, parentId, type` |
 | **Question** | topic | `topicId, text, answer { text, userId }, answered, likesCount` |
 | **Reaction** | any entity | `parentId, parentType, userId, reaction` |
+
+**Sources:**
+- Document: `documents/schema.graphql` строки 5-17
+- Folder: `documents/schema.graphql` строки 20-30
+- Gallery: `gallery/schema.graphql` строки 5-15
+- Image: `gallery/schema.graphql` строки 18-31
+- Blog: `blog/schema.graphql` строки 4-14
+- Post: `blog/schema.graphql` строки 17-31
+- FaqTopic: `faq/schema.graphql` строки 4-14
+- FaqAnswer: `faq/schema.graphql` строки 17-30
+- Topic: `questions/schema.graphql` строки 12-22
+- Question: `questions/schema.graphql` строки 25-39
+- Reaction: `reactions/schema.graphql` строки 26-34
 
 ---
 
@@ -363,7 +392,6 @@ All content types follow the same pattern: owned by a company, attached to a bus
 ```
 Company 1──* Business
 Company 1──* Member 1──* Permission
-Business 1──1 RWA Contract (on-chain, via Factory.deployRWA)
 Business 1──* Pool
 Pool 1──* OutgoingTranche
 Pool 1──* IncomingTranche
