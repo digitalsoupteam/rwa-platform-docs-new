@@ -17,7 +17,7 @@ Every RWA token and pool deployment requires approval from **authorized signers*
 
 ## Architecture
 
-The signing system consists of three components:
+The signing system consists of the following components:
 
 ```
 ┌──────────────┐     RabbitMQ      ┌──────────────┐
@@ -27,9 +27,81 @@ The signing system consists of three components:
 └──────────────┘                    └──────────────┘
 ```
 
-- **Signers Manager** — the central service that creates signature tasks and tracks progress
-- **Signer Agents** — individual services (one per authorized signer) that listen for tasks and respond with signatures
-- **RabbitMQ** — message broker for task distribution and response collection
+- **Signers Manager** — the central service that creates signature tasks, distributes them via RabbitMQ, collects responses, and tracks progress. Implemented as an Elysia (Bun) HTTP service with MongoDB persistence.
+- **Signer Agents** — individual services (one per authorized signer) that listen for tasks and respond with signatures.
+  > **Note:** The Signer Agent service is not yet implemented. Currently, the system supports task creation and signature collection via the Signers Manager API, but the agent-side signing flow requires a separate service to be built.
+- **RabbitMQ** — message broker for task distribution (fanout exchange `sign.exchange`) and response collection (queue `sign.responses`).
+
+## REST API Endpoints
+
+The Signers Manager exposes the following HTTP endpoints:
+
+### `POST /createSignatureTask`
+
+Creates a new signature task and publishes it to the RabbitMQ fanout exchange for distribution to signer agents.
+
+**Request body:**
+
+| Field | Type | Description |
+|---|---|---|
+| `ownerId` | `String` | ID of the entity owner requesting deployment |
+| `ownerType` | `String` | Type of the entity owner (e.g. `"business"`, `"pool"`) |
+| `hash` | `String` | The keccak256 hash of the deployment parameters to be signed |
+| `requiredSignatures` | `Number` | Minimum number of signatures needed for the task to be completed |
+| `expired` | `Number` | Deadline Unix timestamp; the task expires after this time |
+
+**Response:** Returns the created `SignatureTask` object (see below).
+
+### `POST /getSignatureTask`
+
+Retrieves a signature task by its ID, including collected signatures (only returned if the task is completed).
+
+**Request body:**
+
+| Field | Type | Description |
+|---|---|---|
+| `taskId` | `String` | The ID of the signature task |
+
+**Response:** Returns the `SignatureTask` object.
+
+### `SignatureTask` Object
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique task identifier |
+| `ownerId` | `String` | ID of the entity owner who requested the deployment |
+| `ownerType` | `String` | Type of the entity owner (`"business"` or `"pool"`) |
+| `hash` | `String` | The keccak256 hash of the deployment parameters |
+| `requiredSignatures` | `Number` | Minimum number of signatures required |
+| `expired` | `Number` | Deadline Unix timestamp |
+| `completed` | `Boolean` | Whether the task has collected enough signatures |
+| `signatures` | `Array<{ signer, signature }>` | Collected signatures (only present when `completed = true`) |
+
+### GraphQL Access (via Gateway)
+
+The `getSignatureTask` operation is also available as a **GraphQL Query** through the Gateway service:
+
+```graphql
+query GetSignatureTask($input: GetSignatureTaskInput!) {
+  getSignatureTask(input: $input) {
+    id
+    ownerId
+    ownerType
+    hash
+    requiredSignatures
+    expired
+    completed
+    signatures {
+      signer
+      signature
+    }
+  }
+}
+```
+
+**Endpoint:** `/graphql` (Gateway service)
+
+The Gateway resolver proxies the request to the Signers Manager's internal `POST /getSignatureTask` endpoint.
 
 ## Flow
 
@@ -41,8 +113,8 @@ When a user requests RWA or pool deployment, the platform creates a signature ta
 - For Pool: [requestPoolApprovalSignatures](/docs/api/rwa/pools/request-pool-approval-signatures)
 
 Parameters include:
-- **`hash`** — the keccak256 hash of the deployment parameters to be signed
-- **`requiredSignatures`** — minimum number of signatures needed (must be ≥ `minSignersRequired` from Config)
+- **`hash`** — the keccak256 hash of the deployment parameters to be signed (see [Hash Format](#hash-format) below)
+- **`requiredSignatures`** — minimum number of signatures needed for the task to be marked as completed. This value is set when the task is created (currently hardcoded to `3` in the RWA service). The on-chain `Factory` contract additionally enforces that the number of provided signatures is at least `minSignersRequired` from the `Config` contract.
 - **`expired`** — deadline timestamp; the task expires after this time
 
 ### 2. Task Distribution
@@ -74,7 +146,7 @@ signature = sign(ethSignedMessage(hashToSign))
 
 ### 4. Signature Collection
 
-The Signers Manager collects signatures and tracks progress. [Check the task status](/docs/api/signers-manager/get-signature-task) via GraphQL — poll until `completed = true`.
+The Signers Manager collects signatures and tracks progress. [Check the task status](/docs/api/signers-manager/get-signature-task) via GraphQL or the REST API — poll until `completed = true`.
 
 Once `signaturesCount >= requiredSignatures`, the task is marked as `completed`.
 
@@ -100,6 +172,38 @@ The Factory contract verifies:
 - Each signature is valid for the deployment parameters
 - No duplicate signatures
 - The request has not expired
+- The number of signatures is at least `minSignersRequired` from the `Config` contract
+
+### Hash Format
+
+The `hash` field in a signature task is the keccak256 hash of the deployment parameters. The actual `messageHash` used for on-chain signature verification is more complex than the simplified version shown above. It is computed as:
+
+```solidity
+bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(
+    keccak256(
+        abi.encodePacked(
+            keccak256(
+                abi.encodePacked(
+                    block.chainid,          // Chain ID
+                    address(this),          // Factory contract address
+                    msg.sender,            // Deployer address
+                    "deployRWA",           // Action identifier
+                    createRWAFee,          // Deployment fee
+                    entityId,             // Entity ID
+                    entityOwnerId,        // Entity owner ID
+                    entityOwnerType,      // Entity owner type
+                    owner                 // Owner address
+                )
+            ),
+            expired                       // Deadline timestamp
+        )
+    )
+);
+```
+
+For pool deployments, the inner hash includes all pool parameters (fee ratio, RWA address, hold amounts, price impact, reward percent, entry/exit periods, tranche data, etc.) instead of the RWA-specific fields.
+
+This means the `hash` stored in the signature task corresponds to the **inner keccak256 hash** of the deployment parameters (without the `expired` timestamp), while the on-chain contract wraps it with `expired` and applies `toEthSignedMessageHash` for EIP-191 compliance.
 
 ## Rejecting a Request
 
@@ -120,4 +224,4 @@ addressBook.addSigner(address);
 addressBook.removeSigner(address);
 ```
 
-The minimum number of required signers (`minSignersRequired`) is configured in the `Config` contract and can be updated by Governance.
+The minimum number of required signers (`minSignersRequired`) is configured in the `Config` contract and can be updated by Governance. The on-chain `Factory` contract enforces that the number of provided signatures is at least `minSignersRequired` during deployment.
