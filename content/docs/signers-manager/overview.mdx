@@ -28,7 +28,7 @@ The signing system consists of the following components:
 ```
 
 - **Signers Manager** — the central service that creates signature tasks, distributes them via RabbitMQ, collects responses, and tracks progress. Implemented as an Elysia (Bun) HTTP service with MongoDB persistence.
-- **Signer Agents** — individual services (one per authorized signer) that listen for tasks and respond with signatures.
+- **Signer Agents** — individual services (one per authorized signer) that listen for tasks and respond with signatures. Three instances are deployed: `signer-1`, `signer-2`, and `signer-3`, each configured with its own private key.
   > **Note:** The Signer Agent service is not yet implemented. Currently, the system supports task creation and signature collection via the Signers Manager API, but the agent-side signing flow requires a separate service to be built.
 - **RabbitMQ** — message broker for task distribution (fanout exchange `sign.exchange`) and response collection (queue `sign.responses`).
 
@@ -45,7 +45,7 @@ Creates a new signature task and publishes it to the RabbitMQ fanout exchange fo
 | Field | Type | Description |
 |---|---|---|
 | `ownerId` | `String` | ID of the entity owner requesting deployment |
-| `ownerType` | `String` | Type of the entity owner (e.g. `"business"`, `"pool"`) |
+| `ownerType` | `String` | Type of the entity owner (e.g. `"user"`, `"company"`) |
 | `hash` | `String` | The keccak256 hash of the deployment parameters to be signed |
 | `requiredSignatures` | `Number` | Minimum number of signatures needed for the task to be completed |
 | `expired` | `Number` | Deadline Unix timestamp; the task expires after this time |
@@ -70,7 +70,7 @@ Retrieves a signature task by its ID, including collected signatures (only retur
 |---|---|---|
 | `id` | `String` | Unique task identifier |
 | `ownerId` | `String` | ID of the entity owner who requested the deployment |
-| `ownerType` | `String` | Type of the entity owner (`"business"` or `"pool"`) |
+| `ownerType` | `String` | Type of the entity owner (`"user"` or `"company"`) |
 | `hash` | `String` | The keccak256 hash of the deployment parameters |
 | `requiredSignatures` | `Number` | Minimum number of signatures required |
 | `expired` | `Number` | Deadline Unix timestamp |
@@ -207,7 +207,7 @@ This means the `hash` stored in the signature task corresponds to the **inner ke
 
 ## Rejecting a Request
 
-Authorized users can reject a signature request, which cancels the task:
+A signature request can be rejected **only after 60 seconds have passed since the 24-hour deadline** (i.e. after `expired + 60 seconds`). Before that time, rejection is not permitted.
 
 - For RWA: [rejectBusinessApprovalSignatures](/docs/api/rwa/businesses/reject-business-approval-signatures)
 - For Pool: [rejectPoolApprovalSignatures](/docs/api/rwa/pools/reject-pool-approval-signatures)

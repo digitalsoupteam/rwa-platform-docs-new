@@ -43,6 +43,18 @@ const receipt = await tx.wait();
 const proposalId = ... // parse from event
 ```
 
+To vote on a proposal, call the `vote` function:
+
+```solidity
+function vote(
+    uint256 proposalId,  // ID of the proposal
+    bool support,        // true = for, false = against
+    string memory reason // Arbitrary string with voting justification
+) external
+```
+
+The `reason` parameter is an arbitrary string that provides justification for the vote. It is emitted in the `Governance_VoteCast` event for transparency.
+
 The proposal starts immediately with `endTime = block.timestamp + votingPeriod`. There is no voting delay — voting begins right away.
 
 ## Proposal Lifecycle
@@ -53,7 +65,7 @@ Created → Voting Period → Auto-Executed or Auto-Cancelled
 
 1. **Created** — a user with sufficient voting power calls `propose()`
 2. **Voting** — stakers vote for or against during the voting period
-3. **Auto-execution** — checked after each vote: if `votesFor >= quorum` AND `votesFor > votesAgainst` → the proposal executes immediately by calling `target.call(data)`
+3. **Auto-execution** — checked after each vote: if `votesFor >= quorum` AND `votesFor > votesAgainst` → the proposal executes immediately by calling `target.call(data)`. If the target call reverts, the error message is decoded using `_getRevertMsg` and the transaction reverts with that message.
 4. **Auto-cancellation** — if `votesAgainst >= quorum` AND `votesAgainst > votesFor` → the proposal is cancelled immediately
 5. **Manual cancellation** — the proposer can cancel within 12 hours of creation
 
@@ -64,7 +76,8 @@ Created → Voting Period → Auto-Executed or Auto-Cancelled
 | **Proposal threshold** | **1,000,000** PlatformToken | Minimum stake to create a proposal (`proposalThreshold`) |
 | **Quorum** | **40%** of totalVotingPower (total staked tokens) | Minimum participation for proposal to pass (`quorumPercentage = 4000 bps`) |
 | **Voting period** | **7 days** | Duration of voting (`votingPeriod`) |
-
+| **Voting delay** | **0** | Delay before voting begins (`votingDelay`) |
+| **Timelock delay** | **2 days** | Mandatory delay for sensitive operations (`timelockDelay`) |
 
 For example, if total staked PlatformToken = **10,000,000**, quorum = 10,000,000 × 40% = **4,000,000 votes**. To pass, a proposal needs `votesFor >= 4,000,000` AND `votesFor > votesAgainst`.
 
@@ -95,6 +108,12 @@ function cancelTransaction(
     bytes memory data,
     uint256 eta
 ) external            // requires addressBook.requireGovernance(msg.sender)
+
+// Withdraw ERC20 tokens from Timelock (only callable by Timelock role)
+function withdrawERC20(address token, address to, uint256 amount) external
+
+// Withdraw ETH from Timelock (only callable by Timelock role)
+function withdrawETH(address to, uint256 amount) external
 ```
 
 **Key points:**
@@ -102,6 +121,7 @@ function cancelTransaction(
 - After `eta` is reached, **anyone** can call `executeTransaction` (no access control)
 - The transaction must be executed within `GRACE_PERIOD = 7 days` after `eta`, otherwise it expires
 - `timelockDelay` is used to set the minimum `eta` when queuing
+- `withdrawERC20` and `withdrawETH` are used to recover tokens or ETH that were mistakenly sent to the Timelock contract. Both functions are only callable by an address with the Timelock role.
 
 ## Events
 

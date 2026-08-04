@@ -12,12 +12,27 @@ The Slices loyalty program rewards users who contribute to the platform's growth
 
 ## How It Works
 
-The loyalty service listens to on-chain events and tracks every fee-paying action per user. When a user pays a fee (creation, buy, sell), the system:
+The loyalty service tracks every fee-paying action per user by processing on-chain events through a multi-stage pipeline.
+
+### Event Flow
+
+1. **blockchain-scanner** (external service) listens to on-chain events from smart contracts: `Pool.mint()` / `Pool.burn()`, `TokenFactory` (RWA creation), `PoolFactory` (pool creation), and `ReferralTreasury` (withdrawals)
+2. The scanner publishes each event to the RabbitMQ queue `blockchain.events.loyalty`
+3. **BlockchainEventsDaemon** (internal daemon of the loyalty service) is subscribed to this queue, receives events, and processes them
+4. The daemon writes the processed data to MongoDB
+
+### Fee Processing
+
+When a user pays a fee (creation, buy, sell), the system:
 
 1. Checks if the user has a registered referrer
 2. Records the commission amount in the user's fee history
 3. Calculates a referral reward for the referrer (a percentage of the commission)
 4. Stores everything in a queryable database for transparency
+
+### ReferralTreasury Event Processing
+
+When a user withdraws rewards via multi-signature, the `ReferralTreasury` contract emits the `ReferralTreasury_Withdrawn` event. The blockchain-scanner picks it up, publishes it to RabbitMQ, and the daemon processes it by updating the `totalWithdrawnAmount` field in the `referrerWithdraws` collection. This allows the system to track the actual amount withdrawn by each user.
 
 ## ReferralTreasury Contract
 
@@ -25,11 +40,21 @@ All referral rewards are stored in the **ReferralTreasury** smart contract. This
 
 Withdrawals from the treasury require **multi-signature approval** from authorized signers, the same system used for RWA and pool deployments.
 
+The contract emits the `ReferralTreasury_Withdrawn` event upon a successful withdrawal. This event is picked up by the blockchain-scanner, published to RabbitMQ, and processed by the loyalty service's `BlockchainEventsDaemon` to synchronize the withdrawal status — specifically updating the `totalWithdrawnAmount` field in the `referrerWithdraws` collection.
+
 ## Architecture
 
 The Loyalty Service is a microservice built with the following components:
 
 ```
+┌─────────────────────────────────────────────────────┐
+│                 blockchain-scanner                   │
+│  External service — listens to on-chain events from │
+│  smart contracts: Pool, TokenFactory, PoolFactory,  │
+│  ReferralTreasury, and publishes to RabbitMQ        │
+└──────────────────────┬──────────────────────────────┘
+                       │
+                       ▼
 ┌─────────────────────────────────────────────────────┐
 │                    RabbitMQ                         │
 │          queue: blockchain.events.loyalty            │
@@ -38,11 +63,14 @@ The Loyalty Service is a microservice built with the following components:
                    ▼
 ┌─────────────────────────────────────────────────────┐
 │              Blockchain Events Daemon                │
-│  Listens to on-chain events from smart contracts:   │
-│  • Pool.mint() / Pool.burn()                        │
-│  • TokenFactory (RWA creation)                      │
-│  • PoolFactory (pool creation)                      │
-│  • ReferralTreasury (withdrawals)                   │
+│  Internal daemon of the Loyalty Service — reads from │
+│  RabbitMQ, processes events, writes to MongoDB      │
+│  Events handled:                                    │
+│  • Factory_CreateRWAFeeCollected                    │
+│  • Factory_CreatePoolFeeCollected                   │
+│  • Pool_RwaMinted                                   │
+│  • Pool_RwaBurned                                   │
+│  • ReferralTreasury_Withdrawn                       │
 └──────────────────┬──────────────────────────────────┘
                    │
                    ▼
@@ -72,10 +100,11 @@ The Loyalty Service is a microservice built with the following components:
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
+| **blockchain-scanner** | External service | Listens to on-chain events and publishes them to RabbitMQ |
 | **HTTP Server** | Elysia (Bun) | Serves REST API endpoints |
 | **Database** | MongoDB (Mongoose) | Stores all loyalty data |
 | **Message Queue** | RabbitMQ | Delivers blockchain events to the daemon |
-| **Blockchain Events Daemon** | Background process | Listens to queue, processes events, writes to DB |
+| **Blockchain Events Daemon** | Background process (internal) | Reads from RabbitMQ, processes events, writes to DB |
 | **SignersManager** | External service | Creates multi-signature tasks for withdrawals |
 | **Eden** | External service | Executes on-chain transactions |
 
@@ -94,6 +123,8 @@ All endpoints accept `POST` requests with a JSON body and return JSON responses.
 | `POST /getReferrerWithdraws` | Get status of withdrawal requests |
 
 ## Data Models
+
+All data is stored in MongoDB in five collections described below. Each model corresponds to a Mongoose schema with indexes.
 
 ### Commission History
 

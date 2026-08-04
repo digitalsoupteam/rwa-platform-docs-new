@@ -17,12 +17,18 @@ These are payments from the pool to the business owner. They become claimable af
 
 ```solidity
 // Outgoing tranche: amount + timestamp when it becomes claimable
-uint256[] public outgoingTranches;         // Amounts
-uint256[] public outgoingTranchTimestamps;  // Claimable timestamps
-uint256[] public outgoingTrancheStates;     // Claimed amounts (0 = unclaimed)
+uint256[] public outgoingTranches;              // Amounts
+uint256[] public outgoingTranchTimestamps;       // Claimable timestamps
+uint256[] public outgoingTrancheStates;          // Claimed amounts (0 = unclaimed)
+uint256   public outgoingTranchesBalance;        // Reserved balance for outgoing tranches
 ```
 
-The business owner calls `claimOutgoingTranches(trancheIndexes)` to claim each tranche when its timestamp is reached.
+- **`outgoingTranches`** — array of tranche amounts (set at pool creation, immutable).
+- **`outgoingTranchTimestamps`** — array of timestamps when each tranche becomes claimable. These timestamps may be shifted earlier if `floatingOutTranchesTimestamps` is enabled and the target is reached early (see [Floating Timestamps](#floating-timestamps)).
+- **`outgoingTrancheStates`** — array tracking claimed amounts for each tranche. A value of `0` means the tranche has not been claimed yet. When claimed, the full tranche amount is written to this slot.
+- **`outgoingTranchesBalance`** — the total amount of HOLD tokens reserved for outgoing tranches. When the pool reaches its funding target, `expectedHoldAmount` is moved into this balance. Each `claimOutgoingTranches` call deducts from it, and the contract checks that sufficient balance exists before allowing a claim.
+
+The business owner calls `claimOutgoingTranches(trancheIndexes)` to claim one or more tranches when their timestamps are reached. Multiple tranche indexes can be passed in a single call — the contract sums their amounts, verifies the total against `outgoingTranchesBalance`, and transfers the full sum in one transaction.
 
 ### Incoming Tranches
 
@@ -30,12 +36,18 @@ These are expected returns from the business back to the pool. Each tranche has 
 
 ```solidity
 // Incoming tranche: amount + expiration deadline
-uint256[] public incomingTranches;          // Amounts
-uint256[] public incomingTrancheExpired;    // Expiration timestamps
-uint256[] public incomingTrancheStates;     // Returned amounts
+uint256[] public incomingTranches;               // Amounts
+uint256[] public incomingTrancheExpired;          // Expiration timestamps
+uint256[] public incomingTrancheStates;           // Returned amounts
+uint256   public lastCompletedIncomingTranche;    // Index of the last fully completed incoming tranche
 ```
 
-Anyone can call `returnIncomingTranche(amount)` to return funds. The function automatically allocates returned funds to tranches in order.
+- **`incomingTranches`** — array of expected return amounts (set at pool creation, immutable).
+- **`incomingTrancheExpired`** — array of expiration timestamps for each incoming tranche. If a tranche is not fully returned by this timestamp, it is considered late.
+- **`incomingTrancheStates`** — array tracking how much has been returned for each incoming tranche.
+- **`lastCompletedIncomingTranche`** — the index of the last incoming tranche that has been fully returned. The `returnIncomingTranche` function processes tranches sequentially starting from this index, advancing it each time a tranche is completed. This ensures that earlier tranches are always fully satisfied before later ones receive funds.
+
+Anyone can call `returnIncomingTranche(amount)` to return funds. The function automatically allocates returned funds to tranches in order, starting from `lastCompletedIncomingTranche`.
 
 For the full function reference, see [Contract Reference — Pool](/docs/smart-contracts/contract-reference#pool).
 
@@ -54,9 +66,16 @@ If `floatingOutTranchesTimestamps` is enabled and the target is reached before t
 
 ```
 timeSaved = entryPeriodExpired - block.timestamp
-floatingTimestampOffset = timeSaved - 1 day  // if timeSaved > 1 day
+floatingTimestampOffset = timeSaved - 1 day  // if timeSaved > 1 day, otherwise 0
 effectiveTrancheTimestamp = originalTimestamp - floatingTimestampOffset
 ```
+
+**`floatingTimestampOffset`** is a state variable that stores the time saved when the pool target is reached early. It is calculated as:
+
+- If `timeSaved > 1 day`: `floatingTimestampOffset = timeSaved - 1 day`
+- Otherwise: `floatingTimestampOffset = 0` (no shift occurs)
+
+This offset is then subtracted from every outgoing tranche timestamp when checking claimability in `claimOutgoingTranches`. The shift only applies when `floatingTimestampOffset > 0`.
 
 This means tranches become claimable sooner when the target is reached early — rewarding the business for quick fundraising.
 

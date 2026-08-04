@@ -136,14 +136,47 @@ Bonuses are configured at pool creation and are paid from a dedicated bonus rese
 
 ```mermaid
 flowchart TB
-    subgraph Onboarding["Onboarding Flow"]
+    %% Class definitions
+    classDef green fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef blue fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef orange fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef red fill:#f44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    classDef grey fill:#9E9E9E,stroke:#757575,stroke-width:2px,color:#fff
+
+    subgraph AssetTokenization["🏗️ Asset Tokenization"]
         direction TB
-        A["🏢 Company<br/>Register organizational entity"] --> B["💼 Business<br/>Create business under company"]
-        B --> C["🤖 AI Evaluator<br/>Analyze & assign risk score"]
-        C --> D["✍️ Multi-signature Approval<br/>Collect signer approvals"]
-        D --> E["📜 RWA Token<br/>Deploy ERC1155 contract"]
-        E --> F["🏊 Pool<br/>Configure & deploy crowdfunding pool"]
+        A["🏗️ RWA"] --> B["🪙 RWA Token"]
+        B --> C["💧 Pool"]
     end
+
+    subgraph PoolMechanics["⚖️ Pool Mechanics"]
+        direction TB
+        D["📊 AMM"] --> E["🪙 HOLD Token"]
+        F["📦 Tranches"] --> G["💰 Returns"]
+    end
+
+    subgraph Governance["🗳️ Governance"]
+        direction TB
+        H["🏛️ Governance"] --> I["🗳️ DAO"]
+        I --> J["📋 Proposals"]
+        I --> K["⚖️ Staking"]
+    end
+
+    C --> D
+    C --> F
+    E --> H
+
+    class A orange
+    class B green
+    class C green
+    class D blue
+    class E green
+    class F green
+    class G green
+    class H blue
+    class I blue
+    class J orange
+    class K orange
 ```
 
 The complete onboarding flow for a new business on the Slices platform follows these steps:

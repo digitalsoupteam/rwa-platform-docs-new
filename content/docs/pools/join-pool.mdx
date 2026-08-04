@@ -117,6 +117,28 @@ const mintCalldata = encodeFunctionData({
 
 For the full function reference, see [Contract Reference — Pool](/docs/smart-contracts/contract-reference#pool).
 
+### Estimating the Cost
+
+Before calling `mint`, use `estimateMint` to calculate the required HOLD amount:
+
+```solidity
+function estimateMint(
+    uint256 rwaAmount,
+    bool allowPartial
+) public view returns (uint256 holdAmountWithFee, uint256 fee, uint256 actualRwaAmount)
+```
+
+The function returns:
+- **`holdAmountWithFee`** — total HOLD needed (including the entry fee)
+- **`fee`** — the entry fee portion
+- **`actualRwaAmount`** — the actual RWA amount you will receive (may differ from `rwaAmount` if partial fill is allowed)
+
+### Pool Parameters
+
+- **`entryFeePercent`** — a fee (in basis points, 1/10000) charged on mint. It is added to the calculated HOLD amount: `fee = holdAmount × entryFeePercent / 10000`.
+- **`liquidityCoefficient`** — used during pool initialization to set virtual reserves for the constant product AMM: `virtualHoldReserve = expectedHoldAmount × liquidityCoefficient` and `virtualRwaReserve = expectedRwaAmount × (liquidityCoefficient + 1)`.
+- **`priceImpactPercent`** — declared in the contract but currently does not affect the AMM calculations. The pool uses a pure constant product formula.
+
 ## Track Returns
 
 Monitor your position through the platform:
@@ -203,6 +225,30 @@ const burnCalldata = encodeFunctionData({
   ],
 });
 ```
+
+```solidity
+function estimateBurn(
+    uint256 rwaAmount
+) public view returns (
+    uint256 holdAmountWithoutFee,
+    uint256 holdFee,
+    uint256 bonusAmountWithoutFee,
+    uint256 bonusFee,
+    uint256 eligibleRwaAmount
+)
+```
+
+The function returns:
+- **`holdAmountWithoutFee`** — the base HOLD amount you receive (after deducting the exit fee)
+- **`holdFee`** — the exit fee charged on the base amount
+- **`bonusAmountWithoutFee`** — the bonus HOLD amount (after deducting the exit fee)
+- **`bonusFee`** — the exit fee charged on the bonus
+- **`eligibleRwaAmount`** — how much of your RWA is eligible for the bonus
+
+### Exit Fees and Bonuses
+
+- **`exitFeePercent`** — a fee (in basis points, 1/10000) charged on burn. It applies to both the base HOLD amount and any bonus: `holdFee = totalHoldAmount × exitFeePercent / 10000` and `bonusFee = totalBonusAmount × exitFeePercent / 10000`.
+- **Bonuses** — if the pool has `awaitingBonusAmount` and bonuses are unlocked (the entry period has ended and the target was reached), a portion of your RWA may be redeemed with an additional HOLD bonus. The bonus is proportional to your share of the eligible RWA.
 
 You receive your proportional share of returned funds plus any available bonus, minus exit fees. See [Fees](/docs/fees/overview) for the full breakdown of all protocol fees.
 

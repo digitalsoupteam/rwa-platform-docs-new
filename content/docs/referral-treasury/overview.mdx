@@ -1,0 +1,156 @@
+---
+title: "ReferralTreasury"
+description: "Реферальные выплаты, распределение средств, мульти-подписной вывод"
+sidebar_position: 5
+---
+
+## Overview
+
+**ReferralTreasury** manages referral reward distributions within the RWA Platform ecosystem. It holds tokens designated for referral payouts and provides a secure multi-signature withdrawal mechanism to ensure that funds are only released with sufficient authorization.
+
+The contract inherits from `UpgradeableContract` (UUPS upgradeable pattern) and `ReentrancyGuardUpgradeable` (OpenZeppelin), combining upgradeability with reentrancy protection.
+
+```solidity
+contract ReferralTreasury is UpgradeableContract, ReentrancyGuardUpgradeable
+```
+
+:::note Upgradeability
+ReferralTreasury uses the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `upgradeRole` address stored in `AddressBook`. Always interact with ReferralTreasury through its proxy address.
+:::
+
+## State Variables
+
+| Variable | Type | Visibility | Description |
+|----------|------|------------|-------------|
+| `addressBook` | `AddressBook` | `public` | Reference to the central AddressBook contract for protocol discovery and access control |
+| `usedSignatures` | `mapping(bytes32 => bool)` | `public` | Tracks used signature hashes to prevent replay attacks |
+
+## Functions
+
+### Constructor & Initialization
+
+| Function | Access | Description |
+|----------|--------|-------------|
+| `constructor()` | Public | Disables initializers for the UUPS proxy pattern |
+| `initialize(address initialAddressBook)` | `initializer` | Initializes the contract: calls `__UpgradeableContract_init()`, `__ReentrancyGuard_init()`, and stores the AddressBook reference |
+
+### Core Functions
+
+| Function | Access | Description |
+|----------|--------|-------------|
+| `withdraw(address token, uint256 amount, uint256 deadline, address[] signers, bytes[] signatures)` | Anyone + multi-signatures | Withdraws tokens with multi-signature verification. Requires `signers.length >= minSignersRequired`, valid EIP-191 signatures from authorized signers, and a non-expired deadline. Transfers tokens to `msg.sender` |
+| `emergencyWithdraw(address token, address to, uint256 amount)` | Governance | Emergency withdrawal of stuck tokens bypassing multi-signature. Only callable by the Governance contract via `addressBook.requireGovernance(msg.sender)` |
+
+### UpgradeableContract Overrides
+
+| Function | Access | Description |
+|----------|--------|-------------|
+| `uniqueContractId()` → `bytes32` | Anyone | Returns `keccak256("ReferralTreasury")` — unique contract identifier for AddressBook |
+| `implementationVersion()` → `uint256` | Anyone | Returns `1` — current implementation version |
+| `_verifyAuthorizeUpgradeRole()` | Internal | Verifies that `msg.sender` has the upgrade role via `addressBook.requireUpgradeRole(msg.sender)` |
+
+## Events
+
+All events are emitted through the centralized `EventEmitter` contract.
+
+| Event | Parameters | Description |
+|-------|------------|-------------|
+| `ReferralTreasury_Withdrawn` | `emittedFrom, user, token, amount` | Emitted when a successful multi-signature withdrawal occurs |
+| `ReferralTreasury_EmergencyWithdrawn` | `emittedFrom, to, token, amount, caller` | Emitted when an emergency withdrawal is executed by governance |
+
+```solidity
+event ReferralTreasury_Withdrawn(
+    address indexed emittedFrom,
+    address indexed user,
+    address indexed token,
+    uint256 amount
+);
+
+event ReferralTreasury_EmergencyWithdrawn(
+    address indexed emittedFrom,
+    address indexed to,
+    address indexed token,
+    uint256 amount,
+    address caller
+);
+```
+
+## Key Details
+
+### Multi-Signature Withdrawal Mechanism
+
+The `withdraw()` function implements a robust multi-signature verification process:
+
+1. **Deadline check** — the request must be executed before the specified deadline (`block.timestamp <= deadline`)
+2. **Amount validation** — amount must be greater than zero
+3. **Signature count** — the number of signers must match the number of signatures, and both must be at least `config.minSignersRequired()`
+4. **Message format (EIP-191)** — the signed message hash is constructed as:
+
+```solidity
+bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(
+    keccak256(
+        abi.encodePacked(
+            keccak256(
+                abi.encodePacked(
+                    block.chainid,
+                    address(this),
+                    msg.sender,
+                    "withdraw",
+                    token,
+                    amount
+                )
+            ),
+            deadline
+        )
+    )
+);
+```
+
+5. **Signature validation** — each signature is checked:
+   - Not previously used (`usedSignatures` mapping)
+   - Signer is an authorized signer in `AddressBook`
+   - Signature is valid via `SignatureChecker.isValidSignatureNow` (supports both EOA and ERC-1271 contract wallets)
+
+:::warning Replay Protection
+Each signature hash (`keccak256(signature)`) is marked as used after verification, preventing the same signature from being reused in multiple withdrawal requests.
+:::
+
+### Emergency Withdrawal
+
+The `emergencyWithdraw()` function provides a governance-only escape hatch:
+
+- Bypasses the multi-signature requirement
+- Restricted to the Governance contract via `addressBook.requireGovernance(msg.sender)`
+- Intended for recovering stuck tokens or handling exceptional situations
+
+### Role in Ecosystem
+
+ReferralTreasury is part of the **Platform** layer of the RWA Protocol:
+
+```
+┌─────────────────┐     Referral     ┌──────────────────────┐
+│  RWA Platform   │    Rewards      │  ReferralTreasury    │
+│     Users       │◄───────────────│  (Multi-sig vault)   │
+└─────────────────┘                 └──────────┬───────────┘
+                                                │
+                                                │ Governance
+                                                ▼
+                                     ┌──────────────────────┐
+                                     │    Governance / DAO   │
+                                     │  (emergency override) │
+                                     └──────────────────────┘
+```
+
+- **Referral payouts** — holds tokens allocated for referral reward distributions
+- **Multi-signature security** — ensures that withdrawals require approval from multiple authorized signers
+- **Governance oversight** — the DAO retains emergency control for exceptional circumstances
+- **Protocol integration** — registered in `AddressBook` and accessible by other protocol contracts
+
+### Access Control
+
+| Role | Authority |
+|------|-----------|
+| **Signer** | Authorized multi-sig addresses that can approve withdrawals |
+| **Governance** | Can execute emergency withdrawals and update the contract via AddressBook |
+| **UpgradeRole** | Can upgrade the contract implementation |
+| **Anyone** | Can call `withdraw()` with valid multi-signature approval |

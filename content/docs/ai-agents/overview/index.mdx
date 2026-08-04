@@ -1,137 +1,145 @@
 ---
-title: AGENTS.md
-description: Slices platform documentation for AI agents — architecture, entities, flows, and interaction model
+title: AI Overview
+description: AI capabilities on the Slices platform — AI Assistant (chat-bot) and AI Evaluator (risk scoring)
 ---
 
-# Overview
+# AI Overview
 
-Slices is a platform for tokenizing real-world assets (RWAs) and launching crowdfunding pools on BSC (Binance Smart Chain). Businesses raise capital from participants who contribute HOLD tokens and receive RWA tokens in return. An on-chain AMM provides price discovery, tranches automate distributions, and a DAO governs protocol parameters.
+The Slices platform provides two distinct AI capabilities: **AI Assistant** — a conversational chat-bot for user support, and **AI Evaluator** — a synchronous risk scoring engine for businesses and pools.
 
-## Architecture
+Both capabilities are powered by **OpenRouter** — a unified API gateway that provides access to multiple LLM providers through a single interface. OpenRouter handles request routing, fallback logic, and generation metadata tracking.
 
-Three layers work together:
+---
+
+## AI Assistant
+
+A conversational chat-bot that helps users interact with the platform. Each user can create multiple assistants with custom names and optional system prompts.
+
+### Architecture
 
 ```
-Web Platform (Next.js, GraphQL API, AI Assistant, Dashboard)
-        │
-Backend Services (Bun/TypeScript, Elysia, GraphQL, MongoDB)
-        │
-Smart Contracts (Solidity 0.8.28, UUPS upgradeable, BSC)
+User → AI Assistant Service → OpenRouter API → LLM → Response
 ```
 
-**Smart contracts** handle on-chain state: token deployments, pool AMM math, tranche distributions, governance voting, staking. All contracts are upgradeable via UUPS proxy pattern.
+The AI Assistant service:
+1. Receives a user message
+2. Loads the assistant's configuration (name, optional system prompt)
+3. Retrieves the last 5 messages from conversation history for context
+4. Sends the conversation to OpenRouter's `/chat/completions` endpoint
+5. Returns the AI response to the user
 
-**Backend** is a gateway service that exposes a GraphQL API, indexes on-chain events into MongoDB, coordinates multi-signature approvals, runs AI risk evaluations, and provides auxiliary services (documents, galleries, blogs, FAQs, Q&A, reactions, charts, portfolio tracking, loyalty/referrals, testnet faucet).
+### Model
 
-**Web platform** consumes the GraphQL API for all user-facing operations.
+Default model: **`google/gemini-2.0-flash-001`** (configurable via `OPENROUTER_MODEL` environment variable). The model can be overridden per-request.
 
-## Key Entities
+### Context
 
-| Entity | Layer | Description |
+Each assistant has an optional **`systemPrompt`** field — a plain text instruction that sets the assistant's behaviour. No dynamic data injection or pre-defined context modes are used. If no system prompt is provided, only the assistant's name is used as context.
+
+### Limits
+
+| Limit | Value | Behaviour |
 |---|---|---|
-| **Company** | Backend | Organizational entity with members and permissions. Created via GraphQL. |
-| **Business** | Backend | A tokenizable business under a company. Has risk score, type (growth/startup/franchise), socials. Created via GraphQL. |
-| **RWA Token** | On-chain | ERC1155 contract deployed per business via `Factory.deployRWA()`. Each token ID corresponds to one pool. |
-| **Pool** | On-chain + Backend | Crowdfunding contract with AMM, tranches, fees. Deployed via `Factory.deployPool()`. Metadata stored in backend. |
-| **HOLD** | On-chain | ERC20 utility token. Used for pool contributions, fees, and RWA deployment fees. Fixed supply. |
-| **PlatformToken** | On-chain | ERC20 governance token. Staked in DaoStaking for voting power. Mintable by Governance. |
-| **Evaluation** | Backend | AI-generated risk assessment (0-100 score, factors, reasoning) for businesses and pools. |
+| Assistants per user | **10** | Returns `409 Conflict` when exceeded |
+| Message length | **4096 characters** | Returns `413 Payload Too Large` when exceeded |
+| Conversation history | **Last 5 messages** | Sent as context to the LLM |
+| Message retention | **30 days** | Older messages are automatically pruned |
+| Max stored messages | **100** per assistant | Oldest messages are pruned when exceeded |
 
-## Entity Relationships
+### API Endpoints
 
-```
-Company 1──* Business
-Business 1──1 RWA Token Contract
-RWA Token 1──* Token ID (each linked to one Pool)
-Business 1──* Pool
-Pool 1──* Outgoing Tranche
-Pool 1──* Incoming Tranche
-Company 1──* Member 1──* Permission
-```
+All endpoints use `POST` method:
 
-Auxiliary content (documents, galleries, blogs, FAQs, questions, reactions) is attached to businesses or pools via `parentId` + `parentType`.
-
-## Core Flows
-
-### Business Onboarding → RWA Deployment
-
-1. **Create Company** — `createCompany` mutation (GraphQL)
-2. **Create Business** — `createBusiness` or `createBusinessWithAI` mutation under a company
-3. **AI Risk Evaluation** — `updateBusinessRiskScore` triggers async AI evaluation → produces risk score (0-100) with factors and reasoning
-4. **Request Approval Signatures** — `requestBusinessApprovalSignatures` → backend coordinates authorized signers to sign an EIP-712 message off-chain
-5. **Deploy RWA Contract** — caller submits `Factory.deployRWA()` on-chain with collected signatures + fee in HOLD
-6. **Indexing** — backend listens for `RWA_Deployed` event, updates `business.tokenAddress`
-
-### Pool Deployment
-
-1. **Create Pool** — `createPool` or `createPoolWithAI` mutation (links pool to business)
-2. **Configure** — set funding target, RWA supply, fees, periods, tranches, AMM parameters via `editPool`
-3. **Request Approval Signatures** — `requestPoolApprovalSignatures` → signers sign off-chain
-4. **Deploy Pool Contract** — caller submits `Factory.deployPool()` on-chain with signatures + fee in HOLD
-5. **Indexing** — backend listens for `Pool_Deployed` event, updates `pool.poolAddress`
-6. **Subscription** — `poolDeployed` GraphQL subscription fires when deployment is indexed
-
-### Pool Participation (On-Chain Trading)
-
-Trading happens **on-chain** by calling Pool contract functions directly — not via GraphQL mutations:
-
-- **Buy RWA** — `Pool.mint(rwaAmount, maxHoldAmount, validUntil, allowPartial)` → transfers HOLD from buyer, mints RWA tokens via AMM formula
-- **Sell RWA** — `Pool.burn(rwaAmount, minHoldAmount, minBonusAmount, validUntil)` → burns RWA tokens, transfers HOLD + bonus from pool reserves
-- **Estimate** — `Pool.estimateMint(rwaAmount, allowPartial)` and `Pool.estimateBurn(rwaAmount)` for price preview without execution
-
-The AMM uses a constant product formula with virtual reserves:
-```
-k = virtualHoldReserve × virtualRwaReserve
-holdAmount = (k / (virtualRwaReserve - rwaAmount)) - (virtualHoldReserve + realHoldReserve)
-```
-
-### Tranche Distribution
-
-After the pool reaches its funding target (`isTargetReached = true`):
-
-- **Outgoing tranches** — business owner claims HOLD via `Pool.claimOutgoingTranches(indexes)` when tranche timestamps are reached
-- **Incoming tranches** — anyone can return funds via `Pool.returnIncomingTranche(amount)`; funds are allocated to debt repayment first, then bonus accumulation
-- **Floating timestamps** — if `floatingOutTranchesTimestamps` is enabled and target reached early, outgoing tranche timestamps shift forward
-
-### Governance
-
-1. **Stake** — `DaoStaking.stake(amount)` with PlatformToken → gain voting power (1:1)
-2. **Propose** — `Governance.propose(target, data, description)` (requires voting power ≥ `proposalThreshold`)
-3. **Vote** — `Governance.vote(proposalId, support, reason)` → locks staked tokens until proposal end
-4. **Auto-execute** — if `votesFor ≥ quorum` AND `votesFor > votesAgainst` → proposal executes immediately (calls `target.call(data)`)
-5. **Auto-cancel** — if `votesAgainst ≥ quorum` AND `votesAgainst > votesFor` → proposal cancelled
-
-## Authentication
-
-**Wallet signature** — `authenticate` mutation with wallet address + EIP-712 signature + timestamp → returns `accessToken` + `refreshToken`
-
-All GraphQL requests (except `authenticate`) require authentication.
-
-## Interaction Model
-
-| What | How |
+| Endpoint | Description |
 |---|---|
-| Create/edit businesses, pools, companies | GraphQL mutations |
-| Upload documents, images | GraphQL mutations with file uploads |
-| AI risk evaluation | `updateBusinessRiskScore` / `updatePoolRiskScore` mutations (async) |
-| Multi-sig approval coordination | `requestBusinessApprovalSignatures` / `requestPoolApprovalSignatures` |
-| Deploy RWA / Pool contracts | On-chain: `Factory.deployRWA()` / `Factory.deployPool()` |
-| Buy / sell RWA tokens | On-chain: `Pool.mint()` / `Pool.burn()` |
-| Query indexed data | GraphQL queries (pools, businesses, portfolio, charts, DAO, etc.) |
-| Real-time updates | GraphQL subscriptions (`poolDeployed`, `priceUpdates`, `transactionUpdates`) |
-| Governance (stake, vote, propose) | On-chain: `DaoStaking`, `Governance` contract calls |
-| Webhooks | `createWebhookEndpoint` mutation → backend delivers event payloads to your URL |
+| `/createAssistant` | Create a new assistant |
+| `/updateAssistant` | Update assistant name or system prompt |
+| `/deleteAssistant` | Delete an assistant |
+| `/getAssistant` | Get assistant by ID |
+| `/getUserAssistants` | List all assistants for the current user |
+| `/createMessage` | Send a message and receive AI response |
+| `/getMessageHistory` | Get message history for an assistant |
+| `/getMessage` | Get a specific message by ID |
+| `/updateMessage` | Update a message |
+| `/deleteMessage` | Delete a message |
 
-## Network
+### Error Codes
 
-- **Chain:** BSC Testnet (Chain ID: 97)
-- **RPC:** `https://data-seed-prebsc-1-s1.binance.org:8545`
-- **Explorer:** [testnet.bscscan.com](https://testnet.bscscan.com)
-- **Contract addresses:** see [Smart Contract Deployments](/docs/smart-contracts/deployments)
+| Code | Description |
+|---|---|
+| `400` | Bad request (invalid input) |
+| `401` | Unauthorized |
+| `404` | Assistant or message not found |
+| `409` | Assistant limit exceeded |
+| `413` | Message too long |
+| `429` | Rate limited |
+| `500` | Internal server error |
 
-## Next Steps
+---
 
-- [Tools](/docs/ai-agents/tools) — available tools and interfaces for agent interaction
-- [Skills](/docs/ai-agents/skills) — detailed platform knowledge for agents
-- [API Reference](/docs/api) — complete GraphQL API documentation
-- [Smart Contract Reference](/docs/smart-contracts/contract-reference) — all contract functions and access control
+## AI Evaluator
+
+A synchronous risk scoring engine embedded in the RWA service. When a business or pool is created or updated, the system can trigger an AI-based risk assessment.
+
+### Architecture
+
+```
+Client → RWA Service → OpenRouter API → LLM → Risk Score (1-100)
+```
+
+The evaluation is **synchronous** — the RWA service calls OpenRouter's `/chat/completions` endpoint with a structured prompt that includes business/pool details and a list of risk factors. The LLM responds with a numeric score (1-100) and a brief reasoning text.
+
+### Usage
+
+- **Business risk score** — triggered via `updateBusinessRiskScore` mutation (GraphQL) or `/updateBusinessRiskScore` endpoint
+- **Pool risk score** — triggered via `updatePoolRiskScore` mutation (GraphQL) or `/updatePoolRiskScore` endpoint
+
+### Risk Factors
+
+The AI evaluates the following factors:
+- Business/pool model viability
+- Market competition and conditions
+- Regulatory compliance risks
+- Financial stability indicators
+- Operational risks and scalability
+- Management team experience
+- Industry-specific challenges
+- Market positioning and branding
+- Technology and innovation potential
+- Target market size and accessibility
+
+### Response Format
+
+```
+RISK_SCORE: 45
+REASONING: Moderate risk due to competitive market, but strong business model and experienced team
+```
+
+---
+
+## OpenRouter
+
+Both AI features use **OpenRouter** as their LLM gateway. OpenRouter provides:
+
+- **Unified API** — single endpoint (`/chat/completions`) for multiple models
+- **Model flexibility** — model is configurable via environment variable (`OPENROUTER_MODEL`)
+- **Generation metadata** — track token usage, generation IDs, and model info
+- **Middle-out compression** — AI Assistant uses this transform to handle large conversation contexts efficiently
+
+Configuration:
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter API endpoint |
+| `OPENROUTER_API_KEY` | — | API key for authentication |
+| `OPENROUTER_MODEL` | `google/gemini-2.0-flash-001` | Default model for completions |
+
+---
+
+## Planned Features
+
+The following capabilities are **planned** for future releases:
+
+- **Function calling / tool use** — allowing the AI Assistant to call platform APIs and perform actions on behalf of users
+- **Autonomous agent behaviour** — multi-step task execution with planning and state management
+- **Custom skills** — user-defined capabilities that can be attached to assistants

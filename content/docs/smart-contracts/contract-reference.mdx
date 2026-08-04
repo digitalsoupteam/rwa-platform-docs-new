@@ -124,46 +124,55 @@ Read-only functions to query current protocol parameters.
 
 Centralized event logging. All functions restricted to protocol contracts.
 
-| Event | Description |
-|---|---|
-| `Pool_Deployed(address indexed emittedFrom, address indexed deployer, bool awaitCompletionExpired, bool floatingOutTranchesTimestamps, address holdToken, address rwaToken, uint256 tokenId, string entityId, string entityOwnerId, string entityOwnerType, address owner, uint256 expectedHoldAmount, uint256 expectedRwaAmount, uint256 expectedBonusAmount, uint256 rewardPercent, bool fixedSell, bool allowEntryBurn, uint256 entryPeriodStart, uint256 entryPeriodExpired, uint256 completionPeriodExpired, uint256 k, uint256 entryFeePercent, uint256 exitFeePercent, uint256[] outgoingTranches, uint256[] outgoingTranchTimestamps, uint256[] incomingTranches, uint256[] incomingTrancheExpired)` | New pool deployed |
-| `Pool_RwaMinted(address indexed emittedFrom, address indexed minter, uint256 rwaAmountMinted, uint256 holdAmountPaid, uint256 feePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, string poolId, address holdToken)` | RWA tokens minted |
-| `Pool_RwaBurned(address indexed emittedFrom, address indexed burner, uint256 rwaAmountBurned, uint256 holdAmountReceived, uint256 bonusAmountReceived, uint256 holdFeePaid, uint256 bonusFeePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, string poolId, address holdToken)` | RWA tokens burned |
-| `Pool_TargetReached(address indexed emittedFrom, uint256 outgoingTranchesBalance, uint256 floatingTimestampOffset, address owner)` | Pool funding target reached |
-| `Pool_FundsFullyReturned(address indexed emittedFrom, address indexed caller, address owner, uint256 timestamp)` | All funds returned |
-| `Pool_OutgoingTrancheClaimed(address indexed emittedFrom, address indexed claimer, uint256 trancheIndex, uint256 amountClaimed, address holdToken)` | Outgoing tranche claimed |
-| `Pool_OutgoingClaimSummary(address indexed emittedFrom, uint256 currentTotalClaimedAmount, uint256 currentOutgoingTranchesBalance)` | Outgoing claim summary updated |
-| `Pool_IncomingTrancheUpdate(address indexed emittedFrom, address indexed caller, address owner, uint256 trancheIndex, uint256 amountAppliedToTranche, bool isNowComplete, bool wasOnTime, address holdToken)` | Incoming tranche updated |
-| `Pool_IncomingReturnSummary(address indexed emittedFrom, uint256 currentTotalReturnedAmount, uint256 currentAwaitingBonusAmount, uint256 currentLastCompletedIncomingTranche)` | Incoming return summary updated |
-| `Pool_BonusWithdrawn(address indexed emittedFrom, uint256 currentAwaitingBonusAmount, uint256 currentRewardedRwaAmount)` | Bonus withdrawn |
-| `Pool_AwaitingRwaAmountUpdated(address indexed emittedFrom, uint256 awaitingRwaAmount)` | Awaiting RWA amount updated |
-| `Pool_ReservesUpdated(address indexed emittedFrom, uint256 realHoldReserve, uint256 virtualHoldReserve, uint256 virtualRwaReserve)` | AMM reserves changed |
-| `Pool_PausedStateChanged(address indexed emittedFrom, bool isPaused)` | Pool paused/unpaused |
-| `Governance_ProposalCreated(address indexed emittedFrom, uint256 indexed proposalId, address indexed proposer, address target, bytes data, string description, uint256 votesFor, uint256 votesAgainst, uint256 creationTime, uint256 endTime, bool executed, bool cancelled)` | New proposal created |
-| `Governance_VoteCast(address indexed emittedFrom, uint256 indexed proposalId, address indexed voter, bool support, uint256 weight, string reason)` | Vote cast |
-| `Governance_ProposalExecuted(address indexed emittedFrom, uint256 indexed proposalId, address indexed executor)` | Proposal executed |
-| `Governance_ProposalCancelled(address indexed emittedFrom, uint256 indexed proposalId, address indexed canceller)` | Proposal cancelled |
-| `DaoStaking_TokensStaked(address indexed emittedFrom, address indexed staker, uint256 amount, uint256 newVotingPower)` | Tokens staked |
-| `DaoStaking_TokensUnstaked(address indexed emittedFrom, address indexed staker, uint256 amount, uint256 rewardsReceived, uint256 newVotingPower)` | Tokens unstaked |
-| `DaoStaking_TokensLocked(address indexed emittedFrom, address indexed user, uint256 unlockTimestamp)` | Tokens locked |
-| `Timelock_TransactionQueued(address indexed emittedFrom, bytes32 indexed txHash, address target, bytes data, uint256 eta)` | Transaction queued |
-| `Timelock_TransactionExecuted(address indexed emittedFrom, bytes32 indexed txHash, address target, bytes data, uint256 eta)` | Transaction executed |
-| `Timelock_TransactionCancelled(address indexed emittedFrom, bytes32 indexed txHash, address target, bytes data, uint256 eta)` | Transaction cancelled |
-| `Treasury_Withdrawal(address indexed emittedFrom, address indexed to, address indexed token, uint256 amount)` | Treasury withdrawal |
-| `RWA_Deployed(address indexed emittedFrom, address indexed deployer, address owner, string entityId)` | RWA contract deployed |
-| `RWA_Transfer(address indexed emittedFrom, address indexed from, address indexed to, uint256 tokenId, uint256 amount, address pool)` | RWA token transferred |
-| `RWA_PausedStateChanged(address indexed emittedFrom, bool isPaused)` | RWA paused/unpaused |
-| `ReferralTreasury_Withdrawn(address indexed emittedFrom, address indexed user, address indexed token, uint256 amount)` | Referral rewards withdrawn |
-| `ReferralTreasury_EmergencyWithdrawn(address indexed emittedFrom, address indexed to, address indexed token, uint256 amount, address caller)` | Emergency withdrawal executed |
-| `Factory_CreateRWAFeeCollected(address indexed emittedFrom, address indexed sender, uint256 amount, address token)` | RWA creation fee collected |
-| `Factory_CreatePoolFeeCollected(address indexed emittedFrom, address indexed sender, uint256 amount, address token)` | Pool creation fee collected |
-| `PlatformToken_Transfer(address indexed emittedFrom, address indexed from, address indexed to, uint256 amount)` | Platform token transferred |
+| Event | Parameters | Description |
+|---|---|---|
+| `Pool_Deployed` | `address indexed emittedFrom`, `address indexed deployer`, `bool awaitCompletionExpired`, `bool floatingOutTranchesTimestamps`, `address holdToken`, `address rwaToken`, `uint256 tokenId`, `string entityId`, `string entityOwnerId`, `string entityOwnerType`, `address owner`, `uint256 expectedHoldAmount`, `uint256 expectedRwaAmount`, `uint256 expectedBonusAmount`, `uint256 rewardPercent`, `bool fixedSell`, `bool allowEntryBurn`, `uint256 entryPeriodStart`, `uint256 entryPeriodExpired`, `uint256 completionPeriodExpired`, `uint256 k`, `uint256 entryFeePercent`, `uint256 exitFeePercent`, `uint256[] outgoingTranches`, `uint256[] outgoingTranchTimestamps`, `uint256[] incomingTranches`, `uint256[] incomingTrancheExpired` | New pool deployed |
+| `Pool_RwaMinted` | `address indexed emittedFrom`, `address indexed minter`, `uint256 rwaAmountMinted`, `uint256 holdAmountPaid`, `uint256 feePaid`, `uint256 percentBefore`, `uint256 userPercent`, `bool targetReached`, `string businessId`, `string poolId`, `address holdToken` | RWA tokens minted |
+| `Pool_RwaBurned` | `address indexed emittedFrom`, `address indexed burner`, `uint256 rwaAmountBurned`, `uint256 holdAmountReceived`, `uint256 bonusAmountReceived`, `uint256 holdFeePaid`, `uint256 bonusFeePaid`, `uint256 percentBefore`, `uint256 userPercent`, `bool targetReached`, `string businessId`, `string poolId`, `address holdToken` | RWA tokens burned |
+| `Pool_TargetReached` | `address indexed emittedFrom`, `uint256 outgoingTranchesBalance`, `uint256 floatingTimestampOffset`, `address owner` | Pool funding target reached |
+| `Pool_FundsFullyReturned` | `address indexed emittedFrom`, `address indexed caller`, `address owner`, `uint256 timestamp` | All funds returned |
+| `Pool_OutgoingTrancheClaimed` | `address indexed emittedFrom`, `address indexed claimer`, `uint256 trancheIndex`, `uint256 amountClaimed`, `address holdToken` | Outgoing tranche claimed |
+| `Pool_OutgoingClaimSummary` | `address indexed emittedFrom`, `uint256 currentTotalClaimedAmount`, `uint256 currentOutgoingTranchesBalance` | Outgoing claim summary updated |
+| `Pool_IncomingTrancheUpdate` | `address indexed emittedFrom`, `address indexed caller`, `address owner`, `uint256 trancheIndex`, `uint256 amountAppliedToTranche`, `bool isNowComplete`, `bool wasOnTime`, `address holdToken` | Incoming tranche updated |
+| `Pool_IncomingReturnSummary` | `address indexed emittedFrom`, `uint256 currentTotalReturnedAmount`, `uint256 currentAwaitingBonusAmount`, `uint256 currentLastCompletedIncomingTranche` | Incoming return summary updated |
+| `Pool_BonusWithdrawn` | `address indexed emittedFrom`, `uint256 currentAwaitingBonusAmount`, `uint256 currentRewardedRwaAmount` | Bonus withdrawn |
+| `Pool_AwaitingRwaAmountUpdated` | `address indexed emittedFrom`, `uint256 awaitingRwaAmount` | Awaiting RWA amount updated |
+| `Pool_ReservesUpdated` | `address indexed emittedFrom`, `uint256 realHoldReserve`, `uint256 virtualHoldReserve`, `uint256 virtualRwaReserve` | AMM reserves changed |
+| `Pool_PausedStateChanged` | `address indexed emittedFrom`, `bool isPaused` | Pool paused/unpaused |
+| `Governance_ProposalCreated` | `address indexed emittedFrom`, `uint256 indexed proposalId`, `address indexed proposer`, `address target`, `bytes data`, `string description`, `uint256 votesFor`, `uint256 votesAgainst`, `uint256 creationTime`, `uint256 endTime`, `bool executed`, `bool cancelled` | New proposal created |
+| `Governance_VoteCast` | `address indexed emittedFrom`, `uint256 indexed proposalId`, `address indexed voter`, `bool support`, `uint256 weight`, `string reason` | Vote cast |
+| `Governance_ProposalExecuted` | `address indexed emittedFrom`, `uint256 indexed proposalId`, `address indexed executor` | Proposal executed |
+| `Governance_ProposalCancelled` | `address indexed emittedFrom`, `uint256 indexed proposalId`, `address indexed canceller` | Proposal cancelled |
+| `DaoStaking_TokensStaked` | `address indexed emittedFrom`, `address indexed staker`, `uint256 amount`, `uint256 newVotingPower` | Tokens staked |
+| `DaoStaking_TokensUnstaked` | `address indexed emittedFrom`, `address indexed staker`, `uint256 amount`, `uint256 rewardsReceived`, `uint256 newVotingPower` | Tokens unstaked |
+| `DaoStaking_TokensLocked` | `address indexed emittedFrom`, `address indexed user`, `uint256 unlockTimestamp` | Tokens locked |
+| `Timelock_TransactionQueued` | `address indexed emittedFrom`, `bytes32 indexed txHash`, `address target`, `bytes data`, `uint256 eta` | Transaction queued |
+| `Timelock_TransactionExecuted` | `address indexed emittedFrom`, `bytes32 indexed txHash`, `address target`, `bytes data`, `uint256 eta` | Transaction executed |
+| `Timelock_TransactionCancelled` | `address indexed emittedFrom`, `bytes32 indexed txHash`, `address target`, `bytes data`, `uint256 eta` | Transaction cancelled |
+| `Treasury_Withdrawal` | `address indexed emittedFrom`, `address indexed to`, `address indexed token`, `uint256 amount` | Treasury withdrawal |
+| `RWA_Deployed` | `address indexed emittedFrom`, `address indexed deployer`, `address owner`, `string entityId` | RWA contract deployed |
+| `RWA_Transfer` | `address indexed emittedFrom`, `address indexed from`, `address indexed to`, `uint256 tokenId`, `uint256 amount`, `address pool` | RWA token transferred |
+| `RWA_PausedStateChanged` | `address indexed emittedFrom`, `bool isPaused` | RWA paused/unpaused |
+| `ReferralTreasury_Withdrawn` | `address indexed emittedFrom`, `address indexed user`, `address indexed token`, `uint256 amount` | Referral rewards withdrawn |
+| `ReferralTreasury_EmergencyWithdrawn` | `address indexed emittedFrom`, `address indexed to`, `address indexed token`, `uint256 amount`, `address caller` | Emergency withdrawal executed |
+| `Factory_CreateRWAFeeCollected` | `address indexed emittedFrom`, `address indexed sender`, `uint256 amount`, `address token` | RWA creation fee collected |
+| `Factory_CreatePoolFeeCollected` | `address indexed emittedFrom`, `address indexed sender`, `uint256 amount`, `address token` | Pool creation fee collected |
+| `PlatformToken_Transfer` | `address indexed emittedFrom`, `address indexed from`, `address indexed to`, `uint256 amount` | Platform token transferred |
 
 ## RWA Contracts
 
 ### Factory
 
 Deploys RWA token and Pool contracts via ERC1967 proxy.
+
+**Public State Variables:**
+
+| Variable | Type | Description |
+|---|---|---|
+| `deployedRWAs` | `mapping(string => bool) public` | Tracks whether an RWA with given entityId has been deployed |
+| `deployedPools` | `mapping(string => bool) public` | Tracks whether a Pool with given entityId has been deployed |
+
+**Functions:**
 
 | Function | Access | Description |
 |---|---|---|
@@ -186,6 +195,15 @@ ERC1155 multi-token contract for real-world assets.
 ### Pool
 
 Crowdfunding pool with AMM and tranches.
+
+**Public State Variables:**
+
+| Variable | Type | Description |
+|---|---|---|
+| `priceImpactPercent` | `uint256` | AMM price impact percentage. **Note:** not used in AMM logic |
+| `liquidityCoefficient` | `uint256` | AMM liquidity coefficient. **Note:** used only during initialization to calculate virtual reserves |
+
+**Functions:**
 
 | Function | Access | Description |
 |---|---|---|
@@ -221,6 +239,14 @@ Manages proposals and voting.
 
 Enforces time delay on governance actions.
 
+**Public State Variables:**
+
+| Variable | Type | Description |
+|---|---|---|
+| `GRACE_PERIOD` | `uint256 public constant` | Grace period for transaction execution after ETA. Value: `7 days` (604800 seconds) |
+
+**Functions:**
+
 | Function | Access | Description |
 |---|---|---|
 | `queueTransaction(address,bytes,uint256)` → `bytes32` | Governance | Queue transaction |
@@ -250,9 +276,9 @@ Manages PlatformToken staking for governance.
 |---|---|---|
 | `stake(uint256)` | Anyone | Stake tokens |
 | `unstake(uint256)` | Anyone | Unstake tokens |
-| `lock(address,uint256)` | Governance | Lock user's stake |
+| `lock(address,uint256)` | Governance | Lock user's staked tokens |
 | `calculatePendingRewards(address)` → `uint256` | Anyone | Calculate pending rewards |
-| `getAvailableRewards()` → `uint256` | Anyone | Get available rewards |
+| `getAvailableRewards()` → `uint256` | Anyone | Get available reward amount for caller |
 | `getVotingPower(address)` → `uint256` | Anyone | Get voting power |
 | `getTotalVotingPower()` → `uint256` | Anyone | Get total voting power |
 
@@ -270,9 +296,17 @@ Upgradeable ERC20 for staking and governance.
 
 Manages referral rewards with multi-signature withdrawal.
 
+**Public State Variables:**
+
+| Variable | Type | Description |
+|---|---|---|
+| `usedSignatures` | `mapping(bytes32 => bool) public` | Tracks used signatures to prevent replay attacks |
+
+**Functions:**
+
 | Function | Access | Description |
 |---|---|---|
-| `withdraw(address,uint256,uint256,address[],bytes[])` | Anyone + signatures | Withdraw rewards |
+| `withdraw(address,uint256,uint256,address[],bytes[])` | Anyone + signatures | Withdraw rewards. `deadline` parameter enforces expiry check (`block.timestamp <= deadline`) |
 | `emergencyWithdraw(address,address,uint256)` | Governance | Emergency withdrawal |
 
 ## UpgradeableContract

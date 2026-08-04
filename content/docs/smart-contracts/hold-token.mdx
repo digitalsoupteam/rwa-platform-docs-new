@@ -1,166 +1,68 @@
 ---
 title: "HoldToken"
-description: "Detailed documentation of the HoldToken ERC20 contract, its functions, and its role in the RWA Platform ecosystem."
+description: "Documentation of the HoldToken ERC20 utility token — a simple, non-upgradeable ERC20 with fixed supply."
 sidebar_position: 4
 ---
 
 ## Overview
 
-**HoldToken** is the native ERC20 utility token of the RWA Platform ecosystem. It implements the standard ERC20 interface with additional mint and burn capabilities, enabling flexible token management within the platform. HoldToken serves as the backbone for fee collection, staking rewards, and governance participation across all RWA Platform smart contracts.
+**HoldToken** is a simple ERC20 utility token used within the RWA Platform ecosystem. It is **not upgradeable** and has a **fixed total supply** minted entirely in the constructor. The contract inherits only from OpenZeppelin's `ERC20` and does **not** include mint, burn, or access control functionality.
 
-The contract inherits from OpenZeppelin's `ERC20Upgradeable` and uses `AddressBook.upgradeRole()` for upgrade authorization, ensuring both standard token functionality and role-based access control for privileged operations.
+This token is intended for use as a utility token — for example, to pay platform fees or provide liquidity in an AMM. In production, the token name and symbol may be changed; the current code uses test values.
+
+### Deployment context
+
+In the **bscTestnet** network, the HoldToken contract is deployed at address `0x1c0e214bB702572E5582085d6E25c39A2B13510d` as a USDT mock (name `"USDT"`, symbol `"USD Test"`). It is used for testing functionality that requires USDT.
+
+### Production note
+
+On **BSC mainnet**, the real BSC USDT (`0x55d398326f99059fF775485246999027B3197955`) will be used instead of HoldToken. HoldToken is **not intended for production** — it is a test-only contract.
 
 ## Token Details
 
-HoldToken follows the ERC20 standard with the following key functions:
-
-### Standard ERC20 Functions
-
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `transfer` | `transfer(address to, uint256 amount) → bool` | Transfers tokens from the caller to another address. |
-| `approve` | `approve(address spender, uint256 amount) → bool` | Allows a spender to withdraw tokens from the caller's balance. |
-| `transferFrom` | `transferFrom(address from, address to, uint256 amount) → bool` | Transfers tokens using an allowance mechanism. |
-| `balanceOf` | `balanceOf(address account) → uint256` | Returns the token balance of an account. |
-| `allowance` | `allowance(address owner, address spender) → uint256` | Returns the remaining allowance for a spender. |
-
-```solidity
-// Standard transfer
-function transfer(address to, uint256 amount) public virtual override returns (bool) {
-    address owner = _msgSender();
-    _transfer(owner, to, amount);
-    return true;
-}
-
-// Standard approve
-function approve(address spender, uint256 amount) public virtual override returns (bool) {
-    address owner = _msgSender();
-    _approve(owner, spender, amount);
-    return true;
-}
-```
-
-### Mint and Burn Functions
-
-| Function | Signature | Description | Access |
-|----------|-----------|-------------|--------|
-| `mint` | `mint(address to, uint256 amount)` | Creates new tokens and assigns them to an address. | `MINTER_ROLE` |
-| `burn` | `burn(uint256 amount)` | Destroys tokens from the caller's balance. | Any holder |
-| `burnFrom` | `burnFrom(address account, uint256 amount)` | Destroys tokens from a specified account using an allowance. | `BURNER_ROLE` |
-
-```solidity
-// Mint new tokens (MINTER_ROLE only)
-function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
-    _mint(to, amount);
-}
-
-// Burn tokens from caller's balance
-function burn(uint256 amount) public {
-    _burn(_msgSender(), amount);
-}
-
-// Burn tokens from another account (BURNER_ROLE only)
-function burnFrom(address account, uint256 amount) public onlyRole(BURNER_ROLE) {
-    _spendAllowance(account, _msgSender(), amount);
-    _burn(account, amount);
-}
-```
-
-### Token Metadata
-
 | Property | Value |
 |----------|-------|
-| Name | `HoldToken` |
-| Symbol | `HOLD` |
-| Decimals | `18` |
+| Name | `USDT` (test value; replaced with real USDT on mainnet) |
+| Symbol | `USD Test` (test value; replaced with real USDT on mainnet) |
+| Decimals | `18` (inherited from ERC20) |
+| Total Supply | `1_000_000_000_000_000 * 1e18` (1 quadrillion tokens) |
+
+## Contract Source
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.28;
+
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract HoldToken is ERC20 {
+    constructor() ERC20("USDT", "USD Test") {
+        _mint(msg.sender, 1_000_000_000_000_000 * 1e18);
+    }
+}
+```
+
+## Key Characteristics
+
+- **Not upgradeable** — The contract is a plain ERC20 with no proxy or UUPS pattern.
+- **Fixed supply** — All tokens are minted to the deployer at construction time. No additional minting or burning functions exist.
+- **No access control** — There are no roles (`MINTER_ROLE`, `BURNER_ROLE`, etc.) and no dependency on `AddressBook` or `EventEmitter`.
+- **Standard ERC20 interface** — Only the standard `transfer`, `approve`, `transferFrom`, `balanceOf`, and `allowance` functions are available.
 
 ## Role in Ecosystem
 
-HoldToken is deeply integrated into the RWA Platform ecosystem and serves multiple critical functions:
+HoldToken serves as a utility token within the RWA Platform:
 
-- **Fee Collection** — Platform fees for token minting, redemption, and transfers are denominated and collected in HoldToken.
-- **Staking** — Users stake HoldToken to earn rewards and gain access to premium platform features.
-- **Governance** — HoldToken holders participate in protocol governance, voting on key parameters and upgrades.
-- **Collateral** — HoldToken can be used as collateral within the platform's lending and borrowing modules.
-
-The diagram below illustrates the relationship between HoldToken and other platform components:
-
-```
-┌─────────────────┐     Fees      ┌─────────────┐
-│  RWA Platform   │◄──────────────│  HoldToken  │
-│     Factory     │               │   (HOLD)    │
-└────────┬────────┘               └──────┬──────┘
-         │                               │
-         │ Creates                       │ Staking
-         ▼                               ▼
-┌─────────────────┐              ┌─────────────┐
-│  RWA Token      │              │  Staking    │
-│  (ERC20)        │              │  Contract   │
-└─────────────────┘              └─────────────┘
-```
-
-## Usage in Fees and Staking
-
-### Fee Collection
-
-When users interact with the RWA Platform — such as creating new RWA tokens or performing redemptions — a fee is charged in HoldToken. The fee is calculated based on the transaction value and collected by the platform treasury.
-
-```solidity
-// Example fee collection logic
-function collectFee(address user, uint256 amount) internal {
-    uint256 fee = calculateFee(amount);
-    IHoldToken(holdToken).transferFrom(user, treasury, fee);
-}
-
-function calculateFee(uint256 amount) public view returns (uint256) {
-    return (amount * feeBps) / 10000;
-}
-```
-
-### Staking
-
-Users can stake their HoldToken to earn rewards over time. The staking contract distributes rewards proportionally based on the amount staked and the staking duration.
-
-```solidity
-// Example staking logic
-function stake(uint256 amount) external {
-    require(amount > 0, "Amount must be greater than 0");
-    IHoldToken(holdToken).transferFrom(msg.sender, address(this), amount);
-    stakedBalances[msg.sender] += amount;
-    totalStaked += amount;
-    emit Staked(msg.sender, amount);
-}
-
-function claimRewards() external {
-    uint256 reward = calculateReward(msg.sender);
-    require(reward > 0, "No rewards to claim");
-    IHoldToken(holdToken).mint(msg.sender, reward);
-    lastClaimTime[msg.sender] = block.timestamp;
-    emit RewardsClaimed(msg.sender, reward);
-}
-```
+- **Fee payment** — Users may pay platform fees in HoldToken.
+- **AMM liquidity** — HoldToken can be paired with other tokens in an automated market maker.
+- **Staking / rewards** — If staking is implemented, HoldToken can be used as the staked asset (rewards would come from the fixed supply or external sources, not from minting).
 
 :::note
-Staking rewards are minted by the staking contract, which requires the `MINTER_ROLE` on the HoldToken contract. This role is granted during deployment and should be managed by the platform's governance mechanism.
+Because the contract has no mint function, any reward distribution must rely on the existing supply (e.g., through transfers from a treasury address).
 :::
 
 ## Security Considerations
 
-:::warning Access Control
-The `mint` function is restricted to addresses with the `MINTER_ROLE`. Only authorized platform contracts (such as the staking contract and the platform treasury) should be granted this role. Unrestricted minting could lead to token supply inflation and loss of value.
-
-The `burnFrom` function is restricted to addresses with the `BURNER_ROLE`. This role should be carefully assigned to prevent unauthorized token destruction.
-:::
-
-:::note Upgradeability
-HoldToken is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `AddressBook.upgradeRole()` holder. Always interact with HoldToken through its proxy address.
-:::
-
-### Role Management
-
-| Role | Privileges | Recommended Holders |
-|------|------------|-------------------|
-| `DEFAULT_ADMIN_ROLE` | Admin management | Platform multisig / DAO |
-| `AddressBook.upgradeRole()` | Upgrades | Platform multisig / DAO |
-| `MINTER_ROLE` | Token minting | Staking contract, treasury |
-| `BURNER_ROLE` | Token burning from any account | Platform fee manager |
+- The entire supply is minted to the deployer. The deployer must distribute tokens appropriately (e.g., to a treasury, liquidity pool, or community allocation).
+- No upgrade mechanism exists — the token logic is immutable after deployment.
+- No burn function means the total supply cannot be reduced.

@@ -20,32 +20,57 @@ The protocol consists of four layers:
 
 ```mermaid
 flowchart TB
-    subgraph System["📦 System Layer"]
-        AB[AddressBook<br/>Registry & Discovery]
+    %% Class definitions
+    classDef green fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef blue fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef orange fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef red fill:#f44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    classDef grey fill:#9E9E9E,stroke:#757575,stroke-width:2px,color:#fff
+
+    subgraph System["📖 System Layer"]
+        AB["📖 AddressBook"]
+        CF["⚙️ Config"]
+        EE["📢 EventEmitter"]
     end
 
     subgraph RWA["🏭 RWA Layer"]
-        FX[Factory<br/>Pool Deployment]
-        PL[Pool<br/>AMM + Tranches]
-        RWA_TOKEN[RWA Token<br/>ERC1155]
+        FX["🏭 RWA Factory"]
+        RWA_TOKEN["🪙 RWA Token"]
+        PL["💧 Pool"]
     end
 
-    subgraph DAO["🏛️ DAO Layer"]
-        GV[Governance<br/>Proposals & Voting]
-        TL[Timelock<br/>Time-delayed Execution]
-        TR[Treasury<br/>Fee Collection]
+    subgraph DAO["🗳️ DAO Layer"]
+        GV["🗳️ Governor"]
+        TL["⏰ Timelock"]
+        TR["💰 Treasury"]
+    end
+
+    subgraph Platform["🪙 Platform Layer"]
+        PT["🪙 PlatformToken"]
+        HT["🪙 HoldToken"]
+        RT["🎁 ReferralTreasury"]
     end
 
     AB --> FX
     AB --> GV
-
+    AB --> PT
+    CF --> FX
+    CF --> PL
+    CF --> GV
+    CF --> PT
+    EE --> FX
+    EE --> PL
+    EE --> GV
+    EE --> PT
     FX --> RWA_TOKEN
     FX --> PL
-    RWA_TOKEN --> PL
-
     GV --> TL
     TL --> TR
-    PL --> TR
+
+    class AB,CF,EE grey
+    class FX,RWA_TOKEN,PL green
+    class GV,TL,TR blue
+    class PT,HT,RT orange
 ```
 
 All contracts use the **UUPS (Universal Upgradeable Proxy Standard)** pattern, which allows logic updates without changing the contract address. Upgrade rights are controlled by a dedicated `upgradeRole` address stored in `AddressBook`.

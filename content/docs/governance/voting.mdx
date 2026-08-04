@@ -19,6 +19,16 @@ function getVotingPower(address user) external view returns (uint256) {
 
 To have voting power, you must stake PlatformTokens in the `DaoStaking` contract first. See [Staking](/docs/governance/staking).
 
+The total voting power across all users is given by:
+
+```solidity
+function getTotalVotingPower() external view returns (uint256) {
+    return platformToken.totalSupply();
+}
+```
+
+Note: `getTotalVotingPower()` returns the total supply of PlatformToken, not just the staked amount. This is used for quorum calculations.
+
 ## Voting Mechanism
 
 To vote on a proposal:
@@ -57,7 +67,7 @@ A proposal passes when:
 votesFor >= quorum AND votesFor > votesAgainst
 ```
 
-Where `quorum = getTotalVotingPower() × quorumPercentage / 10000`, and `getTotalVotingPower()` returns the total amount of staked PlatformTokens from the `DaoStaking` contract.
+Where `quorum = getTotalVotingPower() × quorumPercentage / 10000`, and `getTotalVotingPower()` returns the total supply of PlatformToken (`platformToken.totalSupply()`).
 
 **quorumPercentage = 40%** (4000 bps, from Config).
 
@@ -65,7 +75,7 @@ For example, with totalVotingPower = 10,000,000:
 
 | Parameter | Value |
 |----------|-------|
-| totalVotingPower (staked PlatformToken) | 10,000,000 |
+| totalVotingPower (total PlatformToken supply) | 10,000,000 |
 | Quorum (40%) | 4,000,000 votes |
 | Voted "For" | 2,500,000 |
 | Voted "Against" | 1,200,000 |
@@ -73,13 +83,13 @@ For example, with totalVotingPower = 10,000,000:
 
 | Parameter | Value |
 |----------|-------|
-| totalVotingPower (staked PlatformToken) | 10,000,000 |
+| totalVotingPower (total PlatformToken supply) | 10,000,000 |
 | Quorum (40%) | 4,000,000 votes |
 | Voted "For" | 4,500,000 |
 | Voted "Against" | 2,000,000 |
 | Result | ✅ **PASSED** — 4.5M >= 4M and 4.5M > 2M |
 
-Quorum is calculated from the **total staked PlatformToken amount** (via `DaoStaking.getTotalVotingPower()`), not the total supply. This means only actively staked tokens count toward quorum.
+Quorum is calculated from the **total PlatformToken supply** (via `DaoStaking.getTotalVotingPower()`), not the staked amount.
 
 A proposal is cancelled when:
 
@@ -100,7 +110,25 @@ There is no manual `executeProposal` or `cancelProposal` function. All execution
 
 When you vote, `daoStaking.lock(msg.sender, proposal.endTime)` is called, which locks your staked tokens until the proposal's `endTime`. You cannot unstake while your tokens are locked. This prevents vote-buying and ensures voters have skin in the game.
 
+The lock function in DaoStaking can only be called by the Governance contract. Its signature is:
+
+```solidity
+function lock(address user, uint256 unlockTimestamp) external
+```
+
+It extends the user's lock to the given unlockTimestamp, never shortening it.
+
 The lock only extends — if you vote on multiple proposals, it extends to the latest `endTime`. The `lock` function checks that the new `endTime` is greater than the current `votingLockTimestamp[user]` before updating; it never shortens the lock.
+
+## Rewards
+
+Stakers earn rewards proportional to their staked amount and staking duration. The available rewards for a user can be queried with:
+
+```solidity
+function getAvailableRewards(address user) external view returns (uint256)
+```
+
+When you call `stake(amount)`, any pending rewards are automatically reinvested — they are added to your `stakedAmount` before the new tokens are staked. This means your voting power increases immediately with the reinvested rewards.
 
 ## Events
 

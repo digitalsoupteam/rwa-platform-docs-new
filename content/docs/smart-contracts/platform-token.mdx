@@ -6,9 +6,9 @@ sidebar_position: 3
 
 ## Overview
 
-**PlatformToken** is the governance ERC20 token of the Slices protocol. It implements the standard ERC20 interface with an upgradeable UUPS proxy pattern and is used exclusively for staking and governance participation.
+**RWA_PLATFORM** is the governance ERC20 token of the Slices protocol. It implements the standard ERC20 interface with an upgradeable UUPS proxy pattern and is used exclusively for staking and governance participation.
 
-Unlike HOLD (the platform's utility token for pool operations and fees), PlatformToken has no on-chain conversion mechanism and serves a single purpose: **decentralized governance**. Holders stake PlatformTokens in the `DaoStaking` contract to gain voting power in the Slices DAO.
+Unlike HOLD (the platform's utility token for pool operations and fees), RWA_PLATFORM has no on-chain conversion mechanism and serves a single purpose: **decentralized governance**. Holders stake RWA_PLATFORM tokens in the `DaoStaking` contract to gain voting power in the Slices DAO.
 
 The contract inherits from OpenZeppelin's `ERC20Upgradeable` and is deployed behind an ERC1967 proxy, allowing logic upgrades through the protocol's governance mechanism.
 
@@ -16,15 +16,15 @@ The contract inherits from OpenZeppelin's `ERC20Upgradeable` and is deployed beh
 
 | Property | Value |
 |----------|-------|
-| Name | `PlatformToken` |
-| Symbol | `PLATFORM` |
+| Name | `RWA_PLATFORM` |
+| Symbol | `RWAP` |
 | Decimals | `18` |
 | Standard | ERC20 (upgradeable via UUPS proxy) |
 | Supply | Mintable — controlled by Governance |
 
 ## Standard ERC20 Functions
 
-PlatformToken implements the full ERC20 interface:
+RWA_PLATFORM implements the full ERC20 interface:
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -33,6 +33,7 @@ PlatformToken implements the full ERC20 interface:
 | `transferFrom` | `transferFrom(address from, address to, uint256 amount) → bool` | Transfers tokens using an allowance mechanism. |
 | `balanceOf` | `balanceOf(address account) → uint256` | Returns the token balance of an account. |
 | `allowance` | `allowance(address owner, address spender) → uint256` | Returns the remaining allowance for a spender. |
+| `PlatformToken_Transfer` | Event emitted via EventEmitter | Emitted on every `transfer`/`transferFrom` call. Contains `from`, `to`, `amount`. |
 
 ```solidity
 // Standard transfer
@@ -52,7 +53,7 @@ function approve(address spender, uint256 amount) public virtual override return
 
 ## Mint Function
 
-PlatformToken has a single privileged function — `mint` — which is restricted to the protocol's **Governance** contract. This ensures that token supply is controlled entirely by the DAO.
+RWA_PLATFORM has a single privileged function — `mint` — which is restricted to the protocol's **Governance** contract. This ensures that token supply is controlled entirely by the DAO.
 
 | Function | Signature | Description | Access |
 |----------|-----------|-------------|--------|
@@ -76,28 +77,28 @@ The `mint` function accepts arrays of addresses and amounts, enabling batch dist
 - **Governance proposals** — the DAO can vote to mint tokens for any purpose
 
 :::note
-PlatformToken does **not** expose public `burn` or `burnFrom` functions. Token supply can only be increased through governance-approved minting. There is no built-in deflationary mechanism.
+RWA_PLATFORM does **not** expose public `burn` or `burnFrom` functions. Token supply can only be increased through governance-approved minting. There is no built-in deflationary mechanism.
 :::
 
 ## Staking
 
-PlatformTokens must be staked in the `DaoStaking` contract to be used in governance. The staking mechanism is detailed in the [Staking](/docs/governance/staking) guide.
+RWA_PLATFORM tokens must be staked in the `DaoStaking` contract to be used in governance. The staking mechanism is detailed in the [Staking](/docs/governance/staking) guide.
 
 ### Staking Flow
 
 ```solidity
-// Approve PlatformToken for DaoStaking contract
+// Approve RWA_PLATFORM for DaoStaking contract
 function stake(uint256 amount) external nonReentrant
 function unstake(uint256 amount) external nonReentrant
 ```
 
-1. User approves the `DaoStaking` contract to spend their PlatformTokens.
+1. User approves the `DaoStaking` contract to spend their RWA_PLATFORM tokens.
 2. User calls `stake(amount)` — tokens are transferred to the staking contract.
 3. The staked amount is recorded and converted to voting power (1:1 ratio).
 4. A staking timestamp is set, starting reward accrual.
 
 ```javascript
-// Approve PlatformToken for DaoStaking contract
+// Approve RWA_PLATFORM for DaoStaking contract
 await platformToken.approve(daoStakingAddress, amount);
 
 // Stake
@@ -117,11 +118,11 @@ annualReward = stakedAmount × annualRewardRate / 10000
 pendingReward = annualReward × stakingDuration / 365 days
 ```
 
-For example, staking **50,000 PlatformToken** for **30 days**:
+For example, staking **50,000 RWA_PLATFORM** for **30 days**:
 
 ```
-annualReward = 50,000 × 10% = 5,000 PlatformToken
-pendingReward = 5,000 × 30 / 365 ≈ 410.96 PlatformToken
+annualReward = 50,000 × 10% = 5,000 RWA_PLATFORM
+pendingReward = 5,000 × 30 / 365 ≈ 410.96 RWA_PLATFORM
 ```
 
 Rewards are automatically reinvested when the user stakes more or partially unstakes.
@@ -150,11 +151,11 @@ Key constraints:
 
 ## Role in DAO Governance
 
-PlatformToken is the foundation of the Slices DAO. Staked tokens grant voting power that is used to approve or reject governance proposals.
+RWA_PLATFORM is the foundation of the Slices DAO. Staked tokens grant voting power that is used to approve or reject governance proposals.
 
 ### Voting Power
 
-Voting power equals the staked PlatformToken balance (1:1 ratio):
+Voting power equals the staked RWA_PLATFORM balance (1:1 ratio):
 
 ```solidity
 function getVotingPower(address user) external view returns (uint256) {
@@ -166,8 +167,8 @@ function getVotingPower(address user) external view returns (uint256) {
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `proposalThreshold` | **1,000,000** PlatformToken | Minimum stake to create a proposal |
-| `quorumPercentage` | **40%** (4000 bps) | Of total PlatformToken supply |
+| `proposalThreshold` | **1,000,000** RWA_PLATFORM | Minimum stake to create a proposal |
+| `quorumPercentage` | **40%** (4000 bps) | Of total RWA_PLATFORM supply |
 | `votingPeriod` | **7 days** | Duration of voting |
 | `timelockDelay` | **2 days** | Delay before queued governance action executes |
 
@@ -179,12 +180,12 @@ All parameters are adjustable via Governance proposals through `Config.update*` 
 Created → Voting Period → Auto-Executed or Auto-Cancelled
 ```
 
-1. **Created** — a user with ≥ 1,000,000 staked PlatformTokens calls `propose()`.
+1. **Created** — a user with ≥ 1,000,000 staked RWA_PLATFORM tokens calls `propose()`.
 2. **Voting** — stakers vote for or against during the 7-day voting period.
 3. **Auto-execution** — if `votesFor >= quorum` AND `votesFor > votesAgainst`, the proposal executes immediately.
 4. **Auto-cancellation** — if `votesAgainst >= quorum` AND `votesAgainst > votesAgainst`, the proposal is cancelled.
 
-Quorum is calculated from the **total PlatformToken supply** (not just the staked amount):
+Quorum is calculated from the **total RWA_PLATFORM supply** (not just the staked amount):
 
 ```
 quorum = platformToken.totalSupply() × quorumPercentage / 10000
@@ -194,7 +195,7 @@ For example, with `totalSupply = 10,000,000`:
 
 | Parameter | Value |
 |-----------|-------|
-| totalSupply PlatformToken | 10,000,000 |
+| totalSupply RWA_PLATFORM | 10,000,000 |
 | Quorum (40%) | 4,000,000 votes |
 | Voted "For" | 4,500,000 |
 | Voted "Against" | 2,000,000 |
@@ -204,7 +205,9 @@ See [Voting](/docs/governance/voting) and [Proposals](/docs/governance/proposals
 
 ## Distribution and Supply
 
-PlatformToken supply is entirely controlled by the DAO through the `mint` function. There is no fixed initial supply — tokens are minted as needed based on governance decisions.
+RWA_PLATFORM supply is entirely controlled by the DAO through the `mint` function. There is no fixed initial supply — tokens are minted as needed based on governance decisions.
+
+При деплое минтится 21 000 000 RWAP на адрес deployer'а (initial mint).
 
 ### Common Distribution Methods
 
@@ -215,11 +218,11 @@ PlatformToken supply is entirely controlled by the DAO through the `mint` functi
 | **Staking incentives** | Additional tokens deposited into `DaoStaking` as reward pool |
 | **Governance proposals** | The DAO can vote to mint tokens for any purpose |
 
-On testnet, PlatformTokens are available through the [Testnet Faucet](/docs/testnet-faucet/overview).
+On testnet, RWA_PLATFORM tokens are available through the [Testnet Faucet](/docs/testnet-faucet/overview).
 
 ## Key Differences from HOLD
 
-| | PlatformToken | HOLD |
+| | RWA_PLATFORM | HOLD |
 |---|---|---|
 | **Type** | Upgradeable ERC20 (UUPS proxy) | Simple ERC20 |
 | **Supply** | Mintable by Governance | Fixed (1 quadrillion) |
@@ -230,7 +233,7 @@ On testnet, PlatformTokens are available through the [Testnet Faucet](/docs/test
 
 ## Contract Architecture
 
-PlatformToken is part of the **Platform** layer in the Slices protocol architecture:
+RWA_PLATFORM is part of the **Platform** layer in the Slices protocol architecture:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -240,22 +243,22 @@ PlatformToken is part of the **Platform** layer in the Slices protocol architect
 │  └────┬─────┘  └──────────┘  └──────────┘          │
 │       │                                              │
 │  ┌────▼─────┐                                       │
-│  │DaoStaking│  ◄── stakes ──  PlatformToken         │
+│  │DaoStaking│  ◄── stakes ──  RWA_PLATFORM         │
 │  └──────────┘                                       │
 ├─────────────────────────────────────────────────────┤
 │                  Platform Layer                      │
 │  ┌──────────────┐  ┌──────────────────┐             │
-│  │ PlatformToken│  │ReferralTreasury  │             │
+│  │ RWA_PLATFORM│  │ReferralTreasury  │             │
 │  └──────────────┘  └──────────────────┘             │
 └─────────────────────────────────────────────────────┘
 ```
 
-The `AddressBook` contract stores the reference to PlatformToken and all other protocol contracts. PlatformToken is looked up by `DaoStaking` and `Governance` through `AddressBook`.
+The `AddressBook` contract stores the reference to RWA_PLATFORM and all other protocol contracts. RWA_PLATFORM is looked up by `DaoStaking` and `Governance` through `AddressBook`.
 
 ## View Functions
 
 ```javascript
-// PlatformToken
+// RWA_PLATFORM
 const totalSupply = await platformToken.totalSupply();
 const balance = await platformToken.balanceOf(user);
 
@@ -270,13 +273,13 @@ const availableRewards = await daoStaking.getAvailableRewards();
 ## Security Considerations
 
 :::warning Access Control
-The `mint` function is restricted to the **Governance** contract via `addressBook.requireGovernance(msg.sender)`. Only the DAO — through approved proposals — can mint new PlatformTokens. Unrestricted minting could lead to token supply inflation and dilution of voting power.
+The `mint` function is restricted to the **Governance** contract via `addressBook.requireGovernance(msg.sender)`. Only the DAO — through approved proposals — can mint new RWA_PLATFORM tokens. Unrestricted minting could lead to token supply inflation and dilution of voting power.
 
 The `AddressBook.upgradeRole()` controls contract upgrades. This role should be held by the DAO's Timelock contract to ensure no single entity can unilaterally modify the token logic.
 :::
 
 :::note Upgradeability
-PlatformToken is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `AddressBook.upgradeRole()` holder. Always interact with PlatformToken through its proxy address. The implementation address can be updated only through a governance proposal.
+RWA_PLATFORM is an upgradeable contract using the UUPS (Universal Upgradeable Proxy Standard) pattern. The proxy contract stores the state, while the implementation can be upgraded by the `AddressBook.upgradeRole()` holder. Always interact with RWA_PLATFORM through its proxy address. The implementation address can be updated only through a governance proposal.
 :::
 
 ### Role Management
@@ -291,7 +294,7 @@ PlatformToken is an upgradeable contract using the UUPS (Universal Upgradeable P
 
 - [Contract Architecture](/docs/smart-contracts/architecture) — system overview and contract layers
 - [Contract Reference](/docs/smart-contracts/contract-reference) — full function signatures
-- [Staking](/docs/governance/staking) — how to stake PlatformTokens
+- [Staking](/docs/governance/staking) — how to stake RWA_PLATFORM tokens
 - [Voting](/docs/governance/voting) — how voting power works
 - [Proposals](/docs/governance/proposals) — creating and managing proposals
 - [HoldToken](/docs/smart-contracts/hold-token) — the platform's utility token

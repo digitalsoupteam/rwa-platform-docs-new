@@ -11,38 +11,59 @@ The Slices platform consists of three layers that work together to enable real-w
 
 ```mermaid
 flowchart TB
+    %% Class definitions
+    classDef green fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef blue fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef orange fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef red fill:#f44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    classDef grey fill:#9E9E9E,stroke:#757575,stroke-width:2px,color:#fff
+
     subgraph Frontend["🌐 Frontend — Web Platform"]
-        NextJS["Next.js (Dashboard)"]
-        GraphQL["GraphQL API Client"]
-        AI["AI Assistant"]
+        NextJS["🖥️ Dashboard"]
+        GraphQL["🔗 GraphQL Client"]
+        AI["🤖 AI Assistant"]
     end
 
     subgraph Backend["⚙️ Backend — API & Services"]
-        Gateway["GraphQL Gateway"]
-        Indexer["Indexer (Blockchain Scanner)"]
-        Signers["Signers Manager"]
-        RWA["RWA Service"]
-        Auth["Auth Service"]
-        Charts["Charts Service"]
-        Loyalty["Loyalty Service"]
-        Faucet["Testnet Faucet"]
+        Gateway["🚪 Gateway"]
+        Indexer["🔍 Indexer"]
+        Signers["✍️ Signers Manager"]
+        RWA["🏢 RWA Service"]
+        Auth["🔐 Auth Service"]
+        Charts["📊 Charts Service"]
+        Loyalty["🎁 Loyalty Service"]
+        Faucet["💧 Testnet Faucet"]
     end
 
     subgraph SmartContracts["📜 Smart Contracts"]
-        System["System Layer<br/>AddressBook · Config · EventEmitter"]
-        RWA_Layer["RWA Layer<br/>Factory · RWA · Pool"]
-        DAO["DAO Layer<br/>Governance · Timelock · Treasury"]
-        Platform["Platform Layer<br/>PlatformToken · HoldToken · ReferralTreasury"]
+        System["📖 AddressBook · ⚙️ Config · 📢 EventEmitter"]
+        RWA_Layer["🏭 Factory · 🪙 RWA · 💧 Pool"]
+        DAO["🗳️ Governance · ⏰ Timelock · 💰 Treasury"]
+        Platform["🪙 PlatformToken · 🪙 HoldToken · 🎁 ReferralTreasury"]
     end
 
     subgraph Blockchain["⛓️ Blockchain"]
-        EVM["EVM-compatible Chain<br/>(BSC / Testnet)"]
+        EVM["⛓️ EVM Chain (BSC / Testnet)"]
+    end
+
+    subgraph Infrastructure["🔧 Infrastructure"]
+        RMQ["🐰 RabbitMQ (Event Bus)"]
+        Redis["🔴 Redis (Pub/Sub + Cache)"]
+        OTEL["📡 OpenTelemetry (Monitoring)"]
     end
 
     Frontend -->|"HTTP / WebSocket"| Backend
     Backend -->|"RPC Calls"| SmartContracts
     SmartContracts -->|"Deployed on"| Blockchain
     Indexer -->|"Reads events"| Blockchain
+    Backend -->|"Publish/Subscribe"| Infrastructure
+    Infrastructure -->|"Tracing"| Backend
+
+    class NextJS,GraphQL,AI orange
+    class Gateway,Indexer,Signers,RWA,Auth,Charts,Loyalty,Faucet blue
+    class System,RWA_Layer,DAO,Platform green
+    class EVM grey
+    class RMQ,Redis,OTEL blue
 ```
 
 ## Smart Contracts
@@ -58,24 +79,39 @@ All contracts use the UUPS upgradeable proxy pattern, allowing logic updates wit
 
 ## Backend Services
 
-The backend consists of multiple independent services, each running as a separate Elysia process. A **GraphQL Gateway** service acts as the primary API facade, routing requests to the appropriate backend service:
+The backend consists of **20 independent microservices**, each running as a separate Elysia process. A **GraphQL Gateway** (Yoga GraphQL Server) acts as the primary API facade, routing requests to the appropriate backend service:
 
-- **GraphQL API** — the primary interface for the web platform and external integrations, powered by a gateway that proxies to specialized services
-- **RWA Service** — manages businesses, pools, token metadata, and coordinates multi-signature approvals
-- **AI Assistant** — [conversational AI](/docs/ai-assistant/overview) for user support and portfolio insights
+- **GraphQL Gateway** — the primary interface for the web platform and external integrations, powered by Yoga GraphQL Server that proxies to specialized services
+- **RWA Service** — manages businesses, pools, token metadata, and coordinates multi-signature approvals; uses Redis, RabbitMQ, and OpenRouter
+- **AI Assistant** — [conversational AI](/docs/ai-assistant/overview) for user support and portfolio insights; uses OpenRouter API
 - **Signers Manager** — [coordinates multi-signature approvals](/docs/signers-manager/overview) for contract deployments
-- **Indexer (Blockchain Scanner)** — listens to on-chain events and maintains a queryable database
-- **Charts** — [price data, OHLC, volume](/docs/charts/overview), and WebSocket updates
-- **Loyalty** — [referral rewards](/docs/loyalty/overview) for bringing new users to the platform
+- **Signer** — executes transaction signing; receives signing requests via RabbitMQ, uses a private key
+- **Blockchain Scanner (Indexer)** — listens to on-chain events via RPC and publishes them to RabbitMQ; runs as a daemon
+- **Charts** — [price data, OHLC, volume](/docs/charts/overview), and WebSocket updates; uses Redis pub/sub and RabbitMQ
+- **Loyalty** — [referral rewards](/docs/loyalty/overview) for bringing new users to the platform; uses RabbitMQ
 - **Testnet Faucet** — [free test tokens](/docs/testnet-faucet/overview) on BSC Testnet
-- **Auth** — wallet-based authentication and token management
+- **Auth** — wallet-based authentication and JWT token management
 - **Company** — company profiles and member management
-- **DAO** — governance data indexing (proposals, votes, staking, treasury)
-- **Documents, Gallery, FAQ, Blog, Portfolio, Questions, Reactions, Files** — supporting services for platform features
+- **DAO** — governance data indexing (proposals, votes, staking, treasury, timelock); uses RabbitMQ
+- **Documents, Gallery, FAQ, Blog, Portfolio, Questions, Reactions, Files** — supporting services for platform features (CRUD operations)
+
+All services are built with **Elysia** (Bun framework) and follow a plugin-based architecture: repositories (MongoDB), clients (RabbitMQ/Redis), services (business logic), controllers (routes), and daemons (background tasks).
+
+## Infrastructure
+
+The platform relies on the following infrastructure components, orchestrated via **Docker Compose**:
+
+- **RabbitMQ** — acts as the central event bus for inter-service communication. Services publish domain events (e.g., `pool.created`, `signature.requested`) and consume relevant events from other services.
+- **Redis** — used for:
+  - **Pub/Sub** — real-time updates for charts and WebSocket connections
+  - **Caching** — frequently accessed data (e.g., token metadata, user sessions)
+- **OpenTelemetry** — distributed tracing across all services. Each service exports traces to a collector (e.g., Jaeger or Grafana Tempo) for monitoring and debugging.
+- **MongoDB** — each service (except Gateway and Signer) has its own MongoDB database, ensuring data isolation. The Gateway does not store data; the Signer uses only RabbitMQ for task queues.
+- **Docker Compose** — defines and runs the entire stack: all 20 microservices plus RabbitMQ, Redis, MongoDB instances, and the OpenTelemetry collector.
 
 ## Data Layer
 
-On-chain data (events, state) is indexed by the backend and stored in a database for fast querying. The GraphQL API provides access to:
+On-chain data (events, state) is indexed by the Blockchain Scanner and stored in MongoDB. The GraphQL API provides access to:
 
 - **Business profiles** — company information, risk scores, social links
 - **Pool data** — configuration, state, reserves, tranches

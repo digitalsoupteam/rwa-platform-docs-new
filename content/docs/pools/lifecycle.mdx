@@ -1,76 +1,70 @@
 ---
-title: Pool Lifecycledescription: From creation to maturity — every stage of a pool
----cle
+title: Pool Lifecycle
+description: From creation to maturity — every stage of a pool
+---
+
+# Pool Lifecycle
 
 A pool progresses through several stages from creation to completion.
 
 ```mermaid
 flowchart TB
-    subgraph Entry["🟢 Entry Period"]
+    %% Class definitions
+    classDef green fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef blue fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef orange fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef red fill:#f44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    classDef grey fill:#9E9E9E,stroke:#757575,stroke-width:2px,color:#fff
+
+    subgraph Preparation["📝 Preparation"]
         direction TB
-        E1["Pool Created"]
-        E2["Participants Buy RWA Tokens via Pool.mint()"]
-        E3["HOLD Contributions Accumulate"]
-        E4{isTargetReached?}
-        E1 --> E2 --> E3 --> E4
+        D["📝 Draft"]
+        PA["⏳ Pending Approval"]
+        D --> PA
     end
 
-    subgraph ActiveTarget["🎯 Active — Target Reached"]
+    subgraph FundingPhase["💰 Funding Phase"]
         direction TB
-        AT1["isTargetReached = true"]
-        AT2["HOLD → outgoingTranchesBalance"]
-        AT3["virtualHoldReserve Increases"]
-        AT1 --> AT2 --> AT3
+        F["💰 Funding"]
     end
 
-    subgraph ActiveTrading["📈 Active — Trading"]
+    subgraph ActiveDist["✅ Active & Distribution"]
         direction TB
-        TR1["Participants Buy & Sell RWA Tokens"]
-        TR2["Business Claims Outgoing Tranches"]
-        TR3["AMM Price Fluctuates"]
-        TR1 --> TR2 --> TR3
+        A["✅ Active"]
+        Di["📦 Distributing"]
+        A --> Di
     end
 
-    subgraph Completion["⏳ Completion Period"]
+    subgraph FinalStates["🏁 Final States"]
         direction TB
-        CP1["New Purchases Blocked"]
-        CP2["Participants Can Still Sell via burn()"]
-        CP3["Bonuses May Become Available"]
-        CP1 --> CP2 --> CP3
+        M["🏁 Matured"]
+        Cl["🔒 Closed"]
+        Ca["❌ Cancelled"]
+        M --> Cl
     end
 
-    subgraph FullyReturned["✅ Fully Returned"]
-        direction TB
-        FR1["isFullyReturned = true"]
-        FR2["fullReturnTimestamp Recorded"]
-        FR3["Participants Can Burn RWA Tokens"]
-        FR1 --> FR2 --> FR3
-    end
+    PA --> F
+    F --> A
+    Di --> M
+    F --> Ca
+    PA --> Ca
 
-    subgraph Bonus["🎁 Bonus Unlock"]
-        direction TB
-        B1{"awaitCompletionExpired?"}
-        B2["1 Day After completionPeriodExpired"]
-        B3["1 Day After fullReturnTimestamp"]
-        B1 -- Yes --> B2
-        B1 -- No + Fully Returned --> B3
-    end
-
-    subgraph Failed["❌ Failed / Cancelled"]
-        direction TB
-        F1["Pool Paused by Governance"]
-        F2["Participants Can Withdraw"]
-        F1 --> F2
-    end
-
-    E4 -- Yes --> AT1
-    E4 -- No + Time Expired --> F1
-    AT3 --> TR1
-    TR3 --> CP1
-    CP3 --> FR1
-    FR3 --> B1
-    CP3 -.-> B1
+    class D grey
+    class PA orange
+    class F blue
+    class A green
+    class Di green
+    class M green
+    class Cl grey
+    class Ca red
 ```
+
+## Static Configuration Parameters
+
+These parameters are set during pool initialization and remain immutable throughout the pool's lifecycle:
+
+- **`fixedSell`** (`bool`) — If `true`, the total amount of RWA tokens that can be minted is capped at `expectedRwaAmount`. Once the fixed amount is fully sold, no more RWA can be minted via `Pool.mint()`. If `false`, minting continues based on AMM reserves without a hard cap.
+- **`allowEntryBurn`** (`bool`) — If `true`, participants can burn RWA tokens (sell) via `Pool.burn()` during the entry period. If `false`, burning is blocked until the entry period expires, preventing early exits before the target is reached.
 
 ## Stage 1: Entry Period
 
@@ -88,11 +82,11 @@ The entry period ends early if the pool reaches its funding target (`isTargetRea
 
 When `awaitingRwaAmount >= expectedRwaAmount`, the target is reached:
 
-1. `isTargetReached` is set to `true`
+1. `isTargetReached` is set to `true` — this flag indicates that the pool has met its funding target and outgoing tranches become claimable
 2. The expected HOLD amount is moved to `outgoingTranchesBalance`
 3. `virtualHoldReserve` increases by `expectedHoldAmount`
 4. `realHoldReserve` decreases by `expectedHoldAmount`
-5. Floating timestamp offset is calculated if applicable
+5. Floating timestamp offset is calculated if `floatingOutTranchesTimestamps` is enabled
 6. A `Pool_TargetReached` event is emitted
 
 The business owner can now claim outgoing tranches according to their schedule.
@@ -105,6 +99,12 @@ After the target is reached and until `completionPeriodExpired`:
 - **The business can claim outgoing tranches**
 - **The business can return funds** via `returnIncomingTranche()`
 - **The AMM price fluctuates** based on trading activity
+
+### Outgoing Tranches and Floating Timestamps
+
+The pool supports configurable outgoing tranche schedules for distributing funds to the business.
+
+- **`floatingOutTranchesTimestamps`** (`bool`) — If `true`, outgoing tranche timestamps are adjusted when the target is reached early. The offset is calculated as `(entryPeriodExpired - block.timestamp) - 1 day`, reducing all tranche timestamps by this amount. This allows the business to access funds sooner when the pool fills up quickly. If `false`, tranche timestamps remain fixed regardless of when the target is reached.
 
 ## Stage 4: Completion Period
 
@@ -119,7 +119,7 @@ After `completionPeriodExpired`:
 
 When `totalReturnedAmount >= expectedHoldAmount + expectedBonusAmount`:
 
-1. `isFullyReturned` is set to `true`
+1. `isFullyReturned` is set to `true` — this flag indicates that all funds (principal + bonus) have been returned by the business
 2. `fullReturnTimestamp` is recorded
 3. A `Pool_FundsFullyReturned` event is emitted
 4. Participants can burn their RWA tokens to claim their share
@@ -131,6 +131,11 @@ Bonuses unlock based on the `awaitCompletionExpired` flag:
 - **If `awaitCompletionExpired = true`** — bonuses unlock 1 day after `completionPeriodExpired`
 - **If `awaitCompletionExpired = false` and funds are fully returned** — bonuses unlock 1 day after `fullReturnTimestamp`
 - **If `awaitCompletionExpired = false` but funds are NOT fully returned** — bonuses unlock 1 day after `completionPeriodExpired` (fallback)
+
+### Bonus Amounts
+
+- **`awaitingBonusAmount`** (`uint256`) — The total amount of HOLD tokens available as bonuses for participants. This accumulates as the business returns funds above the `expectedHoldAmount` threshold. Each `returnIncomingTranche()` call adds the excess portion to this balance.
+- **`rewardedRwaAmount`** (`uint256`) — The cumulative amount of RWA tokens that have been rewarded with bonuses. When a participant burns RWA tokens and claims a bonus, the corresponding RWA amount is added to this counter. This prevents the same RWA tokens from being rewarded multiple times.
 
 ## Failed / Cancelled
 

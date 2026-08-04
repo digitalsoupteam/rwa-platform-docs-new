@@ -15,7 +15,7 @@ The Slices protocol uses a role-based access control (RBAC) system managed by th
 | **Timelock** | `Timelock` | Delays and executes treasury withdrawals with a 2-day timelock delay |
 | **UpgradeRole** | UUPS Proxy | Authorizes contract implementation upgrades via the UUPS pattern |
 | **Signers** | `AddressBook` | Manages the set of authorized signers for multi-sig operations |
-| **ProtocolContract** | `AddressBook` | Marks contracts as protocol-authorized for cross-contract calls |
+| **ProtocolContract** | `AddressBook` | Marks trusted contracts (RWA, Pool, Config, DaoStaking, Timelock, Treasury, PlatformToken, ReferralTreasury, Factory) as protocol-authorized for cross-contract calls |
 
 ```mermaid
 flowchart TB
@@ -206,7 +206,7 @@ function removeSigner(address signer) external {
 
 ## ProtocolContract
 
-The `ProtocolContract` role marks contracts as trusted within the protocol ecosystem. This allows authorized contracts to call restricted functions on other protocol contracts.
+The `ProtocolContract` role marks contracts as trusted within the protocol ecosystem. This allows authorized contracts to call restricted functions on other protocol contracts. The set of protocol contracts includes: **RWA**, **Pool**, **Config**, **DaoStaking**, **Timelock**, **Treasury**, **PlatformToken**, **ReferralTreasury**, and **Factory**.
 
 ```solidity
 function requireProtocolContract(address account) external view {
@@ -217,6 +217,11 @@ function requireProtocolContract(address account) external view {
 **Permissions:**
 - Call restricted cross-contract functions
 - Interact with other protocol contracts at the system level
+
+**Assignment:**
+- Governance sets the implementation addresses via `setRWAImplementation` and `setPoolImplementation`
+- Factory adds newly created RWA and Pool contracts to the protocol contract registry via `addRWA` and `addPool`
+- Other system contracts (Config, DaoStaking, Timelock, etc.) are registered as protocol contracts when their addresses are set through their respective setter functions
 
 ## Permission Matrix
 

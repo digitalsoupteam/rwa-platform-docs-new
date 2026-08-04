@@ -28,44 +28,82 @@ Benefits of ERC1155:
 - **Metadata** — each token ID has a unique metadata URI
 - **Efficiency** — lower gas costs compared to deploying separate ERC20 contracts
 
+### RWA Contract Architecture
+
+The RWA token contract holds an **immutable reference** to the system's `AddressBook` contract, which serves as the central registry for all protocol components. Through the `AddressBook`, the RWA contract gains access to:
+
+- **Config** — reads Governance-configured parameters (fees, limits, metadata URI)
+- **EventEmitter** — emits on-chain events for off-chain indexing and monitoring
+- **Role verification** — checks caller permissions (Governance, Timelock, signers)
+
+This architecture ensures that the RWA contract always operates with the latest protocol configuration without requiring upgrades.
+
+#### Metadata URI Format
+
+Each token ID's metadata URI follows the format:
+
+```
+{baseUri}/{address(this)}/{tokenId}
+```
+
+Where:
+
+- **`baseUri`** — the base metadata URI, read from the `Config` contract (Governance-configurable)
+- **`address(this)`** — the hex address of the RWA contract itself
+- **`tokenId`** — the numeric ID of the token
+
+This format guarantees that every token across every RWA contract has a unique, resolvable metadata URI.
+
 ## Tokenization Flow
 
 ```mermaid
 flowchart TB
-    subgraph AssetIntake["📋 Asset Intake"]
-        A1["Company Registers on Platform"]
-        A2["Business Details Submitted"]
+    %% Class definitions
+    classDef green fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef blue fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef orange fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef red fill:#f44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    classDef grey fill:#9E9E9E,stroke:#757575,stroke-width:2px,color:#fff
+
+    subgraph AssetPrep["🏗️ Asset Preparation"]
+        direction TB
+        A["🏗️ RWA"]
+        B["💰 Valuation"]
+        C["⚖️ Legal Structuring"]
+        D["📄 Documentation"]
+        A --> B
+        B --> C
+        C --> D
     end
 
-    subgraph AIEval["🤖 AI Evaluation"]
-        B1["Off-Chain Risk Analysis"]
-        B2["Risk Score Published to Contract"]
+    subgraph EvalApproval["🤖 Evaluation & Approval"]
+        direction TB
+        E["🤖 AI Risk Evaluation"]
+        F["✍️ Multi-sig Approval"]
+        E --> F
     end
 
-    subgraph Legal["⚖️ Legal & Signatures"]
-        C1["Multi-Sig Review by Signers"]
-        C2["Approvals Collected"]
+    subgraph TokenFunding["🪙 Tokenization & Funding"]
+        direction TB
+        G["🪙 RWA Token Creation"]
+        H["💧 Pool Deployment"]
+        I["💰 Funding"]
+        J["📦 Distribution"]
+        G --> H
+        H --> I
+        I --> J
     end
 
-    subgraph Minting["🪙 RWA Token Creation"]
-        D1["Factory.deployRWA() Called"]
-        D2["RWA Contract Deployed via ERC1967 Proxy"]
-    end
+    D --> E
+    F --> G
 
-    subgraph PoolAssign["🏊 Pool Assignment"]
-        E1["Pool Deployed for the RWA"]
-        E2["Tokens Minted on Contribution"]
-    end
-
-    A1 --> A2
-    A2 --> B1
-    B1 --> B2
-    B2 --> C1
-    C1 --> C2
-    C2 --> D1
-    D1 --> D2
-    D2 --> E1
-    E1 --> E2
+    class A,B,C,D orange
+    class E blue
+    class F blue
+    class G green
+    class H green
+    class I blue
+    class J green
 ```
 
 1. **Business creation** — the business registers on the platform
@@ -203,3 +241,43 @@ This multi-signature mechanism reduces the risk of a single compromised key bein
 - **Holding** — participants hold tokens representing their stake
 - **Burning** — tokens are burned when participants exit the pool
 - **Completion** — when all funds are returned, the pool is fully settled
+
+## Security: Emergency Pause
+
+The RWA token contract includes an **emergency pause mechanism** that can halt all token operations in case of an incident or vulnerability.
+
+### Paused State
+
+The contract maintains a `paused` boolean flag. When set to `true`, the following operations are blocked:
+
+- **Transfers** — any transfer of RWA tokens between addresses
+- **Minting** — creation of new RWA tokens
+- **Burning** — destruction of existing RWA tokens
+- **Token creation** — creation of new token IDs within the contract
+
+### Role Separation
+
+The pause mechanism enforces a strict separation of powers:
+
+| Function | Allowed Caller | Effect |
+|----------|---------------|--------|
+| `enablePause()` | **Governance (DAO)** | Sets `paused = true`, freezing all token operations |
+| `disablePause()` | **Timelock** | Sets `paused = false`, restoring normal operations |
+
+This design ensures that:
+
+- **Governance (DAO)** can quickly freeze a contract in an emergency, but cannot unfreeze it unilaterally
+- **Timelock** can only unfreeze after the configured delay, preventing hasty or malicious unpausing
+- Neither role can both pause and unpause alone — a compromise of either key cannot permanently lock or unlock the contract
+
+## Events
+
+The RWA contract emits the following events through the `EventEmitter` for off-chain monitoring and indexing:
+
+| Event | Description | Triggered By |
+|-------|-------------|-------------|
+| `RWA_Deployed` | A new RWA token contract has been deployed | `Factory.deployRWA()` |
+| `RWA_Transfer` | RWA tokens have been transferred, minted, or burned | Any token movement (`_update()`) |
+| `RWA_PausedStateChanged` | The contract's paused state has changed | `enablePause()` / `disablePause()` |
+
+These events enable off-chain services (indexers, dashboards, monitoring tools) to track the lifecycle of RWA tokens and respond to state changes in real time.

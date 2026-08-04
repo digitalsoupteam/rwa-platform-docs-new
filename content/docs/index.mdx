@@ -55,17 +55,58 @@ New to Slices? Start here:
 5. **Returns** — The business repays funds through incoming tranches; participants burn RWA tokens to claim returns.
 
 ```mermaid
-graph TD
-    A[Business] --> B[Platform Web App]
-    B --> C[AI Risk Evaluator]
-    C --> D[Multi-sig Signers]
-    D --> E[Smart Contracts]
-    E --> F[RWA Token ERC1155]
-    E --> G[Pool Contract]
-    G --> H[AMM]
-    G --> I[Tranches]
-    H --> J[Participants]
-    I --> J
-    J --> K[HOLD Token]
-    K --> L[BSC]
+flowchart TB
+    %% Class definitions
+    classDef green fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff
+    classDef blue fill:#2196F3,stroke:#1976D2,stroke-width:2px,color:#fff
+    classDef orange fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff
+    classDef red fill:#f44336,stroke:#D32F2F,stroke-width:2px,color:#fff
+    classDef grey fill:#9E9E9E,stroke:#757575,stroke-width:2px,color:#fff
+
+    subgraph "🏢 Business Onboarding"
+        direction TB
+        A["🏢 Business"] --> B["🌐 Web App"]
+        B --> C["🤖 AI Evaluator"]
+    end
+
+    subgraph "✅ Approval & Deployment"
+        direction TB
+        D["✍️ Signers"] --> E["📜 Contracts"]
+        E --> F["🪙 RWA Token"]
+        E --> G["💧 Pool"]
+    end
+
+    subgraph "💰 Funding"
+        direction TB
+        H["📊 AMM"] --> I["👥 Participants"]
+    end
+
+    subgraph "📦 Distribution"
+        direction TB
+        J["📦 Tranches"]
+    end
+
+    subgraph "🔄 Returns"
+        direction TB
+        K["🪙 HOLD Token"] --> L["⛓️ BSC"]
+    end
+
+    C --> D
+    G --> H
+    G --> J
+    J --> I
+    I --> K
+
+    class A orange
+    class B blue
+    class C blue
+    class D blue
+    class E blue
+    class F green
+    class G green
+    class H blue
+    class I orange
+    class J green
+    class K green
+    class L grey
 ```

@@ -12,8 +12,8 @@ The Testnet Faucet provides free test tokens on BSC Testnet for platform develop
 | Token | Purpose | How to Use |
 |-------|---------|------------|
 | **Gas (BNB)** | Pay transaction fees on BSC Testnet | Required for any on-chain interaction |
-| **HOLD** | Platform utility token | Buy RWA tokens in pools, pay fees |
-| **PlatformToken** | Governance token | Stake for voting power in the DAO |
+| **HOLD** | Тестовый USDT-токен для покупки RWA токенов в пулах и оплаты комиссий | Buy RWA tokens in pools, pay fees |
+| **Platform (RWAP)** | Токен управления (RWAP) для стейкинга и голосования в DAO | Stake for voting power in the DAO |
 
 ## Rate Limits
 
@@ -25,13 +25,15 @@ Each token type has an independent cooldown period. After requesting a token, yo
 | HOLD | Configurable (typically 24h) |
 | PlatformToken | Configurable (typically 24h) |
 
+Каждый тип токена имеет свой независимый период ожидания, который настраивается отдельно.
+
 You can [check your unlock times](/docs/api/testnet-faucet/get-unlock-time) before making a request. A value of `0` means no previous request — you can request immediately.
 
 ## Usage
 
 ### Request Gas Tokens
 
-[Request BNB](/docs/api/testnet-faucet/request-gas) for transaction fees — provide your wallet address and desired amount.
+[Request BNB](/docs/api/testnet-faucet/request-gas) for transaction fees — provide your wallet address.
 
 ### Request HOLD Tokens
 
@@ -57,7 +59,7 @@ User Request → Faucet Service → Blockchain Client → On-Chain Transfer
                               Cooldown Enforced for Next Request
 ```
 
-1. The user sends a request with their wallet address and desired amount
+1. The user sends a request with their wallet address
 2. The faucet service checks the cooldown period
 3. If allowed, the blockchain client sends the tokens from the faucet wallet
 4. The request is recorded in the database for history and rate limiting
