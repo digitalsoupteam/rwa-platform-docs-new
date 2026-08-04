@@ -39,6 +39,8 @@ After your business is created, request multi-signature approval for RWA deploym
 
 See [Token Creation](/docs/tokenization/token-creation) for the full process and contract details.
 
+The multi-signature approval process is handled automatically by the RWA Service — it coordinates off-chain signature collection and triggers on-chain deployment once all approvals are collected.
+
 ## Step 4: Configure and Deploy a Pool
 
 With your RWA token deployed, configure your pool:
@@ -49,6 +51,8 @@ With your RWA token deployed, configure your pool:
 4. Call `Factory.deployPool()` on-chain with the collected signatures + fee in HOLD
 
 For a detailed walkthrough of pool configuration and deployment, see [Launch a Pool](/docs/pools/launch-pool).
+
+The pool approval process is also automated by the RWA Service, managing off-chain signatures and on-chain pool deployment.
 
 ## Step 5: Promote and Collect
 
@@ -64,4 +68,3 @@ Once your pool is live:
 - Learn about [Core Concepts](/docs/get-started/concepts) — the building blocks of the platform
 - Explore [Pool Types](/docs/pools/overview) — how pools work
 - Read the [Smart Contract Architecture](/docs/smart-contracts/architecture) — how contracts fit together
-- Browse the [API Reference](/docs/api/rwa/pools/get-pools) — complete GraphQL documentation
