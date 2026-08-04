@@ -54,8 +54,8 @@ Stores all configurable protocol parameters.
 | `updateEntryPeriodDurationRange(uint256,uint256)` | Governance | Update entry period duration range |
 | `updateCompletionPeriodDurationRange(uint256,uint256)` | Governance | Update completion period range |
 | `updateEntryPeriodConfig(uint256,uint256)` | Governance | Update entry start offsets |
-| `updateOutgoingTranchesConfig(...)` | Governance | Update outgoing tranche limits |
-| `updateIncomingTranchesConfig(...)` | Governance | Update incoming tranche limits |
+| `updateOutgoingTranchesConfig(uint256,uint256,uint256,uint256,uint256)` | Governance | Update outgoing tranche limits |
+| `updateIncomingTranchesConfig(uint256,uint256,uint256,uint256,uint256)` | Governance | Update incoming tranche limits |
 | `updateLiquidityCoefficients(uint256[],uint256[])` | Governance | Update AMM coefficients |
 | `updateVotingPeriod(uint256)` | Governance | Update voting period |
 | `updateVotingDelay(uint256)` | Governance | Update voting delay |
@@ -274,7 +274,6 @@ Base contract for all upgradeable contracts (UUPS pattern).
 
 | Function | Access | Description |
 |---|---|---|
-| `upgradeTo(address)` | UpgradeRole | Upgrade implementation |
 | `upgradeToAndCall(address,bytes)` | UpgradeRole | Upgrade and call |
 | `uniqueContractId()` → `bytes32` | Anyone | Get contract identifier |
 | `implementationVersion()` → `uint256` | Anyone | Get version number |
