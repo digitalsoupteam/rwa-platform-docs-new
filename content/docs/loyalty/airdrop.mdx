@@ -116,53 +116,87 @@ The weights can be adjusted per airdrop campaign to emphasize different user beh
 
 ## Data Access
 
-All tracked data is queryable via GraphQL:
+All tracked data is queryable via REST API:
 
-- **[getFees](/docs/api/loyalty/get-fees)** — aggregated fee and reward totals per user
-- **[getReferrerClaimHistory](/docs/api/loyalty/get-referrer-claim-history)** — full audit trail of every event
-- **[getReferrals](/docs/api/loyalty/get-referrals)** — referral relationships
+- **`POST /getFees`** — aggregated fee and reward totals per user (with filtering, sorting, and pagination)
+- **`getReferrerClaimHistory`** — full audit trail of every event
+- **`getReferrals`** — referral relationships
 
-For example, to retrieve aggregated fee data for a user:
+### `POST /getFees`
 
-```graphql
-query GetUserFees {
-  getFees(
-    chainId: 1
-    userWallet: "0x1234...abcd"
-  ) {
-    buyCommissionAmount
-    buyCommissionCount
-    sellCommissionAmount
-    sellCommissionCount
-    tokenCreationCommissionAmount
-    tokenCreationCommissionCount
-    poolCreationCommissionAmount
-    poolCreationCommissionCount
-    referralRewardAmount
-    referralRewardCount
-  }
+Retrieves aggregated fee and reward data for users. Supports filtering, sorting, and pagination.
+
+#### Request Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `filter` | `Object` | `{}` | Filter criteria by any field (e.g. `{ userWallet: "0x1234...abcd" }`) |
+| `sort` | `Object` | `{}` | Sort order, e.g. `{ buyCommissionAmount: "desc" }` |
+| `limit` | `Number` | `100` | Maximum number of records to return |
+| `offset` | `Number` | `0` | Number of records to skip (for pagination) |
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` | Unique record identifier |
+| `userWallet` | `String` | Wallet address of the user |
+| `userId` | `String` | Platform user ID |
+| `chainId` | `Number` | Blockchain ID |
+| `tokenAddress` | `String` | Token address (USDT) |
+| `buyCommissionAmount` | `String` | Total USDT spent on buy fees |
+| `buyCommissionCount` | `Number` | Number of buy operations |
+| `sellCommissionAmount` | `String` | Total USDT spent on sell fees |
+| `sellCommissionCount` | `Number` | Number of sell operations |
+| `tokenCreationCommissionAmount` | `String` | Total USDT spent on RWA creation |
+| `tokenCreationCommissionCount` | `Number` | Number of RWA tokens created |
+| `poolCreationCommissionAmount` | `String` | Total USDT spent on pool creation |
+| `poolCreationCommissionCount` | `Number` | Number of pools created |
+| `referralRewardAmount` | `String` | Total USDT earned from referrals |
+| `referralRewardCount` | `Number` | Number of referral rewards earned |
+| `createdAt` | `String` | Record creation timestamp |
+| `updatedAt` | `String` | Record last update timestamp |
+
+#### Example Request
+
+```json
+POST /getFees
+Content-Type: application/json
+
+{
+  "filter": {
+    "userWallet": "0x1234...abcd",
+    "chainId": 1
+  },
+  "limit": 10,
+  "offset": 0
 }
 ```
 
-Response:
+#### Example Response
 
 ```json
-{
-  "data": {
-    "getFees": {
-      "buyCommissionAmount": "500.00",
-      "buyCommissionCount": 12,
-      "sellCommissionAmount": "350.00",
-      "sellCommissionCount": 8,
-      "tokenCreationCommissionAmount": "200.00",
-      "tokenCreationCommissionCount": 2,
-      "poolCreationCommissionAmount": "200.00",
-      "poolCreationCommissionCount": 1,
-      "referralRewardAmount": "320.00",
-      "referralRewardCount": 5
-    }
+[
+  {
+    "id": "664f1a2b3c4d5e6f7a8b9c0d",
+    "userWallet": "0x1234...abcd",
+    "userId": "user_42",
+    "chainId": 1,
+    "tokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    "buyCommissionAmount": "500.00",
+    "buyCommissionCount": 12,
+    "sellCommissionAmount": "350.00",
+    "sellCommissionCount": 8,
+    "tokenCreationCommissionAmount": "200.00",
+    "tokenCreationCommissionCount": 2,
+    "poolCreationCommissionAmount": "200.00",
+    "poolCreationCommissionCount": 1,
+    "referralRewardAmount": "320.00",
+    "referralRewardCount": 5,
+    "createdAt": "2024-05-22T10:30:00.000Z",
+    "updatedAt": "2024-05-22T10:30:00.000Z"
   }
-}
+]
 ```
 
 ## Transparency

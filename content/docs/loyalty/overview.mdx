@@ -25,6 +25,198 @@ All referral rewards are stored in the **ReferralTreasury** smart contract. This
 
 Withdrawals from the treasury require **multi-signature approval** from authorized signers, the same system used for RWA and pool deployments.
 
+## Architecture
+
+The Loyalty Service is a microservice built with the following components:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    RabbitMQ                         │
+│          queue: blockchain.events.loyalty            │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│              Blockchain Events Daemon                │
+│  Listens to on-chain events from smart contracts:   │
+│  • Pool.mint() / Pool.burn()                        │
+│  • TokenFactory (RWA creation)                      │
+│  • PoolFactory (pool creation)                      │
+│  • ReferralTreasury (withdrawals)                   │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│                    MongoDB (5 collections)           │
+│  • commissionHistory  — audit log of all fees       │
+│  • fees               — aggregated fee data         │
+│  • referrals          — referral relationships       │
+│  • referrerClaimHistory — referral reward history    │
+│  • referrerWithdraws  — withdrawal requests          │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│              Loyalty Service (Elysia/Bun)            │
+│  7 REST POST endpoints for data querying             │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│                 SignersManager                       │
+│  External service for multi-signature task creation  │
+└─────────────────────────────────────────────────────┘
+```
+
+### Components
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **HTTP Server** | Elysia (Bun) | Serves REST API endpoints |
+| **Database** | MongoDB (Mongoose) | Stores all loyalty data |
+| **Message Queue** | RabbitMQ | Delivers blockchain events to the daemon |
+| **Blockchain Events Daemon** | Background process | Listens to queue, processes events, writes to DB |
+| **SignersManager** | External service | Creates multi-signature tasks for withdrawals |
+| **Eden** | External service | Executes on-chain transactions |
+
+## REST API Endpoints
+
+All endpoints accept `POST` requests with a JSON body and return JSON responses.
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /getFees` | Get aggregated fee data for a user (per chain, per token) |
+| `POST /getCommissionHistory` | Get detailed audit log of all commission events |
+| `POST /getReferrals` | Get referral relationships for a user |
+| `POST /registerReferral` | Register a new referral relationship |
+| `POST /getReferrerClaimHistory` | Get history of referral rewards earned |
+| `POST /createReferrerWithdrawTask` | Create a withdrawal request for referral rewards |
+| `POST /getReferrerWithdraws` | Get status of withdrawal requests |
+
+## Data Models
+
+### Commission History
+
+Audit log of every fee-paying event with on-chain transaction hash for verifiability.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Wallet address that paid the fee |
+| `userId` | `string` | Platform user ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Token address of the fee (e.g. USDT) |
+| `amount` | `Decimal128` | Fee amount |
+| `actionType` | `string` | One of: `buy_commission`, `sell_commission`, `token_creation_commission`, `pool_creation_commission`, `referral_reward` |
+| `transactionHash` | `string` | On-chain transaction hash for auditability |
+| `relatedUserWallet` | `string?` | Referred user's wallet (for referral rewards) |
+| `relatedUserId` | `string?` | Referred user's platform ID (for referral rewards) |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record update timestamp |
+
+### Aggregated Fees
+
+Aggregated fee amounts and counts per user, per chain, per token.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Wallet address |
+| `userId` | `string` | Platform user ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Token address |
+| `buyCommissionAmount` | `Decimal128` | Total USDT spent on buy commissions |
+| `buyCommissionCount` | `number` | Number of buy operations |
+| `sellCommissionAmount` | `Decimal128` | Total USDT spent on sell commissions |
+| `sellCommissionCount` | `number` | Number of sell operations |
+| `tokenCreationCommissionAmount` | `Decimal128` | Total USDT spent on RWA creation |
+| `tokenCreationCommissionCount` | `number` | Number of RWA tokens created |
+| `poolCreationCommissionAmount` | `Decimal128` | Total USDT spent on pool creation |
+| `poolCreationCommissionCount` | `number` | Number of pools created |
+| `referralRewardAmount` | `Decimal128` | Total USDT earned from referrals |
+| `referralRewardCount` | `number` | Number of referral rewards received |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record update timestamp |
+
+### Referral
+
+Stores referral relationships — who referred whom.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Referred user's wallet |
+| `userId` | `string` | Referred user's platform ID |
+| `referrerWallet` | `string` | Referrer's wallet |
+| `referrerId` | `string` | Referrer's platform ID |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record update timestamp |
+
+### Referrer Claim History
+
+History of referral rewards earned by referrers.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Referrer's wallet |
+| `userId` | `string` | Referrer's platform ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Reward token address |
+| `amount` | `Decimal128` | Reward amount |
+| `actionType` | `string` | Type of action that generated the reward |
+| `transactionHash` | `string` | On-chain transaction hash |
+| `relatedUserWallet` | `string?` | Referred user's wallet |
+| `relatedUserId` | `string?` | Referred user's platform ID |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record update timestamp |
+
+### Referrer Withdraw
+
+Withdrawal requests for referral rewards.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | User's wallet |
+| `userId` | `string` | User's platform ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Token address to withdraw |
+| `amount` | `Decimal128` | Withdrawal amount |
+| `taskId` | `string` | Task ID in Eden for tracking |
+| `totalWithdrawnAmount` | `Decimal128` | Total amount already withdrawn by the user |
+| `taskExpiredAt` | `number` | Unix timestamp when the task expires |
+| `taskCooldown` | `number` | Cooldown period in seconds before next withdrawal |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record update timestamp |
+
+## Withdrawal Mechanism
+
+### Creating a Withdrawal Request
+
+When a user requests a withdrawal of referral rewards via `POST /createReferrerWithdrawTask`:
+
+1. The system validates the `chainId` against the list of **supported networks**
+2. A **message hash** is generated using `ethers.solidityPackedKeccak256` with the user's wallet, chain ID, token address, and amount
+3. The withdrawal task is sent to **Eden** (external service) for on-chain execution
+4. A record is created in the `referrerWithdraws` collection with the task ID
+
+### Cooldown
+
+- There is a **30-day cooldown** (`60 × 60 × 24 × 30` seconds) between withdrawal requests
+- The `taskCooldown` field stores this value
+- The `taskExpiredAt` field stores the timestamp when the current task expires
+
+### Multi-Signature
+
+- Withdrawals require **multi-signature approval** from authorized signers
+- The **SignersManager** external service handles the creation of signing tasks
+- This is the same multi-signature system used for RWA and pool deployments
+
+### Tracking Withdrawals
+
+Users can track their withdrawal requests via `POST /getReferrerWithdraws`, which returns the list of records from the `referrerWithdraws` collection.
+
 ## Key Data Tracked
 
 The loyalty service tracks the following per user, per chain, per token:

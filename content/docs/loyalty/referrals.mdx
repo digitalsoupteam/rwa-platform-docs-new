@@ -19,21 +19,19 @@ User A earns referral reward (% of fees)
 
 ### 1. Register a Referral
 
-When a new user joins, they register their referrer via the [registerReferral](/docs/api/loyalty/register-referral) mutation:
+When a new user joins, they register their referrer via the `POST /registerReferral` endpoint:
 
-```graphql
-mutation RegisterReferral($input: RegisterReferralInput!) {
-  registerReferral(input: $input) {
-    id
-    userWallet
-    userId
-    referrerWallet
-    referrerId
-  }
+**Request body:**
+```json
+{
+  "userWallet": "0x...",
+  "userId": "user_123",
+  "referrerWallet": "0x...",
+  "referrerId": "user_456"
 }
 ```
 
-Rules:
+**Rules:**
 - A user can only register **one referrer** — cannot be changed
 - Users **cannot refer themselves**
 - Referral should be registered before any fee-generating activity
@@ -73,36 +71,161 @@ rewardAmount = 100 × 1000 / 10000 = 10 USDT
 
 Here, `1000` represents 10% (since 1000 bps = 10%), and dividing by `10000` converts basis points back to a decimal fraction.
 
-### 4. Viewing Fees and Rewards
+## REST API Endpoints
 
-Users can query their accumulated fees and rewards via GraphQL:
+| Endpoint | Description |
+|----------|-------------|
+| `POST /registerReferral` | Register a new referral relationship |
+| `POST /getReferrals` | Get the list of users referred by a referrer |
+| `POST /getFees` | Get aggregated fees and rewards for a user |
+| `POST /getReferrerClaimHistory` | Get the full audit trail of referral rewards |
+| `POST /createReferrerWithdrawTask` | Create a withdrawal request for accumulated rewards |
+| `POST /getReferrerWithdraws` | Get the status and history of withdrawal requests |
 
-- **[getFees](/docs/api/loyalty/get-fees)** — returns commission amounts and counts for each fee type, plus total referral reward
-- **[getReferrerClaimHistory](/docs/api/loyalty/get-referrer-claim-history)** — full audit trail of every fee event and reward
+## Data Models
 
-The fees response includes:
+### Referral
 
-| Field | Description |
-|-------|-------------|
-| `buyCommissionAmount` | Total fees paid on buy operations |
-| `sellCommissionAmount` | Total fees paid on sell operations |
-| `tokenCreationCommissionAmount` | Total fees paid on RWA creation |
-| `poolCreationCommissionAmount` | Total fees paid on pool creation |
-| `referralRewardAmount` | Total rewards earned from referrals |
-| `*Count` fields | Number of times each action occurred |
+Represents a referral relationship between a referrer and a referred user.
 
-### 5. Commission History
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Wallet address of the referred user |
+| `userId` | `string` | Platform ID of the referred user |
+| `referrerWallet` | `string` | Wallet address of the referrer |
+| `referrerId` | `string` | Platform ID of the referrer |
+| `createdAt` | `Date` | When the referral was registered |
+| `updatedAt` | `Date` | When the record was last updated |
 
-Every fee event and referral reward is recorded in the commission history with:
+### Referrer Claim History
 
-| Field | Description |
-|-------|-------------|
-| `actionType` | `buy_commission`, `sell_commission`, `token_creation_commission`, `pool_creation_commission`, or `referral_reward` |
-| `amount` | The commission or reward amount |
-| `transactionHash` | On-chain transaction that triggered the event |
-| `relatedUserWallet` | For referral rewards: the referred user who paid the fee |
-| `relatedUserId` | For referral rewards: the referred user's ID |
+Every referral reward event is recorded in the claim history with full audit trail.
 
-### 6. Withdrawing Rewards
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Wallet address of the referrer |
+| `userId` | `string` | Platform ID of the referrer |
+| `chainId` | `number` | Blockchain ID where the event occurred |
+| `tokenAddress` | `string` | Address of the reward token |
+| `amount` | `Decimal128` | Reward amount |
+| `actionType` | `string` | Type of operation that generated the reward |
+| `transactionHash` | `string` | On-chain transaction hash (for auditability) |
+| `relatedUserWallet` | `string?` | Wallet of the referred user whose activity triggered the reward |
+| `relatedUserId` | `string?` | Platform ID of the referred user |
+| `logIndex` | `number` | Log index within the block |
+| `blockNumber` | `number` | Block number of the event |
+| `createdAt` | `Date` | When the record was created |
+| `updatedAt` | `Date` | When the record was last updated |
 
-Referral rewards are held in the **ReferralTreasury** smart contract. See [Withdrawing Rewards](/docs/loyalty/rewards) for the full withdrawal process.
+### Referrer Withdraw
+
+Represents a withdrawal request for accumulated referral rewards.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Wallet address of the user requesting withdrawal |
+| `userId` | `string` | Platform ID of the user |
+| `chainId` | `number` | Blockchain ID for the withdrawal |
+| `tokenAddress` | `string` | Address of the token to withdraw |
+| `amount` | `Decimal128` | Amount requested for withdrawal |
+| `taskId` | `string` | Task ID in Eden for tracking the on-chain transaction |
+| `taskExpiredAt` | `number` | Unix timestamp when the task expires |
+| `taskCooldown` | `number` | Unix timestamp until the next withdrawal is allowed |
+| `totalWithdrawnAmount` | `Decimal128` | Total amount already withdrawn by this user |
+| `createdAt` | `Date` | When the withdrawal request was created |
+| `updatedAt` | `Date` | When the record was last updated |
+
+### Aggregated Fees
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `ObjectId` | Unique record identifier |
+| `userWallet` | `string` | Wallet address of the user |
+| `userId` | `string` | Platform ID of the user |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Token address |
+| `buyCommissionAmount` | `Decimal128` | Total fees paid on buy operations |
+| `buyCommissionCount` | `number` | Number of buy operations |
+| `sellCommissionAmount` | `Decimal128` | Total fees paid on sell operations |
+| `sellCommissionCount` | `number` | Number of sell operations |
+| `tokenCreationCommissionAmount` | `Decimal128` | Total fees paid on RWA creation |
+| `tokenCreationCommissionCount` | `number` | Number of RWA creations |
+| `poolCreationCommissionAmount` | `Decimal128` | Total fees paid on pool creation |
+| `poolCreationCommissionCount` | `number` | Number of pool creations |
+| `referralRewardAmount` | `Decimal128` | Total rewards earned from referrals |
+| `referralRewardCount` | `number` | Number of referral rewards earned |
+| `createdAt` | `Date` | When the record was created |
+| `updatedAt` | `Date` | When the record was last updated |
+
+## Withdrawing Rewards
+
+Referral rewards are held in the **ReferralTreasury** smart contract. The withdrawal process involves several steps and validations.
+
+### Creating a Withdrawal Request
+
+Users initiate a withdrawal by calling `POST /createReferrerWithdrawTask` with:
+
+```json
+{
+  "userWallet": "0x...",
+  "userId": "user_123",
+  "chainId": 1,
+  "tokenAddress": "0x...",
+  "amount": 100.50
+}
+```
+
+### Validation Checks
+
+Before processing, the system performs the following checks:
+
+1. **Supported Network** — the `chainId` must be in the configured `supportedNetworks` list
+2. **Cooldown Period** — at least **30 days** must have passed since the last withdrawal (`60 × 60 × 24 × 30` seconds)
+3. **Sufficient Balance** — the requested amount must not exceed the available reward balance
+
+### Multi-Signature Security
+
+The **ReferralTreasury** contract requires **3 out of 5** authorized signers to approve any withdrawal. This multi-signature mechanism ensures that no single party can unilaterally withdraw funds.
+
+### Processing Flow
+
+```
+User → POST /createReferrerWithdrawTask
+                ↓
+      Validate checks (network, cooldown, balance)
+                ↓
+      Generate message hash via ethers.solidityPackedKeccak256
+      (userWallet, tokenAddress, amount, taskExpiredAt)
+                ↓
+      Create task in SignersManager (multi-signature coordination)
+                ↓
+      SignersManager collects 3 of 5 signatures
+                ↓
+      Task sent to Eden (external on-chain executor)
+                ↓
+      Eden executes ReferralTreasury.withdraw() on-chain
+                ↓
+      Withdrawal record created in referrerWithdraws collection
+```
+
+### Tracking Withdrawal Status
+
+Users can track their withdrawal requests via `POST /getReferrerWithdraws`:
+
+```json
+{
+  "filter": { "userWallet": "0x..." },
+  "sort": { "createdAt": -1 },
+  "limit": 10,
+  "offset": 0
+}
+```
+
+The response includes the `taskId` which can be used to track the task in Eden.
+
+### Auditability
+
+Every reward in the referrer claim history contains a `transactionHash` — the on-chain transaction hash that generated the reward. Anyone can verify that a recorded reward corresponds to a real on-chain transaction.

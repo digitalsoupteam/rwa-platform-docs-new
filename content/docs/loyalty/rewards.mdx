@@ -1,19 +1,107 @@
 ---
-title: Withdrawing Rewards
-description: How to withdraw accumulated referral rewards from the ReferralTreasury
+title: Rewards & Withdrawals
+description: How referral rewards are accumulated, tracked, and withdrawn from the ReferralTreasury
 ---
 
-# Withdrawing Rewards
+# Rewards & Withdrawals
 
-Referral rewards are held in the **ReferralTreasury** smart contract. To withdraw them, you need to go through a multi-signature approval process.
+Referral rewards are earned when your referred users perform on-chain operations (buy, sell, create RWA, create pool). The rewards are tracked in the loyalty service and can be withdrawn from the **ReferralTreasury** smart contract through a multi-signature approval process.
+
+## How Rewards Accumulate
+
+When a referred user performs an on-chain operation, the blockchain events daemon:
+
+1. Finds the referral relationship for the payer
+2. Records the commission in `commissionHistory`
+3. If a referrer exists — calculates the reward: `reward = commission × referralRewardPercentage / 10000`
+4. Records the reward in `referrerClaimHistory`
+5. Updates aggregated data in `fees`
+
+### Reward Formula
+
+```
+rewardAmount = commissionAmount × referralRewardPercentage / 10000
+```
+
+- `referralRewardPercentage` — protocol parameter in basis points (bps)
+- Example: 10% = 1000 bps, commission 100 USDT → reward 10 USDT
 
 ## How the Treasury Works
 
-The ReferralTreasury is a smart contract that holds USDT allocated for referral rewards. Key characteristics:
+The **ReferralTreasury** is a smart contract that holds USDT allocated for referral rewards. Key characteristics:
 
 - **Manually funded** — the treasury is topped up manually by the protocol. There is no automatic minting. The total available reward pool is limited by what has been deposited
 - **Multi-sig withdrawal** — every withdrawal requires signatures from authorized signers (same system as RWA and pool deployments)
 - **Emergency withdrawal** — Governance can withdraw tokens in case of emergency
+
+## REST API Endpoints
+
+| Endpoint | Description |
+|---|---|
+| **`POST /getFees`** | Get aggregated fees and rewards for a user |
+| **`POST /getReferrerClaimHistory`** | Get detailed history of earned referral rewards |
+| **`POST /createReferrerWithdrawTask`** | Create a withdrawal task for accumulated rewards |
+| **`POST /getReferrerWithdraws`** | Get withdrawal task history and status |
+
+## Data Models
+
+### Aggregated Fees (`fees`)
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `ObjectId` | Unique record ID |
+| `userWallet` | `string` | User's wallet address |
+| `userId` | `string` | User's platform ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Token address (USDT) |
+| `buyCommissionAmount` | `Decimal128` | Total USDT spent on buy commissions |
+| `buyCommissionCount` | `number` | Number of buy operations |
+| `sellCommissionAmount` | `Decimal128` | Total USDT spent on sell commissions |
+| `sellCommissionCount` | `number` | Number of sell operations |
+| `tokenCreationCommissionAmount` | `Decimal128` | Total USDT spent on RWA creation |
+| `tokenCreationCommissionCount` | `number` | Number of RWA tokens created |
+| `poolCreationCommissionAmount` | `Decimal128` | Total USDT spent on pool creation |
+| `poolCreationCommissionCount` | `number` | Number of pools created |
+| `referralRewardAmount` | `Decimal128` | Total USDT earned from referral rewards |
+| `referralRewardCount` | `number` | Number of referral rewards earned |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record last update timestamp |
+
+### Referrer Claim History (`referrerClaimHistory`)
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `ObjectId` | Unique record ID |
+| `userWallet` | `string` | Referrer's wallet address |
+| `userId` | `string` | Referrer's platform ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Reward token address |
+| `amount` | `Decimal128` | Reward amount |
+| `actionType` | `string` | Operation type |
+| `transactionHash` | `string` | On-chain transaction hash |
+| `relatedUserWallet` | `string?` | Referred user's wallet |
+| `relatedUserId` | `string?` | Referred user's platform ID |
+| `logIndex` | `number` | Event log index in the block |
+| `blockNumber` | `number` | Block number |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record last update timestamp |
+
+### Referrer Withdraw (`referrerWithdraw`)
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `ObjectId` | Unique record ID |
+| `userWallet` | `string` | User's wallet address |
+| `userId` | `string` | User's platform ID |
+| `chainId` | `number` | Blockchain ID |
+| `tokenAddress` | `string` | Withdrawal token address |
+| `amount` | `Decimal128` | Withdrawal amount |
+| `taskId` | `string` | Eden task ID |
+| `taskExpiredAt` | `number` | Task expiration timestamp (unix) |
+| `taskCooldown` | `number` | Next allowed withdrawal timestamp (unix) |
+| `totalWithdrawnAmount` | `Decimal128` | Total amount already withdrawn |
+| `createdAt` | `Date` | Record creation timestamp |
+| `updatedAt` | `Date` | Record last update timestamp |
 
 ## Withdrawal Flow
 
@@ -25,35 +113,48 @@ The ReferralTreasury is a smart contract that holds USDT allocated for referral 
 
 ### Step 1: Create a Withdraw Task
 
-Call [createReferrerWithdrawTask](/docs/api/loyalty/create-referrer-withdraw-task) with your wallet, the token address, and the amount you want to withdraw:
+**`POST /createReferrerWithdrawTask`**
 
-```graphql
-mutation CreateReferrerWithdrawTask($input: CreateReferrerWithdrawTaskInput!) {
-  createReferrerWithdrawTask(input: $input) {
-    id
-    referrerWallet
-    chainId
-    tokenAddress
-    totalWithdrawnAmount
-    taskId
-    taskExpiredAt
-    taskCooldown
-  }
+Request body:
+
+```json
+{
+  "chainId": 1,
+  "tokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  "amount": "50000000"
 }
 ```
 
-The system:
-1. Checks your accumulated referral rewards for this token
-2. Subtracts any already withdrawn amount
-3. Verifies the requested amount doesn't exceed available rewards
-4. Checks the cooldown period (1 month between withdrawal tasks)
-5. Generates a message hash of the withdrawal parameters
-6. Creates a signature task via the Signers Manager
-7. Returns the task details
+The system validates:
+
+1. **Supported network** — `chainId` must be in the `supportedNetworks` list
+2. **Cooldown** — at least **30 days** must have passed since the last withdrawal (`taskCooldown`)
+3. **Available balance** — requested amount must not exceed `referralRewardAmount - totalWithdrawnAmount`
+4. **Generates a message hash** — via `ethers.solidityPackedKeccak256(userWallet, tokenAddress, amount, taskExpiredAt)`
+5. **Creates a signature task** — via the Signers Manager
+6. **Returns task details**
+
+Response:
+
+```json
+{
+  "id": "...",
+  "userWallet": "0xYourWallet...",
+  "chainId": 1,
+  "tokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  "amount": "50000000",
+  "taskId": "sig_task_456",
+  "taskExpiredAt": 1712345678,
+  "taskCooldown": 1714937678,
+  "totalWithdrawnAmount": "50000000",
+  "createdAt": "2025-01-01T00:00:00.000Z",
+  "updatedAt": "2025-01-01T00:00:00.000Z"
+}
+```
 
 ### Step 2: Signers Approve
 
-The Signers Manager distributes the task to authorized signers. Each signer reviews the withdrawal and signs the message hash. Once enough signatures are collected (minimum 3), the task is marked as completed.
+The Signers Manager distributes the task to authorized signers. Each signer reviews the withdrawal and signs the message hash. Once enough signatures are collected (minimum **3 out of 5**), the task is marked as completed.
 
 The message that signers sign follows the **EIP-712** typed data standard:
 
@@ -74,11 +175,9 @@ Each signer produces a signature over the typed data, resulting in a 65-byte `(r
 0xabc123...def45678901234567890123456789012345678901234567890123456789012345678901b
 ```
 
-Check the task status via [getSignatureTask](/docs/api/signers-manager/get-signature-task).
-
 ### Step 3: Execute On-Chain
 
-Once you have the collected signatures, call `ReferralTreasury.withdraw()` on-chain:
+Once the signatures are collected, anyone can call `ReferralTreasury.withdraw()` on-chain:
 
 ```solidity
 function withdraw(
@@ -91,6 +190,7 @@ function withdraw(
 ```
 
 The contract verifies:
+
 - The request hasn't expired (10-minute window)
 - Each signer is authorized in AddressBook
 - Each signature is valid for the withdrawal parameters
@@ -98,37 +198,27 @@ The contract verifies:
 
 After successful withdrawal, the tokens are transferred to your wallet and a `ReferralTreasury_Withdrawn` event is emitted.
 
-### End-to-End Example: Withdrawing 50 USDT
+## End-to-End Example: Withdrawing 50 USDT
 
 Suppose you have accumulated **100 USDT** in referral rewards and want to withdraw **50 USDT**.
 
 **Step 1 — Create the task:**
 
-Call `createReferrerWithdrawTask` with:
-- `tokenAddress`: `0xdAC17F958D2ee523a2206206994597C13D831ec7` (USDT on Ethereum)
-- `amount`: `50000000` (50 USDT with 6 decimals)
-- `chainId`: `1` (Ethereum mainnet)
+Call `POST /createReferrerWithdrawTask` with:
+
+```json
+{
+  "chainId": 1,
+  "tokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  "amount": "50000000"
+}
+```
 
 The system checks:
+
 - ✅ Available rewards: 100 USDT ≥ 50 USDT
 - ✅ Cooldown passed (no previous withdrawal in the last month)
 - ✅ Generates a message hash and creates a signature task
-
-Response:
-```json
-{
-  "createReferrerWithdrawTask": {
-    "id": "task_abc123",
-    "referrerWallet": "0xYourWallet...",
-    "chainId": 1,
-    "tokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    "totalWithdrawnAmount": "50000000",
-    "taskId": "sig_task_456",
-    "taskExpiredAt": "1712345678",
-    "taskCooldown": "1714937678"
-  }
-}
-```
 
 **Step 2 — Signers approve:**
 
@@ -145,6 +235,7 @@ Three authorized signers review the withdrawal parameters and each signs the EIP
 **Step 3 — Execute on-chain:**
 
 Call `ReferralTreasury.withdraw()` with:
+
 - `token`: `0xdAC17F958D2ee523a2206206994597C13D831ec7`
 - `amount`: `50000000`
 - `deadline`: `1712345678`
@@ -156,16 +247,23 @@ The contract verifies all signatures, transfers **50 USDT** to your wallet, and 
 ## Constraints
 
 | Constraint | Value | Description |
-|------------|-------|-------------|
+|---|---|---|
 | Task expiry | **10 minutes** | The signature task expires if not executed in time |
-| Cooldown | **1 month** | Must wait 1 month between withdrawal tasks |
-| Min signers | **3** | Minimum number of signatures required |
-| Available amount | `totalRewards - totalWithdrawn` | Cannot withdraw more than earned |
+| Cooldown | **30 days** | Must wait 30 days between withdrawal tasks |
+| Min signers | **3 out of 5** | Minimum number of signatures required |
+| Available amount | `referralRewardAmount - totalWithdrawnAmount` | Cannot withdraw more than earned |
 
 ## Viewing Withdrawals
 
-- **[getReferrerWithdraws](/docs/api/loyalty/get-referrer-withdraws)** — view your withdrawal history with amounts and status
-- **[getReferrerClaimHistory](/docs/api/loyalty/get-referrer-claim-history)** — view on-chain withdrawal events
+- **`POST /getReferrerWithdraws`** — view your withdrawal history with amounts and task IDs
+- **`POST /getReferrerClaimHistory`** — view on-chain withdrawal events (ReferralTreasury_Withdrawn)
+- **`POST /getFees`** — view your accumulated referral rewards (`referralRewardAmount`)
+
+## Auditing
+
+Each reward in `referrerClaimHistory` contains a `transactionHash` — the on-chain hash of the event that generated the reward. This allows anyone to verify that the recorded reward corresponds to a real on-chain transaction.
+
+Each withdrawal task contains a `taskId` that can be used to track the task status in Eden.
 
 ## Emergency
 
