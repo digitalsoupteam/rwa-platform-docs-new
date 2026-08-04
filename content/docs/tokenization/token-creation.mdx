@@ -9,6 +9,8 @@ Creating RWA tokens involves deploying a token contract through the Factory and 
 
 ## Step 1: Deploy the RWA Contract
 
+Before deploying the RWA contract, the business must undergo an **off-chain AI risk evaluation**. The AI Risk Evaluator analyzes the business data, documents, and images on the platform's backend servers, producing a risk score (0–100) and a detailed factor breakdown. This risk score is then submitted to the smart contract as part of the deployment parameters. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for the full off-chain process.
+
 The `Factory.deployRWA()` function creates a new RWA token contract:
 
 ```solidity
@@ -138,8 +140,8 @@ Every RWA token and pool deployment requires multi-signature approval to ensure 
 
 ### Signer Roles
 
-- **Authorized Signers** — a set of 3–5 addresses designated as authorized signers for the platform
-- **`minSignersRequired`** — the minimum number of signatures required for a deployment to proceed (typically 2–3, configurable by Governance)
+- **Authorized Signers** — a set of addresses designated as authorized signers for the platform. The number of signers is configurable through Governance (DAO), with configurable minimum and maximum bounds (e.g., 3–5 signers).
+- **`minSignersRequired`** — the minimum number of signatures required for a deployment to proceed. This value is also configurable through Governance, with its own minimum and maximum bounds (e.g., 2–3, configurable by Governance).
 - **Signer Independence** — each signer is an independent entity (e.g., platform operators, compliance officers, external auditors)
 
 ### Approval Process
