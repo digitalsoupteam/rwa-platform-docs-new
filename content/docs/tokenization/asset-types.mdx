@@ -52,6 +52,20 @@ Fees are configured per-pool and are bounded by Governance-defined ranges. While
 
 All fee parameters are validated against Governance-configured ranges at deployment time. Higher-risk types (Startup) tend to have higher fee ranges to compensate for the additional due diligence and monitoring required. See [Fees](/docs/tokenization/fees) for the full specification.
 
+### Governance-Controlled Parameters
+
+Beyond fees, several other critical parameters are bounded by Governance through the DAO and vary by business type:
+
+- **Risk Score Limits** — `minBusinessRiskScore` and `maxBusinessRiskScore` define the acceptable range for AI-assigned risk scores. Growth businesses typically have lower score ranges, while Startups have higher ranges. Any deployment with a risk score outside these bounds is rejected.
+
+- **Financial Limits** — `expectedHoldAmount`, `expectedRwaAmount`, and `rewardPercent` all have Governance-configured minimum and maximum ranges. Growth pools tend to have higher expected amounts and lower reward percentages, while Startup pools have smaller amounts and higher rewards.
+
+- **Time Limits** — `entryPeriod` and `completionPeriod` are bounded by Governance. Growth businesses typically have shorter completion periods, while Startups have longer ones.
+
+- **Tranche Limits** — the number of outgoing and incoming tranches, their percentages, and intervals are all bounded by Governance. Growth pools often have more frequent outgoing tranches, while Startup pools have fewer but larger ones.
+
+- **Multi-Signature Limits** — the number of authorized signers and the minimum required signatures are configurable through Governance, with configurable minimum and maximum bounds.
+
 ## Automated Market Maker (AMM)
 
 The AMM uses a constant product formula to determine the price of RWA tokens in HOLD:
@@ -105,14 +119,41 @@ Incoming tranches represent the capital contribution schedule — when and how m
 
 The tranche structure varies by business type (as described in [How Type Affects Pool Configuration](#how-type-affects-pool-configuration)), but the claiming mechanism is identical for all pools.
 
+### Floating Tranches
+
+In addition to fixed tranches, pools can use **floating tranches** — tranches with flexible timing and amounts. Floating tranches are particularly useful for businesses with variable revenue streams or uncertain payout schedules, which is common for Startup and Franchise types.
+
+#### Floating Outgoing Tranches
+
+Floating outgoing tranches allow the pool owner to schedule payouts at flexible timestamps. Each floating outgoing tranche has:
+
+- **`timestamp`** — the scheduled payout time (configurable within Governance bounds)
+- **`amount`** — the HOLD amount to distribute
+- **`distributed`** — how much has already been paid out
+- **`state`** — the current status of the tranche
+
+The pool can have multiple floating outgoing timestamps, each with configurable intervals and percentages, all bounded by Governance.
+
+#### Floating Incoming Tranches
+
+Floating incoming tranches allow flexible contribution schedules. Each floating incoming tranche has:
+
+- **`timestamp`** — when the contribution is due
+- **`amount`** — the expected HOLD amount
+- **`filled`** — how much has been contributed
+- **`expired`** — the deadline for this tranche
+- **`state`** — the current status
+
+All floating tranche parameters (count, intervals, percentages, amounts, timestamps, expiry, states) are bounded by Governance-configured minimum and maximum ranges, providing flexibility within safe protocol limits.
+
 ## Multi-Signature Approval
 
 Every RWA token and pool deployment requires approval from authorized signers. The multi-signature process ensures that no single party can deploy assets without independent verification.
 
 ### Signer Roles
 
-- **Authorized Signers** — a set of 3–5 trusted addresses, typically including platform operators, legal representatives, and compliance officers
-- **minSignersRequired** — the minimum number of signatures required for a deployment to proceed (typically 2–3 out of the total signers)
+- **Authorized Signers** — a set of trusted addresses, typically including platform operators, legal representatives, and compliance officers. The number of signers is configurable through Governance (DAO), with configurable minimum and maximum bounds (e.g., 3–5 signers).
+- **`minSignersRequired`** — the minimum number of signatures required for a deployment to proceed. This value is also configurable through Governance, with its own minimum and maximum bounds (e.g., 2–3 out of the total signers).
 
 ### Approval Process
 
