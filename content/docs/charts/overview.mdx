@@ -15,12 +15,17 @@ Every time a pool's reserves change (mint, burn, or return), the price is record
 price = (virtualHoldReserve + realHoldReserve) / virtualRwaReserve
 ```
 
+> **Note:** All Charts API endpoints use HTTP POST with a JSON body. Actual endpoint paths: `/getRawPriceData`, `/getOhlcPriceData`, `/getVolumeData`, `/getPoolTransactions`.
+
 Each price data point includes:
 - **Pool address** — which pool
 - **Timestamp** — when the trade occurred
 - **Block number** — on-chain block
-- **Reserves** — `realHoldReserve`, `virtualHoldReserve`
+- **Reserves** — `realHoldReserve`, `virtualHoldReserve`, `virtualRwaReserve`
 - **Price** — calculated price
+- **id** — unique identifier
+- **createdAt** — record creation timestamp
+- **updatedAt** — record last update timestamp
 
 ## Update Frequency
 
@@ -55,35 +60,22 @@ Each price data point includes:
 
 ### Volume Data
 
-[Track mint and burn volumes](/docs/api/charts/get-volume-data) over time — each data point includes mint volume, burn volume, and total volume for the period.
+[Track mint and burn volumes](/docs/api/charts/get-volume-data) over time — each data point includes mint volume and burn volume for the period.
 
 ### Pool Transactions
 
-[View all transactions](/docs/api/charts/get-pool-transactions) for a specific pool — each record shows transaction type (mint/burn), user address, RWA amount, HOLD amount, bonus amount, and timestamp.
+[View all transactions](/docs/api/charts/get-pool-transactions) for a specific pool — each record shows transaction type (mint/burn), user address, RWA amount, HOLD amount, bonus amount, hold fee, bonus fee, and timestamp.
 
 ### Retention Policy
 
-Data is automatically removed based on Time-To-Live (TTL) indexes in MongoDB:
-
-| Data Type | Retention Period |
-|-----------|-----------------|
-| Raw price data | 30 days |
-| OHLC — 1m | 7 days |
-| OHLC — 5m | 30 days |
-| OHLC — 15m | 90 days |
-| OHLC — 1h | 180 days |
-| OHLC — 4h | 1 year |
-| OHLC — 1d | 2 years |
-| OHLC — 1w | Indefinitely |
-| Volume data | 90 days |
-| Pool transactions | 30 days |
+Data is stored for a limited time and automatically removed based on Time-To-Live (TTL) indexes in MongoDB.
 
 ### Sort & Filter Parameters
 
 The Charts API supports sorting and filtering for historical data endpoints.
 
-**Sort** — an array of `{ field, order }` objects where `order` is `"asc"` or `"desc"`.  
-Example: `sort=[{"field":"timestamp","order":"desc"}]` sorts results by timestamp in descending order.
+**Sort** — a record of field-to-order mappings where order is `"asc"` or `"desc"`.  
+Example: `sort={"timestamp":"desc"}` sorts results by timestamp in descending order.
 
 **Filter** — an object with field conditions. Supported operators: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`.  
 Example: `filter={"poolAddress":{"eq":"0x..."}}` filters by a specific pool address.
@@ -92,9 +84,8 @@ Example: `filter={"poolAddress":{"eq":"0x..."}}` filters by a specific pool addr
 
 | Endpoint | Sort | Filter |
 |---|---|---|
-| Raw Price Data | `sort=[{"field":"timestamp","order":"desc"}]` | `filter={"poolAddress":{"eq":"0x..."}}` |
-| OHLC Data | — | `filter={"interval":{"eq":"1h"}}` |
-| Pool Transactions | — | `filter={"type":{"in":["swap","addLiquidity"]}}` |
+| Raw Price Data | `sort={"timestamp":"desc"}` | `filter={"poolAddress":{"eq":"0x..."}}` |
+| Pool Transactions | — | `filter={"transactionType":{"in":["MINT","BURN"]}}` |
 
 ## Real-Time Updates
 
@@ -107,18 +98,7 @@ The platform provides real-time updates via WebSocket subscriptions:
 
 These subscriptions allow the frontend and external integrations to receive live data without polling.
 
-## Rate Limits
-
-The following rate limits apply to the Charts API:
-
-| Endpoint Type | Limit |
-|---------------|-------|
-| REST API | 100 requests per minute per IP address |
-| WebSocket | 10 concurrent connections per IP address |
-
-When a limit is exceeded, the API returns an **HTTP 429 (Too Many Requests)** response with a `Retry-After` header indicating when the client can retry.
-
-For higher limits, please contact the team.
+> **Note:** WebSocket subscriptions are implemented through an API Gateway, which relays events from Redis Pub/Sub. In this service, publication happens to Redis, not directly via WebSocket.
 
 ## Data Flow
 
