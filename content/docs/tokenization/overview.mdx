@@ -15,7 +15,7 @@ The platform supports various business types:
 - **Startup** — early-stage ventures with growth potential
 - **Franchise** — franchise operations looking to fund new locations
 
-Each business undergoes AI-based risk evaluation, then deploys an RWA token contract.
+Each business undergoes an off-chain AI-based risk evaluation. The evaluation is performed outside the blockchain by the AI Risk Evaluator, and the resulting risk score is passed to the smart contract as part of the deployment parameters.
 
 ## Token Standard: ERC1155
 
@@ -31,19 +31,93 @@ Benefits of ERC1155:
 ## Tokenization Flow
 
 ```
-Business → AI Evaluation → RWA Contract Deployed → Pool Created → Tokens Minted
+Business → Off-Chain AI Evaluation → Multi-Signature Approval → RWA Contract Deployed → Pool Created → Tokens Minted
 ```
 
 1. **Business creation** — the business registers on the platform
-2. **AI evaluation** — the AI evaluator analyzes the business and assigns a risk score
+2. **Off-chain AI evaluation** — the AI evaluator analyzes the business off-chain and assigns a risk score; the score is submitted to the smart contract
 3. **Multi-signature approval** — authorized signers review and approve the deployment
 4. **RWA deployment** — `Factory.deployRWA()` creates a new RWA token contract via ERC1967 proxy
 5. **Pool deployment** — `Factory.deployPool()` creates a pool linked to the RWA token
 6. **Token minting** — when participants contribute HOLD, the pool mints RWA tokens to them
 
-## Compliance Layer
+## Fees
 
-Each deployment requires multi-signature approval from authorized signers. This ensures that only verified businesses can tokenize assets on the platform. The AI evaluator provides an additional layer of risk assessment.
+The platform charges fees at several stages of the tokenization lifecycle:
+
+- **`createRWAFee`** — a one-time fee in HOLD tokens charged when deploying a new RWA contract via `Factory.deployRWA()`. The caller must pay this fee within the configured range.
+- **`createPoolFeeRatio`** — a ratio-based fee applied when deploying a new pool via `Factory.deployPool()`. It is calculated as a percentage of the pool's target raise amount.
+- **`entryFee`** — a fee deducted from a participant's contribution when they enter a pool and mint RWA tokens. The fee is taken in HOLD tokens and reduces the amount that goes into the pool.
+- **`exitFee`** — a fee deducted when a participant exits a pool and burns their RWA tokens. The fee is taken from the returned HOLD amount.
+
+All fee parameters are bounded by Governance-configured ranges and can be adjusted within those bounds by authorized roles.
+
+## Automated Market Maker (AMM)
+
+Each pool uses a **constant product AMM** formula to determine the exchange rate between HOLD and RWA tokens:
+
+```
+k = HOLD_reserve * RWA_supply
+```
+
+When a participant contributes HOLD to mint RWA tokens, the pool calculates the amount of RWA to mint using:
+
+```
+RWA_minted = RWA_supply - k / (HOLD_reserve + HOLD_contributed)
+```
+
+This formula ensures that the price of RWA tokens adjusts dynamically based on supply and demand. Early participants receive a more favorable rate, while later participants pay a higher price as the pool approaches its target.
+
+If `fixedSell` is enabled, the pool sells tokens at a fixed price instead of using the AMM curve.
+
+## Tranches (Outgoing / Incoming)
+
+Pools are structured into **tranches** — time-based segments that govern when participants can enter, receive payouts, and exit.
+
+### Outgoing Tranches
+
+Outgoing tranches define the schedule of **payouts** to token holders. Each outgoing tranche has:
+
+- **`targetTimestamp`** — when the payout is scheduled
+- **`amount`** — the total HOLD amount to be distributed in this tranche
+- **`distributed`** — how much has already been paid out
+
+When a payout is due, the pool distributes HOLD proportionally to all current RWA token holders based on their share of the total supply.
+
+### Incoming Tranches
+
+Incoming tranches define the schedule of **contributions** from participants. Each incoming tranche has:
+
+- **`targetTimestamp`** — when the contribution window opens
+- **`amount`** — the total HOLD amount expected in this tranche
+- **`filled`** — how much has been contributed so far
+
+Participants can contribute HOLD and mint RWA tokens during the active incoming tranche windows. Once a tranche is filled, the next tranche becomes available.
+
+### How Participants Receive Payments
+
+1. When an outgoing tranche is due, the pool contract calculates each holder's share based on their RWA token balance
+2. The holder claims their payout by calling the pool's claim function
+3. The payout is sent in HOLD tokens, and the tranche's `distributed` amount is updated
+4. Participants can exit the pool at any time by burning their RWA tokens, subject to the `exitFee`
+
+## Multi-Signature Approval
+
+Every RWA token and pool deployment requires approval from authorized signers. This ensures that only verified businesses can tokenize assets on the platform.
+
+### Signer Roles
+
+- **Authorized Signers** — a set of addresses (typically 3–5) that are permissioned to review and approve deployments
+- **`minSignersRequired`** — the minimum number of signatures needed for a deployment to proceed (e.g., 2 out of 3, or 3 out of 5)
+
+### Approval Process
+
+1. **Submission** — the deployment parameters (business data, risk score, fee configuration) are submitted on-chain
+2. **Independent review** — each authorized signer independently verifies the parameters off-chain
+3. **Signing** — each signer submits their cryptographic signature on-chain, approving the deployment
+4. **Execution** — once `minSignersRequired` signatures are collected, the deployment is executed automatically
+
+This multi-signature mechanism reduces the risk of a single compromised key being used to authorize fraudulent deployments.
 
 ## Token Lifecycle
 

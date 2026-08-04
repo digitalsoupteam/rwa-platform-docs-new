@@ -21,13 +21,13 @@ The `businessType` is set when creating a business via the [Create Business](/do
 
 ## How Type Affects Evaluation
 
-The AI Risk Evaluator considers the business type as part of its analysis. Each type carries different risk characteristics:
+The off-chain AI Risk Evaluator considers the business type as part of its analysis. The evaluation is performed entirely off-chain — the AI model analyzes business data, market context, and financial factors outside the blockchain. The resulting risk score is then passed to the smart contract as part of the deployment parameters. Each type carries different risk characteristics:
 
 - **Growth** — typically lower risk: established revenue, proven business model, expansion into adjacent markets
 - **Startup** — typically higher risk: unproven product-market fit, no historical revenue, but higher potential upside
 - **Franchise** — moderate risk: proven brand and operational model, but depends on location-specific factors and franchisor relationship
 
-The risk score (0-100) reflects this: growth businesses tend toward the lower end, startups toward the higher end, franchises in the middle. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for how the score is computed.
+The risk score (0-100) reflects this: growth businesses tend toward the lower end, startups toward the higher end, franchises in the middle. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for how the score is computed off-chain.
 
 ## How Type Affects Pool Configuration
 
@@ -37,7 +37,91 @@ While all three types use the same pool mechanism, the tranche structure and par
 - **Startup** — longer completion periods, higher reward percentages (higher risk premium for participants), fewer but larger tranches
 - **Franchise** — moderate periods, moderate reward, tranches aligned with expected franchise revenue timeline
 
-These are not enforced by the protocol — any business can configure any valid pool parameters. But the AI evaluation and participant expectations are informed by the business type.
+These are not enforced by the protocol — any business can configure any valid pool parameters. But the off-chain AI evaluation and participant expectations are informed by the business type.
+
+## Fees
+
+Fees are configured per-pool and are bounded by Governance-defined ranges. While the same fee types apply to all business types, the actual fee values typically reflect the risk profile of the asset:
+
+| Fee | Description | Typical Range by Type |
+|---|---|---|
+| **createRWAFee** | One-time fee in HOLD tokens paid when deploying the RWA contract | Growth: 100–500 HOLD; Startup: 50–200 HOLD; Franchise: 100–300 HOLD |
+| **createPoolFeeRatio** | Percentage of the pool target amount paid at pool creation (basis points) | Growth: 50–100 bps; Startup: 100–200 bps; Franchise: 75–150 bps |
+| **entryFee** | Fee charged to participants when they enter the pool, as a percentage of their contribution | Growth: 0–1%; Startup: 1–3%; Franchise: 0.5–2% |
+| **exitFee** | Fee charged to participants when they exit the pool, as a percentage of their redeemed tokens | Growth: 0–0.5%; Startup: 0.5–2%; Franchise: 0–1% |
+
+All fee parameters are validated against Governance-configured ranges at deployment time. Higher-risk types (Startup) tend to have higher fee ranges to compensate for the additional due diligence and monitoring required. See [Fees](/docs/tokenization/fees) for the full specification.
+
+## Automated Market Maker (AMM)
+
+The AMM uses a constant product formula to determine the price of RWA tokens in HOLD:
+
+```
+k = HOLD_reserve * RWA_supply
+```
+
+When a participant buys RWA tokens, the amount minted is calculated as:
+
+```
+RWA_minted = RWA_supply - (k / (HOLD_reserve + HOLD_paid))
+```
+
+The AMM pricing is independent of the business type — the same formula applies to all pools. However, the effective price per token is influenced by:
+
+- **Pool size** — larger pools (typical for Growth and Franchise) have deeper liquidity, resulting in lower price impact per trade
+- **Supply dynamics** — Startup pools with smaller supplies tend to have higher price sensitivity
+- **fixedSell** — if enabled, tokens are sold at a fixed price instead of using the AMM curve, which is common for Franchise pools with predictable revenue
+
+When `fixedSell` is disabled (the default), the AMM determines the available supply dynamically, and the price moves along the bonding curve as tokens are minted.
+
+## Tranches (Outgoing / Incoming)
+
+Tranches define the schedule of capital contributions and payouts for a pool. Each pool has two types of tranches:
+
+### Outgoing Tranches
+
+Outgoing tranches represent the payout schedule — when and how much the pool distributes to participants. Each outgoing tranche contains:
+
+- **targetTimestamp** — the date when the payout is scheduled
+- **amount** — the total amount of HOLD to be distributed in this tranche
+- **distributed** — the amount already distributed (updated as payouts are claimed)
+
+Participants receive their share of each outgoing tranche proportionally to their token holdings at the time of distribution. For example, if a participant holds 10% of the total RWA supply, they receive 10% of each outgoing tranche amount.
+
+### Incoming Tranches
+
+Incoming tranches represent the capital contribution schedule — when and how much the pool expects to receive from the business. Each incoming tranche contains:
+
+- **targetTimestamp** — the date when the contribution is due
+- **amount** — the expected contribution amount in HOLD
+- **filled** — the amount already received
+
+### How Participants Receive Payouts
+
+1. The business makes contributions to the pool according to the incoming tranche schedule
+2. These contributions fund the outgoing tranches
+3. Participants claim their share of each outgoing tranche by calling `claim()` on the pool contract
+4. The pool distributes HOLD tokens proportionally to each participant's RWA balance
+
+The tranche structure varies by business type (as described in [How Type Affects Pool Configuration](#how-type-affects-pool-configuration)), but the claiming mechanism is identical for all pools.
+
+## Multi-Signature Approval
+
+Every RWA token and pool deployment requires approval from authorized signers. The multi-signature process ensures that no single party can deploy assets without independent verification.
+
+### Signer Roles
+
+- **Authorized Signers** — a set of 3–5 trusted addresses, typically including platform operators, legal representatives, and compliance officers
+- **minSignersRequired** — the minimum number of signatures required for a deployment to proceed (typically 2–3 out of the total signers)
+
+### Approval Process
+
+1. **Submission** — a deployment request is created with the business data, risk score, and pool parameters
+2. **Independent review** — each authorized signer independently reviews the deployment details, including the off-chain AI risk score, business documentation, and pool configuration
+3. **Signing** — signers who approve the deployment cryptographically sign the deployment parameters
+4. **Execution** — once `minSignersRequired` signatures are collected, the deployment can be executed on-chain
+
+This multi-signature requirement applies to all business types equally, providing a consistent security layer across Growth, Startup, and Franchise deployments.
 
 ## Token Metadata
 
@@ -51,7 +135,7 @@ The metadata includes the business name, description, risk score, and supporting
 
 ## Risk Evaluation
 
-Each business undergoes an AI-powered risk evaluation before tokenization. The evaluation considers:
+Each business undergoes an off-chain AI-powered risk evaluation before tokenization. The evaluation is performed entirely outside the blockchain — the AI model processes business data and returns a risk score, which is then submitted to the smart contract as part of the deployment parameters. The evaluation considers:
 
 - **Business description** — the nature and viability of the business
 - **Business type** — growth, startup, or franchise (affects risk baseline)
@@ -61,4 +145,4 @@ Each business undergoes an AI-powered risk evaluation before tokenization. The e
 - **Documents** — uploaded business plans, financial projections, legal documents
 - **Gallery images** — photos of the business, products, or locations
 
-The result is a **risk score** (0-100) and a detailed breakdown of evaluation factors. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for the full process.
+The result is a **risk score** (0-100) and a detailed breakdown of evaluation factors. See [AI Risk Evaluator](/docs/ai-evaluator/overview) for the full off-chain process.

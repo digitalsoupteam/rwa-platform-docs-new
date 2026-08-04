@@ -55,6 +55,103 @@ function mint(
 
 The pool calculates the required HOLD amount using the AMM constant product formula, transfers HOLD from the participant, and mints RWA tokens.
 
+## Fees
+
+The platform charges four types of fees during token creation and pool participation:
+
+| Fee | Description | When Charged |
+|---|---|---|
+| `createRWAFee` | One-time fee in HOLD tokens for deploying the RWA contract | At `deployRWA()` call |
+| `createPoolFeeRatio` | Percentage of the pool's target amount (`expectedRwaAmount`) charged at pool creation | At pool deployment |
+| `entryFee` | Percentage of the HOLD amount paid when entering a pool | At `mint()` call |
+| `exitFee` | Percentage of the RWA amount paid when exiting a pool | At `redeem()` or `burn()` call |
+
+All fee parameters are bounded by Governance-configured minimum and maximum ranges. The actual values are set per pool at deployment time.
+
+## Automated Market Maker (AMM)
+
+The AMM uses a **constant product formula** to determine the exchange rate between HOLD and RWA tokens:
+
+```
+k = HOLD_reserve * RWA_supply
+```
+
+Where:
+- `HOLD_reserve` — the total HOLD tokens locked in the pool
+- `RWA_supply` — the total RWA tokens minted by the pool
+- `k` — the constant product, which remains invariant during trades
+
+When a participant mints RWA tokens, the required HOLD amount is calculated as:
+
+```
+HOLD_required = HOLD_reserve * (RWA_minted / (RWA_supply - RWA_minted))
+```
+
+This formula creates a **non-linear price curve** — as more RWA tokens are minted, the price in HOLD increases, and vice versa. This provides:
+
+- **Dynamic pricing** — the price adjusts automatically based on supply and demand
+- **Liquidity** — participants can always mint or redeem at the current AMM price without needing a counterparty
+- **Price discovery** — the AMM rate reflects the market's valuation of the asset
+
+If `fixedSell` is enabled on the pool, the AMM is bypassed and tokens are sold at a fixed price until the cap is reached.
+
+## Tranches (Outgoing / Incoming)
+
+Each pool maintains two types of tranches that govern the flow of funds:
+
+### Outgoing Tranches (Distributions)
+
+Outgoing tranches represent scheduled **payouts to participants**. Each outgoing tranche contains:
+
+```solidity
+struct OutgoingTranche {
+    uint256 targetTimestamp;  // When the distribution is scheduled
+    uint256 amount;           // Total HOLD amount to distribute
+    uint256 distributed;      // Amount already distributed
+}
+```
+
+Participants receive their share of each outgoing tranche proportional to their RWA token balance at the time of distribution.
+
+### Incoming Tranches (Contributions)
+
+Incoming tranches represent scheduled **contributions from participants**. Each incoming tranche contains:
+
+```solidity
+struct IncomingTranche {
+    uint256 targetTimestamp;  // When the contribution is due
+    uint256 amount;           // Total HOLD amount expected
+    uint256 filled;           // Amount already contributed
+}
+```
+
+### How Participants Receive Payouts
+
+1. **Distribution event** — when an outgoing tranche's `targetTimestamp` is reached, the pool triggers a distribution
+2. **Proportional allocation** — each participant's share is calculated as `(participant_RWA_balance / total_RWA_supply) * tranche_amount`
+3. **Claim** — participants call `claimOutgoingTranche(trancheId)` to receive their HOLD payout
+4. **Verification** — participants can check pending distributions via `getOutgoingTranches()` and their contribution schedule via `getIncomingTranches()`
+
+## Multi-Signature Approval
+
+Every RWA token and pool deployment requires multi-signature approval to ensure security and compliance.
+
+### Signer Roles
+
+- **Authorized Signers** — a set of 3–5 addresses designated as authorized signers for the platform
+- **`minSignersRequired`** — the minimum number of signatures required for a deployment to proceed (typically 2–3, configurable by Governance)
+- **Signer Independence** — each signer is an independent entity (e.g., platform operators, compliance officers, external auditors)
+
+### Approval Process
+
+1. **Submission** — the deployer submits the deployment request with the required parameters
+2. **Independent Review** — each authorized signer independently reviews the business details, risk score, and pool configuration
+3. **Signing** — each signer signs the deployment parameters off-chain, producing a cryptographic signature
+4. **Execution** — the deployer collects the required number of signatures and submits them to `deployRWA()`. The contract verifies that:
+   - All signatures are from unique authorized signers
+   - At least `minSignersRequired` valid signatures are provided
+   - The request has not expired (`expired` timestamp)
+
 ## Token Supply
 
 If `fixedSell` is enabled on the pool, the total RWA supply is capped at `expectedRwaAmount`. Once all tokens are minted, no more can be created. If `fixedSell` is disabled, the AMM determines the available supply dynamically.
