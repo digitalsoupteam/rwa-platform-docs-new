@@ -28,8 +28,8 @@ Each pool is configured with these parameters at deployment time. All parameters
 | `rewardPercent` | Bonus rate (in basis points) |
 | `entryFeePercent` | Fee charged on contributions (basis points) |
 | `exitFeePercent` | Fee charged on exits (basis points) |
-| `priceImpactPercent` | AMM price impact parameter |
-| `liquidityCoefficient` | AMM liquidity multiplier |
+| `priceImpactPercent` | Selects the liquidity coefficient in Factory (not used directly in Pool AMM) |
+| `liquidityCoefficient` | AMM liquidity multiplier — directly used in virtual reserve calculations |
 | `entryPeriodStart` | When contributions can begin |
 | `entryPeriodExpired` | When the entry period ends |
 | `completionPeriodExpired` | When the pool must be completed |
