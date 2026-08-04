@@ -64,11 +64,13 @@ Created → Voting Period → Auto-Executed or Auto-Cancelled
 | **Proposal threshold** | **1,000,000** PlatformToken | Minimum stake to create a proposal (`proposalThreshold`) |
 | **Quorum** | **40%** of totalSupply | Minimum participation for proposal to pass (`quorumPercentage = 4000 bps`) |
 | **Voting period** | **7 days** | Duration of voting (`votingPeriod`) |
-| **Timelock delay** | **2 days** | Delay before queued governance action executes (`timelockDelay`) |
+
 
 For example, if totalSupply PlatformToken = **10,000,000**, quorum = 10,000,000 × 40% = **4,000,000 votes**. To pass, a proposal needs `votesFor >= 4,000,000` AND `votesFor > votesAgainst`.
 
 To create a proposal, you must have **≥ 1,000,000 PlatformToken** staked. If you have 500,000 — you can only vote on others' proposals, not create your own.
+
+> **Note:** The `timelockDelay` parameter is used only for Treasury operations that go through the Timelock controller. Regular governance proposals are executed immediately after passing (see [Proposal Lifecycle](#proposal-lifecycle)).
 
 ## Viewing Proposals
 
