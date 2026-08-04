@@ -120,8 +120,8 @@ Centralized event logging. All functions restricted to protocol contracts.
 | Event | Description |
 |---|---|
 | `Pool_Deployed(address indexed emittedFrom, address indexed deployer, bool awaitCompletionExpired, bool floatingOutTranchesTimestamps, address holdToken, address rwaToken, uint256 tokenId, string entityId, string entityOwnerId, string entityOwnerType, address owner, uint256 expectedHoldAmount, uint256 expectedRwaAmount, uint256 expectedBonusAmount, uint256 rewardPercent, bool fixedSell, bool allowEntryBurn, uint256 entryPeriodStart, uint256 entryPeriodExpired, uint256 completionPeriodExpired, uint256 k, uint256 entryFeePercent, uint256 exitFeePercent, uint256[] outgoingTranches, uint256[] outgoingTranchTimestamps, uint256[] incomingTranches, uint256[] incomingTrancheExpired)` | New pool deployed |
-| `Pool_RwaMinted(address indexed emittedFrom, address indexed minter, uint256 rwaAmountMinted, uint256 holdAmountPaid, uint256 feePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, uint256 poolId, address holdToken)` | RWA tokens minted |
-| `Pool_RwaBurned(address indexed emittedFrom, address indexed burner, uint256 rwaAmountBurned, uint256 holdAmountReceived, uint256 bonusAmountReceived, uint256 holdFeePaid, uint256 bonusFeePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, uint256 poolId, address holdToken)` | RWA tokens burned |
+| `Pool_RwaMinted(address indexed emittedFrom, address indexed minter, uint256 rwaAmountMinted, uint256 holdAmountPaid, uint256 feePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, string poolId, address holdToken)` | RWA tokens minted |
+| `Pool_RwaBurned(address indexed emittedFrom, address indexed burner, uint256 rwaAmountBurned, uint256 holdAmountReceived, uint256 bonusAmountReceived, uint256 holdFeePaid, uint256 bonusFeePaid, uint256 percentBefore, uint256 userPercent, bool targetReached, string businessId, string poolId, address holdToken)` | RWA tokens burned |
 | `Pool_TargetReached(address indexed emittedFrom, uint256 outgoingTranchesBalance, uint256 floatingTimestampOffset, address owner)` | Pool funding target reached |
 | `Pool_FundsFullyReturned(address indexed emittedFrom, address indexed caller, address owner, uint256 timestamp)` | All funds returned |
 | `Pool_OutgoingTrancheClaimed(address indexed emittedFrom, address indexed claimer, uint256 trancheIndex, uint256 amountClaimed, address holdToken)` | Outgoing tranche claimed |
@@ -161,7 +161,7 @@ Deploys RWA token and Pool contracts via ERC1967 proxy.
 | Function | Access | Description |
 |---|---|---|
 | `deployRWA(uint256,string,string,string,address,address[],bytes[],uint256)` → `address` | Anyone + signatures | Deploy RWA token |
-| `deployPool(uint256,string,string,string,address,RWA,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,uint256[],uint256[],uint256[],uint256[],address[],bytes[],uint256)` → `address` | Anyone + signatures | Deploy pool |
+| `deployPool(uint256,string,RWA,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,bool,bool,bool,uint256[],uint256[],uint256[],uint256[],address[],bytes[],uint256)` → `address` | Anyone + signatures | Deploy pool |
 
 ### RWA
 

@@ -147,6 +147,9 @@ const poolAbi = parseAbi([
   'function estimateBurn(uint256 rwaAmount) view returns (uint256 holdAmount, uint256 holdFee, uint256 bonusAmount, uint256 bonusFee, uint256 eligibleRwa)',
   'function burn(uint256 rwaAmount, uint256 minHoldAmount, uint256 minBonusAmount, uint256 validUntil)',
 ]);
+const rwaAbi = parseAbi([
+  'function approve(address spender, uint256 amount) returns (bool)',
+]);
 
 // 1. Estimate return via useReadContract
 const { data: estimate } = useReadContract({
@@ -159,7 +162,19 @@ const { data: estimate } = useReadContract({
 const holdAmount = estimate?.[0] ?? 0n;
 const bonusAmount = estimate?.[2] ?? 0n;
 
-// 2. Burn via useWriteContract
+// 2. Approve RWA for pool via useWriteContract
+const { writeContract: approveRwa } = useWriteContract();
+
+const handleApproveRwa = () => {
+  approveRwa({
+    address: rwaTokenAddress,
+    abi: rwaAbi,
+    functionName: 'approve',
+    args: [poolAddress, rwaAmount],
+  });
+};
+
+// 3. Burn via useWriteContract
 const { writeContract: burn } = useWriteContract();
 
 const handleBurn = () => {
