@@ -74,43 +74,99 @@ See [Signers Manager](/docs/signers-manager/overview) for the full multi-sig flo
 
 Once you have the collected signatures, call `Factory.deployPool()` on-chain. The caller must approve the HOLD fee first, then submit the transaction with all parameters and signatures.
 
-```javascript
-const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, wallet);
-const holdToken = new ethers.Contract(HOLD_ADDRESS, erc20Abi, wallet);
+```tsx
+import { useWriteContract, encodeFunctionData } from 'wagmi';
+import { parseAbi } from 'viem';
+
+// ABI fragments
+const factoryAbi = parseAbi([
+  'function deployPool(uint256 createPoolFeeRatio,uint256 poolId,address rwaContract,uint256 expectedHoldAmount,uint256 expectedRwaAmount,uint256 priceImpactPercent,uint256 rewardPercent,uint256 entryPeriodStart,uint256 entryPeriodExpired,uint256 completionPeriodExpired,uint256 entryFeePercent,uint256 exitFeePercent,bool fixedSell,bool allowEntryBurn,bool awaitCompletionExpired,uint256[] memory floatingOutTranchesTimestamps,uint256[] memory outgoingTrancheAmounts,uint256[] memory outgoingTrancheTimestamps,uint256[] memory incomingTrancheAmounts,uint256[] memory incomingTrancheDeadlines,address[] memory signers,bytes memory signatures,uint256 expired)',
+]);
+const holdAbi = parseAbi([
+  'function approve(address spender, uint256 amount) returns (bool)',
+]);
 
 // Calculate the fee: expectedHoldAmount × createPoolFeeRatio / 10000
 const poolFee = (expectedHoldAmount * createPoolFeeRatio) / 10000n;
 
-// Approve HOLD for the fee
-await holdToken.approve(FACTORY_ADDRESS, poolFee);
+// 1. Approve HOLD for the fee via useWriteContract
+const { writeContract: approve } = useWriteContract();
 
-// Deploy the pool
-const tx = await factory.deployPool(
-  createPoolFeeRatio,
-  poolId,                      // entityId (from backend)
-  rwaContract,                // RWA address
-  expectedHoldAmount,
-  expectedRwaAmount,
-  priceImpactPercent,
-  rewardPercent,
-  entryPeriodStart,
-  entryPeriodExpired,
-  completionPeriodExpired,
-  entryFeePercent,
-  exitFeePercent,
-  fixedSell,
-  allowEntryBurn,
-  awaitCompletionExpired,
-  floatingOutTranchesTimestamps,
-  outgoingTrancheAmounts,      // uint256[] amounts
-  outgoingTrancheTimestamps,   // uint256[] timestamps
-  incomingTrancheAmounts,      // uint256[] amounts
-  incomingTrancheDeadlines,    // uint256[] deadlines
-  signers,                     // addresses from signature task
-  signatures,                  // signature bytes from task
-  expired                      // expiration from task
-);
-await tx.wait();
+const handleApprove = () => {
+  approve({
+    address: HOLD_ADDRESS,
+    abi: holdAbi,
+    functionName: 'approve',
+    args: [FACTORY_ADDRESS, poolFee],
+  });
+};
+
+// 2. Deploy the pool via useWriteContract
+const { writeContract: deployPool } = useWriteContract();
+
+const handleDeploy = () => {
+  deployPool({
+    address: FACTORY_ADDRESS,
+    abi: factoryAbi,
+    functionName: 'deployPool',
+    args: [
+      createPoolFeeRatio,
+      poolId,
+      rwaContract,
+      expectedHoldAmount,
+      expectedRwaAmount,
+      priceImpactPercent,
+      rewardPercent,
+      entryPeriodStart,
+      entryPeriodExpired,
+      completionPeriodExpired,
+      entryFeePercent,
+      exitFeePercent,
+      fixedSell,
+      allowEntryBurn,
+      awaitCompletionExpired,
+      floatingOutTranchesTimestamps,
+      outgoingTrancheAmounts,
+      outgoingTrancheTimestamps,
+      incomingTrancheAmounts,
+      incomingTrancheDeadlines,
+      signers,
+      signatures,
+      expired,
+    ],
+  });
+};
+
+// Prepare calldata with encodeFunctionData (alternative)
+const deployCalldata = encodeFunctionData({
+  abi: factoryAbi,
+  functionName: 'deployPool',
+  args: [
+    createPoolFeeRatio,
+    poolId,
+    rwaContract,
+    expectedHoldAmount,
+    expectedRwaAmount,
+    priceImpactPercent,
+    rewardPercent,
+    entryPeriodStart,
+    entryPeriodExpired,
+    completionPeriodExpired,
+    entryFeePercent,
+    exitFeePercent,
+    fixedSell,
+    allowEntryBurn,
+    awaitCompletionExpired,
+    floatingOutTranchesTimestamps,
+    outgoingTrancheAmounts,
+    outgoingTrancheTimestamps,
+    incomingTrancheAmounts,
+    incomingTrancheDeadlines,
+    signers,
+    signatures,
+    expired,
+  ],
+});
 ```
 
 ### What Happens Inside `deployPool()`
