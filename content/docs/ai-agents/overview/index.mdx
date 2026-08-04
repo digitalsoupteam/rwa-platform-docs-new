@@ -28,7 +28,7 @@ Smart Contracts (Solidity 0.8.28, UUPS upgradeable, BSC)
 ## Key Entities
 
 | Entity | Layer | Description |
-||---|---|---|
+|---|---|---|
 | **Company** | Backend | Organizational entity with members and permissions. Created via GraphQL. |
 | **Business** | Backend | A tokenizable business under a company. Has risk score, type (growth/startup/franchise), socials. Created via GraphQL. |
 | **RWA Token** | On-chain | ERC1155 contract deployed per business via `Factory.deployRWA()`. Each token ID corresponds to one pool. |
@@ -103,10 +103,7 @@ After the pool reaches its funding target (`isTargetReached = true`):
 
 ## Authentication
 
-Two methods:
-
-1. **Wallet signature** — `authenticate` mutation with wallet address + EIP-712 signature + timestamp → returns `accessToken` + `refreshToken`
-2. **API key** — create via `createApiKey` mutation, use as `Authorization: Bearer <key>` header
+**Wallet signature** — `authenticate` mutation with wallet address + EIP-712 signature + timestamp → returns `accessToken` + `refreshToken`
 
 All GraphQL requests (except `authenticate`) require authentication.
 
