@@ -17,8 +17,8 @@ Every RWA token and pool deployment requires approval from authorized signers. T
 
 ### Signer Roles
 
-- **Authorized Signers** — a set of 3–5 trusted addresses (individuals or entities) designated by Governance
-- **minSignersRequired** — the minimum number of signatures required for a deployment to be valid (typically 2–3, depending on the asset type and risk score)
+- **Authorized Signers** — a set of trusted addresses (individuals or entities) designated by Governance. The number of signers is configurable through Governance (DAO), with configurable minimum and maximum bounds (e.g., 3–5 signers).
+- **`minSignersRequired`** — the minimum number of signatures required for a deployment to be valid. This value is also configurable through Governance, with its own minimum and maximum bounds (e.g., 2–3, depending on the asset type and risk score).
 - **Signer Independence** — each signer operates independently; no single signer can approve a deployment alone
 
 ### Approval Process
@@ -53,6 +53,22 @@ All fee parameters are bounded by Governance-configured ranges, ensuring that fe
 | **exitFee** | Percentage fee charged when a participant exits a pool (burns tokens) | Stabilizes the pool by discouraging rapid exits; bounded by Governance |
 
 All fee values are validated against Governance-configured minimum and maximum ranges at deployment time. Any attempt to set a fee outside these ranges is rejected by the smart contract, providing a compliance safeguard against malicious or erroneous fee configuration.
+
+### Governance-Controlled Parameters
+
+Beyond fees, several other critical parameters are bounded by Governance through the DAO, providing additional compliance safeguards:
+
+- **Risk Score Limits** — `minBusinessRiskScore`, `maxBusinessRiskScore`, `minPoolRiskScore`, `maxPoolRiskScore` define the acceptable range for AI-assigned risk scores (0–100). Any deployment with a risk score outside these bounds is rejected, ensuring that only appropriately evaluated assets are tokenized.
+
+- **Financial Limits** — `expectedHoldAmount`, `expectedRwaAmount`, and `rewardPercent` all have Governance-configured minimum and maximum ranges. This prevents pools from being created with unrealistic target amounts or excessive reward rates, protecting participants from unsustainable or fraudulent offerings.
+
+- **Time Limits** — `entryPeriod` and `completionPeriod` are bounded by Governance, preventing pools from having unrealistically short (rushed) or excessively long (indefinite) timelines. This ensures participants have adequate time to evaluate and enter pools, while also guaranteeing that pools complete within a reasonable timeframe.
+
+- **Tranche Limits** — the number of outgoing and incoming tranches, their percentages, and intervals are all bounded by Governance. This prevents extreme tranche structures that could be used to manipulate payout schedules or hide unfavorable terms.
+
+- **Multi-Signature Limits** — the number of authorized signers (`minSigners` / `maxSigners`) and the minimum required signatures (`minSignersRequired` / `maxSignersRequired`) are configurable through Governance, with configurable minimum and maximum bounds. This ensures that the multi-signature security level can be adjusted as the platform evolves.
+
+All these parameters are validated against Governance-configured ranges at deployment time, providing a comprehensive compliance layer that extends beyond fees to every critical aspect of pool configuration.
 
 ## Automated Market Maker (AMM) and Compliance
 
@@ -106,6 +122,38 @@ Each incoming tranche has:
 2. When an outgoing tranche's `targetTimestamp` is reached, the pool's distributor calls `distribute()`
 3. The smart contract calculates each participant's share based on their token balance relative to total supply
 4. The participant can then claim their HOLD tokens via `claim()`
+
+### Floating Tranches and Compliance
+
+In addition to fixed tranches, pools can use **floating tranches** — tranches with flexible timing and amounts. Floating tranches are useful for businesses with variable revenue streams or uncertain payout schedules.
+
+#### Floating Outgoing Tranches
+
+Floating outgoing tranches allow the pool owner to schedule payouts at flexible timestamps. Each floating outgoing tranche has:
+
+- **`timestamp`** — the scheduled payout time (configurable within Governance bounds)
+- **`amount`** — the HOLD amount to distribute
+- **`distributed`** — how much has already been paid out
+- **`state`** — the current status of the tranche (pending, claimed, etc.)
+
+The pool can have multiple floating outgoing timestamps, each with configurable intervals and percentages, all bounded by Governance.
+
+#### Floating Incoming Tranches
+
+Floating incoming tranches allow flexible contribution schedules. Each floating incoming tranche has:
+
+- **`timestamp`** — when the contribution is due
+- **`amount`** — the expected HOLD amount
+- **`filled`** — how much has been contributed
+- **`expired`** — the deadline for this tranche
+- **`state`** — the current status
+
+#### Compliance Safeguards for Floating Tranches
+
+- **Governance Bounds** — all floating tranche parameters (count, intervals, percentages, amounts, timestamps, expiry, states) are bounded by Governance-configured minimum and maximum ranges, preventing abuse through extreme or indefinite schedules.
+- **State Machine** — each floating tranche has a state that tracks its lifecycle (pending, active, completed, expired). The smart contract enforces valid state transitions, preventing double-claiming or premature distributions.
+- **Expiry Enforcement** — floating incoming tranches have an `expired` timestamp after which contributions are no longer accepted, ensuring that contribution windows remain bounded.
+- **Audit Trail** — every floating tranche state change, distribution, and contribution is recorded on-chain, providing a complete audit trail for regulatory reporting.
 
 ## Platform Controls
 
