@@ -15,7 +15,7 @@ The Slices platform consists of three layers that work together to enable real-w
 │  (Next.js, GraphQL API, AI Assistant, Dashboard) │
 ├─────────────────────────────────────────────────┤
 │              Backend Services                    │
-│  (Gateway, Indexer, AI Evaluator, Signers Mgr)  │
+│  (Gateway, Indexer (Blockchain Scanner), Signers Mgr)  │
 ├─────────────────────────────────────────────────┤
 │              Smart Contracts                     │
 │  (Factory, RWA, Pool, Governance, Timelock...)   │
@@ -29,7 +29,7 @@ The on-chain layer consists of upgradeable Solidity contracts deployed on EVM-co
 - **System layer** — AddressBook (registry), Config (parameters), EventEmitter (logging)
 - **RWA layer** — Factory (deployment), RWA (ERC1155 tokens), Pool (crowdfunding + AMM)
 - **DAO layer** — Governance, Timelock, Treasury, DaoStaking
-- **Platform layer** — PlatformToken, ReferralTreasury
+- **Platform layer** — PlatformToken, ReferralTreasury, HoldToken
 
 All contracts use the UUPS upgradeable proxy pattern, allowing logic updates without changing contract addresses.
 
@@ -39,12 +39,9 @@ The backend consists of multiple independent services, each running as a separat
 
 - **GraphQL API** — the primary interface for the web platform and external integrations, powered by a gateway that proxies to specialized services
 - **RWA Service** — manages businesses, pools, token metadata, and coordinates multi-signature approvals
-- **AI Evaluator** — [risk scoring](/docs/ai-evaluator/overview) for businesses and pools using AI analysis
 - **AI Assistant** — [conversational AI](/docs/ai-assistant/overview) for user support and portfolio insights
 - **Signers Manager** — [coordinates multi-signature approvals](/docs/signers-manager/overview) for contract deployments
-- **Blockchain Scanner** — listens to on-chain events and maintains a queryable database
-- **API Keys** — [persistent authentication](/docs/api-keys/overview) for programmatic access
-- **Webhooks** — [real-time event notifications](/docs/webhooks/overview) via HTTP
+- **Indexer (Blockchain Scanner)** — listens to on-chain events and maintains a queryable database
 - **Charts** — [price data, OHLC, volume](/docs/charts/overview), and WebSocket updates
 - **Loyalty** — [referral rewards](/docs/loyalty/overview) for bringing new users to the platform
 - **Testnet Faucet** — [free test tokens](/docs/testnet-faucet/overview) on BSC Testnet
@@ -62,16 +59,14 @@ On-chain data (events, state) is indexed by the backend and stored in a database
 - **Portfolio data** — token balances, transaction history
 - **Governance data** — proposals, votes, staking positions, timelock tasks
 - **Chart data** — price history, volume, OHLC data
-- **AI evaluations** — risk scores, reasoning, factors
 
 ## Key Flows
 
 **Business onboarding:**
 1. Create a company profile via the web platform
-2. Submit business details for AI risk evaluation
-3. Request multi-signature approval for RWA deployment
-4. Deploy RWA token contract via Factory
-5. Configure and deploy a Pool
+2. Request multi-signature approval for RWA deployment
+3. Deploy RWA token contract via Factory
+4. Configure and deploy a Pool
 
 **Pool participation:**
 1. Browse available pools on the platform
