@@ -9,17 +9,38 @@ The Slices platform consists of three layers that work together to enable real-w
 
 ## System Overview
 
-```
-┌─────────────────────────────────────────────────┐
-│                  Web Platform                    │
-│  (Next.js, GraphQL API, AI Assistant, Dashboard) │
-├─────────────────────────────────────────────────┤
-│              Backend Services                    │
-│  (Gateway, Indexer (Blockchain Scanner), Signers Mgr)  │
-├─────────────────────────────────────────────────┤
-│              Smart Contracts                     │
-│  (Factory, RWA, Pool, Governance, Timelock...)   │
-└─────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Frontend["Web Platform"]
+        NextJS["Next.js (Dashboard)"]
+        GraphQL["GraphQL API Client"]
+        AI["AI Assistant"]
+    end
+
+    subgraph Backend["Backend Services"]
+        Gateway["GraphQL Gateway"]
+        Indexer["Indexer (Blockchain Scanner)"]
+        Signers["Signers Manager"]
+        RWA["RWA Service"]
+        Auth["Auth Service"]
+        Charts["Charts Service"]
+    end
+
+    subgraph SmartContracts["Smart Contracts"]
+        System["System Layer<br/>(AddressBook, Config, EventEmitter)"]
+        RWA_Layer["RWA Layer<br/>(Factory, RWA, Pool)"]
+        DAO["DAO Layer<br/>(Governance, Timelock, Treasury)"]
+        Platform["Platform Layer<br/>(PlatformToken, HoldToken)"]
+    end
+
+    subgraph Blockchain["Blockchain"]
+        EVM["EVM-compatible Chain<br/>(BSC / Testnet)"]
+    end
+
+    Frontend -->|"HTTP / WebSocket"| Backend
+    Backend -->|"RPC Calls"| SmartContracts
+    SmartContracts -->|"Deployed on"| Blockchain
+    Indexer -->|"Reads events"| Blockchain
 ```
 
 ## Smart Contracts

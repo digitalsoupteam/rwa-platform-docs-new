@@ -134,6 +134,18 @@ Bonuses are configured at pool creation and are paid from a dedicated bonus rese
 
 ## Onboarding Flow (Company → Business → AI → Signatures → RWA → Pool)
 
+```mermaid
+flowchart TB
+    subgraph Onboarding["Onboarding Flow"]
+        direction TB
+        A["🏢 Company<br/>Register organizational entity"] --> B["💼 Business<br/>Create business under company"]
+        B --> C["🤖 AI Evaluator<br/>Analyze & assign risk score"]
+        C --> D["✍️ Multi-signature Approval<br/>Collect signer approvals"]
+        D --> E["📜 RWA Token<br/>Deploy ERC1155 contract"]
+        E --> F["🏊 Pool<br/>Configure & deploy crowdfunding pool"]
+    end
+```
+
 The complete onboarding flow for a new business on the Slices platform follows these steps:
 
 1. **Create a Company** — register an organizational entity via the web platform or API. Provide name, description, country, and social links

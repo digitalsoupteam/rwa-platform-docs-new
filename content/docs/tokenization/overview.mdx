@@ -30,8 +30,42 @@ Benefits of ERC1155:
 
 ## Tokenization Flow
 
-```
-Business → Off-Chain AI Evaluation → Multi-Signature Approval → RWA Contract Deployed → Pool Created → Tokens Minted
+```mermaid
+flowchart TB
+    subgraph AssetIntake["📋 Asset Intake"]
+        A1["Business Registration"]
+        A2["Document Submission"]
+    end
+
+    subgraph AIEval["🤖 AI Evaluation"]
+        B1["Off-Chain Risk Analysis"]
+        B2["Risk Score Assignment"]
+    end
+
+    subgraph Legal["⚖️ Legal Review"]
+        C1["Multi-Signature Review"]
+        C2["Approval Collection"]
+    end
+
+    subgraph Minting["🪙 Minting"]
+        D1["RWA Contract Deployed"]
+        D2["ERC1967 Proxy Setup"]
+    end
+
+    subgraph PoolAssign["🏊 Pool Assignment"]
+        E1["Pool Deployment"]
+        E2["Token Minting on Contribution"]
+    end
+
+    A1 --> A2
+    A2 --> B1
+    B1 --> B2
+    B2 --> C1
+    C1 --> C2
+    C2 --> D1
+    D1 --> D2
+    D2 --> E1
+    E1 --> E2
 ```
 
 1. **Business creation** — the business registers on the platform
