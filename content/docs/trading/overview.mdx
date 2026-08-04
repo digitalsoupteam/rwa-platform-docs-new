@@ -42,6 +42,11 @@ totalCost = holdAmount + fee
 
 You need to approve the HOLD tokens first, then call `mint`. For a full code example, see [Join a Pool](/docs/pools/join-pool).
 
+**Mint constraints:**
+- `mint()` is only available after `entryPeriodStart` and before `completionPeriodExpired`.
+- If the pool is `isFullyReturned`, minting is permanently disabled.
+- If `fixedSell` is enabled, the total amount of RWA that can be minted is capped at `expectedRwaAmount`. If `rwaAmount` exceeds the remaining capacity, the transaction reverts unless `allowPartial` is set to `true`.
+
 ## Sell RWA Tokens
 
 To sell RWA tokens, call `Pool.burn()`:
@@ -58,19 +63,22 @@ function burn(
 You receive:
 
 - **Base return** — your proportional share of returned funds, calculated via the AMM
-- **Bonus** — additional rewards if the business has exceeded its obligations
+- **Bonus** — additional rewards distributed proportionally among eligible RWA holders if the business has exceeded its obligations. Bonuses are unlocked after the completion period expires (plus a 1-day delay) and are subject to the `checkBonusesUnlocked()` check. The bonus amount is calculated as `(awaitingBonusAmount × eligibleRwaAmount) / availableRwaAmountToBonus`, where `eligibleRwaAmount` is capped by the remaining unrewarded RWA supply.
 
 Both amounts are subject to the exit fee. See [Fees](/docs/fees/overview) for the full breakdown of all protocol fees.
 
+**Burn constraints:**
+- If `allowEntryBurn` is `false`, burning is not allowed during the entry period (before `entryPeriodExpired`) unless the pool target has already been reached.
+
 ## Price Discovery
 
-The AMM price is determined by the pool's reserves:
+The AMM price is derived from the pool's reserves. The contract does not store a price value — instead, it emits a `ReservesUpdated` event after every mint and burn with the current `realHoldReserve`, `virtualHoldReserve`, and `virtualRwaReserve`. The price can be computed client-side as:
 
 ```
 price = (virtualHoldReserve + realHoldReserve) / virtualRwaReserve
 ```
 
-The price updates after every trade. You can query current and historical prices via the [Charts API](/docs/charts/overview):
+You can query current and historical prices via the [Charts API](/docs/charts/overview):
 
 - **[Raw price data](/docs/api/charts/get-raw-price-data)** — historical price points with reserve snapshots
 - **[OHLC data](/docs/api/charts/get-ohlc-price-data)** — open, high, low, close prices over configurable intervals
