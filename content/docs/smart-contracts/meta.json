@@ -4,6 +4,7 @@
     "architecture",
     "contract-reference",
     "platform-token",
-    "deployments"
+    "deployments",
+    "upgradeable-contract"
   ]
 }
