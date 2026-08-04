@@ -19,8 +19,15 @@ Each price data point includes:
 - **Pool address** — which pool
 - **Timestamp** — when the trade occurred
 - **Block number** — on-chain block
-- **Reserves** — `realHoldReserve`, `virtualHoldReserve`, `virtualRwaReserve`
+- **Reserves** — `realHoldReserve`, `virtualHoldReserve`
 - **Price** — calculated price
+
+## Update Frequency
+
+- **On-chain events** — price data is recorded every time a pool's reserves change (mint, burn, or return).
+- **Latency** — the delay between an on-chain event and its appearance in the API or WebSocket is typically **1–2 seconds**.
+- **WebSocket updates** — `priceUpdates` and `transactionUpdates` subscriptions deliver events in real time as they occur.
+- **REST API (historical data)** — historical data is available with a delay of no more than **5 seconds** after the block is processed.
 
 ## Historical Data
 
@@ -54,6 +61,41 @@ Each price data point includes:
 
 [View all transactions](/docs/api/charts/get-pool-transactions) for a specific pool — each record shows transaction type (mint/burn), user address, RWA amount, HOLD amount, bonus amount, and timestamp.
 
+### Retention Policy
+
+Data is automatically removed based on Time-To-Live (TTL) indexes in MongoDB:
+
+| Data Type | Retention Period |
+|-----------|-----------------|
+| Raw price data | 30 days |
+| OHLC — 1m | 7 days |
+| OHLC — 5m | 30 days |
+| OHLC — 15m | 90 days |
+| OHLC — 1h | 180 days |
+| OHLC — 4h | 1 year |
+| OHLC — 1d | 2 years |
+| OHLC — 1w | Indefinitely |
+| Volume data | 90 days |
+| Pool transactions | 30 days |
+
+### Sort & Filter Parameters
+
+The Charts API supports sorting and filtering for historical data endpoints.
+
+**Sort** — an array of `{ field, order }` objects where `order` is `"asc"` or `"desc"`.  
+Example: `sort=[{"field":"timestamp","order":"desc"}]` sorts results by timestamp in descending order.
+
+**Filter** — an object with field conditions. Supported operators: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`.  
+Example: `filter={"poolAddress":{"eq":"0x..."}}` filters by a specific pool address.
+
+**Examples by endpoint:**
+
+| Endpoint | Sort | Filter |
+|---|---|---|
+| Raw Price Data | `sort=[{"field":"timestamp","order":"desc"}]` | `filter={"poolAddress":{"eq":"0x..."}}` |
+| OHLC Data | — | `filter={"interval":{"eq":"1h"}}` |
+| Pool Transactions | — | `filter={"type":{"in":["swap","addLiquidity"]}}` |
+
 ## Real-Time Updates
 
 The platform provides real-time updates via WebSocket subscriptions:
@@ -64,6 +106,19 @@ The platform provides real-time updates via WebSocket subscriptions:
 | [`transactionUpdates(poolAddress)`](/docs/api/charts/transaction-updates) | Notified when a mint or burn occurs — includes pool address, timestamp, transaction type, user, amounts, and fees |
 
 These subscriptions allow the frontend and external integrations to receive live data without polling.
+
+## Rate Limits
+
+The following rate limits apply to the Charts API:
+
+| Endpoint Type | Limit |
+|---------------|-------|
+| REST API | 100 requests per minute per IP address |
+| WebSocket | 10 concurrent connections per IP address |
+
+When a limit is exceeded, the API returns an **HTTP 429 (Too Many Requests)** response with a `Retry-After` header indicating when the client can retry.
+
+For higher limits, please contact the team.
 
 ## Data Flow
 
