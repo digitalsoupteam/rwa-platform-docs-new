@@ -16,7 +16,7 @@ The protocol consists of four layers:
 | **System** | AddressBook, Config, EventEmitter | Registry, parameters, event logging |
 | **RWA** | Factory, RWA, Pool | Asset tokenization and crowdfunding |
 | **DAO** | Governance, Timelock, Treasury, DaoStaking | Decentralized governance and treasury |
-| **Platform** | PlatformToken, ReferralTreasury | Staking token and referral rewards |
+| **Platform** | PlatformToken, HoldToken, ReferralTreasury | Staking token, base currency, and referral rewards |
 
 All contracts use the **UUPS (Universal Upgradeable Proxy Standard)** pattern, which allows logic updates without changing the contract address. Upgrade rights are controlled by a dedicated `upgradeRole` address stored in `AddressBook`.
 
@@ -36,6 +36,7 @@ Timelock public timelock;
 Treasury public treasury;
 Factory public factory;
 PlatformToken public platformToken;
+HoldToken public holdToken;
 ReferralTreasury public referralTreasury;
 ```
 
@@ -189,7 +190,7 @@ function withdrawERC20(address token, address to, uint256 amount) external nonRe
 
 ### Timelock
 
-Enforces a time delay on governance actions. Transactions must be queued with an ETA (earliest execution time) that is at least `timelockDelay` seconds in the future. Once queued, they can be executed by anyone after the ETA, within a 7-day grace period.
+Enforces a time delay on Treasury withdrawals and RWA unpause. Not used for regular governance proposals. Transactions must be queued with an ETA (earliest execution time) that is at least `timelockDelay` seconds in the future. Once queued, they can be executed by anyone after the ETA, within a 7-day grace period.
 
 ```solidity
 function queueTransaction(address target, bytes memory data, uint256 eta) external returns (bytes32)
@@ -226,6 +227,10 @@ function lock(address user, uint256 unlockTimestamp) external  // governance onl
 - **`unstake`** — withdraw tokens. Requires the voting lock to have expired.
 - **`lock`** — governance can extend the lock period for a specific user
 
+### HoldToken
+
+An ERC20 token used as the base currency for pool participation, staking, and fee payments. It is the primary medium of exchange within the protocol.
+
 ## Access Control
 
 The protocol uses a layered access control model:
@@ -239,6 +244,7 @@ The protocol uses a layered access control model:
 | **Signer** | Authorized multi-sig addresses | Approve RWA and Pool deployments |
 | **Protocol Contract** | Any registered contract | `EventEmitter` emit functions |
 | **Pool Owner** | The business that owns the pool | `claimOutgoingTranches` |
+| **HoldToken** | HoldToken contract | Mint/burn by Factory and Pool |
 
 ## Upgradeability
 
@@ -279,4 +285,3 @@ Each contract has a unique identifier (`uniqueContractId`) and a version number 
 1. A staker with sufficient voting power creates a proposal via `Governance.propose()`
 2. Stakers vote during the voting period via `Governance.vote()`
 3. When the voting period ends, the proposal is automatically executed if it passed and met quorum
-4. The executed call goes through `Timelock`, which enforces a delay before the action takes effect
