@@ -36,7 +36,7 @@ await daoStaking.stake(amount);
 
 When you stake:
 1. PlatformTokens transfer from your wallet to DaoStaking contract
-2. Your staked amount is recorded → becomes voting power (1:1 ratio)
+2. Your staked amount is recorded → becomes voting power (1:1 ratio, no multiplier)
 3. Staking timestamp is set → reward accrual begins
 4. If you already have staked tokens, pending rewards are auto-reinvested
 
@@ -58,14 +58,14 @@ annualReward = stakedAmount × daoStakingAnnualRewardRate / 10000
 pendingReward = annualReward × stakingDuration / 365 days
 ```
 
-Rewards are capped by available rewards in the contract (balance minus total deposits).
+Rewards are paid in **PlatformToken** (not HOLD) and are capped by available rewards in the contract (balance minus total deposits).
 
 ### View Functions
 
 ```javascript
 const staked = await daoStaking.stakedAmount(user);
-const votingPower = await daoStaking.getVotingPower(user);
-const totalVotingPower = await daoStaking.getTotalVotingPower();  // totalSupply
+const votingPower = await daoStaking.getVotingPower(user);          // = stakedAmount (1:1)
+const totalVotingPower = await daoStaking.getTotalVotingPower();    // totalSupply
 const pendingRewards = await daoStaking.calculatePendingRewards(user);
 const availableRewards = await daoStaking.getAvailableRewards();
 ```
@@ -90,7 +90,7 @@ const receipt = await tx.wait();
 const proposalId = ... // parse from event
 ```
 
-**Requirement:** `getVotingPower(msg.sender) >= proposalThreshold`
+**Requirement:** `getVotingPower(msg.sender) >= proposalThreshold` (Governance.sol:61 — value from Config, not hardcoded)
 
 ### Proposal Types
 
@@ -108,14 +108,14 @@ Proposals can target any contract call. Common types:
 ### Proposal Lifecycle
 
 ```
-Created → Voting Period → Auto-Executed or Auto-Cancelled
+Created → Voting (auto-check after each vote) → Auto-Executed or Auto-Cancelled
 ```
 
 1. **Created** — `propose()` creates proposal with `endTime = block.timestamp + votingPeriod`
 2. **Voting** — stakers vote for/against during voting period
-3. **Auto-execution** — checked after each vote: if `votesFor >= quorum` AND `votesFor > votesAgainst` → `target.call(data)` executes immediately
-4. **Auto-cancellation** — if `votesAgainst >= quorum` AND `votesAgainst > votesFor` → proposal cancelled
-5. **Manual cancel** — proposer can cancel within 12 hours of creation
+3. **Auto-execution** — checked **immediately after each vote** (`_checkAutoAction` at Governance.sol:130): if `votesFor >= quorum` AND `votesFor > votesAgainst` → `target.call(data)` executes right away
+4. **Auto-cancellation** — if `votesAgainst >= quorum` AND `votesAgainst > votesFor` → proposal cancelled immediately
+5. **Manual cancel** — proposer can cancel within 12 hours of creation (Governance.sol:141)
 
 ### Query Proposals (GraphQL — indexed)
 
@@ -156,7 +156,7 @@ When you vote:
 quorum = platformToken.totalSupply() × quorumPercentage / 10000
 ```
 
-**Important:** Quorum is calculated from **total PlatformToken supply**, not just staked amount. This means if much of the supply is unstaked, reaching quorum requires high participation from active stakers.
+**Important:** Quorum is calculated from **total PlatformToken supply** (DaoStaking.sol:196-198), not just staked amount. This means if much of the supply is unstaked, reaching quorum requires high participation from active stakers.
 
 ### Vote Query (GraphQL — indexed)
 
@@ -283,3 +283,54 @@ Withdrawals require a Timelock transaction:
 
 1. Governance proposal passes → calls `Timelock.queueTransaction(treasury, withdrawData, eta)`
 2. After `timelockDelay`, anyone calls `Timelock.executeTransaction()` → triggers `Treasury.withdrawERC20()` or `Treasury.withdrawETH()`
+
+---
+
+## Additional GraphQL Types
+
+### StakingHistory (dao/schema.graphql:46-56)
+
+Indexed history of staking operations:
+
+```graphql
+query {
+  getStakingHistory(input: {
+    filter: { staker: { $eq: "0x..." } }
+    sort: { createdAt: "desc" }
+    limit: 10
+  }) {
+    staker amount operation
+    transactionHash createdAt
+  }
+}
+```
+
+### TimelockTask (dao/schema.graphql:58-68)
+
+Queued timelock transactions:
+
+```graphql
+query {
+  getTimelockTasks(input: {
+    filter: { executed: { $eq: false } }
+    sort: { eta: "asc" }
+  }) {
+    id txHash target data eta executed
+  }
+}
+```
+
+### TreasuryWithdraw (dao/schema.graphql:70-80)
+
+Historical treasury withdrawals:
+
+```graphql
+query {
+  getTreasuryWithdraws(input: {
+    sort: { createdAt: "desc" }
+    limit: 10
+  }) {
+    recipient token amount transactionHash
+  }
+}
+```
