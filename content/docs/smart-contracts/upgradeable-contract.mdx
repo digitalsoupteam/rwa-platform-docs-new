@@ -1,6 +1,6 @@
 ---
 title: "UpgradeableContract"
-description: "Base UUPS upgradeable contract — upgradeRole management, upgrade mechanism, access control, and inheritance guide for child contracts."
+description: "Base UUPS upgradeable contract — upgrade authorization via AddressBook, inheritance guide, and security considerations."
 sidebar_position: 5
 ---
 
@@ -8,21 +8,18 @@ sidebar_position: 5
 
 **UpgradeableContract** is the base contract for all upgradeable contracts in the RWA Platform protocol. It implements the UUPS (Universal Upgradeable Proxy Standard) pattern, allowing logic updates without changing the contract address. Every core contract — from `AddressBook` and `Config` to `Pool` and `RWA` — inherits from this foundation.
 
-The contract combines OpenZeppelin's `Initializable`, `UUPSUpgradeable`, `OwnableUpgradeable`, and `AccessControlUpgradeable` to provide a secure, role-gated upgrade mechanism.
+The contract combines OpenZeppelin's `Initializable`, `UUPSUpgradeable`, and `ReentrancyGuardUpgradeable` to provide a secure, role-gated upgrade mechanism. Upgrade authorization is delegated to the `AddressBook` contract via the `_verifyAuthorizeUpgradeRole()` function.
 
 ## Overview
 
-The UUPS pattern places the upgrade logic in the implementation contract rather than the proxy. This means each contract is responsible for authorising its own upgrades. `UpgradeableContract` enforces this through a dedicated `upgradeRole` — an address that holds the exclusive right to call `upgradeTo` and `upgradeToAndCall`.
+The UUPS pattern places the upgrade logic in the implementation contract rather than the proxy. This means each contract is responsible for authorising its own upgrades. `UpgradeableContract` enforces this through a dedicated upgrade role managed by the `AddressBook` — an address that holds the exclusive right to call `upgradeTo` and `upgradeToAndCall`.
 
 ```solidity
 abstract contract UpgradeableContract is
     Initializable,
     UUPSUpgradeable,
-    OwnableUpgradeable,
-    AccessControlUpgradeable
+    ReentrancyGuardUpgradeable
 {
-    bytes32 public constant UPGRADE_ROLE = keccak256("UPGRADE_ROLE");
-
     function uniqueContractId() public pure virtual returns (bytes32);
     function implementationVersion() public pure virtual returns (uint256);
 
@@ -30,58 +27,99 @@ abstract contract UpgradeableContract is
         internal
         virtual
         override
-        onlyRole(UPGRADE_ROLE)
     {
-        // Only UPGRADE_ROLE holders can authorise upgrades
+        _verifyAuthorizeUpgradeRole();
+    }
+
+    function _verifyAuthorizeUpgradeRole() internal view virtual {
+        // Delegates to AddressBook to check if msg.sender has upgrade rights
+        require(
+            IAddressBook(addressBook).upgradeRole(msg.sender),
+            "UpgradeableContract: caller does not have the upgrade role"
+        );
     }
 }
 ```
 
-## Upgrade Role
+## Upgrade Authorization via AddressBook
 
-### Role Definition
+### How It Works
 
-The `UPGRADE_ROLE` is a keccak256-hashed role identifier:
-
-```solidity
-bytes32 public constant UPGRADE_ROLE = keccak256("UPGRADE_ROLE");
-```
-
-Only addresses that hold this role can call `upgradeTo` or `upgradeToAndCall`. This is enforced by the `_authorizeUpgrade` function, which uses OpenZeppelin's `onlyRole` modifier.
-
-### Granting and Revoking
-
-The `UPGRADE_ROLE` is managed through the standard `AccessControlUpgradeable` interface:
-
-| Function | Signature | Description | Access |
-|----------|-----------|-------------|--------|
-| `grantRole` | `grantRole(bytes32 role, address account)` | Grants the upgrade role to an account | `DEFAULT_ADMIN_ROLE` |
-| `revokeRole` | `revokeRole(bytes32 role, address account)` | Revokes the upgrade role from an account | `DEFAULT_ADMIN_ROLE` |
-| `renounceRole` | `renounceRole(bytes32 role, address account)` | Account renounces the role itself | Caller only |
-| `hasRole` | `hasRole(bytes32 role, address account) → bool` | Check if an account has the role | Anyone |
+Instead of storing roles directly in the contract (as in `AccessControlUpgradeable`), `UpgradeableContract` relies on the **AddressBook** — a central registry that manages all protocol roles, including the upgrade role. The `_verifyAuthorizeUpgradeRole()` function queries the `AddressBook` to check whether `msg.sender` holds the upgrade role.
 
 ```solidity
-// Grant upgrade rights to a multisig wallet
-grantRole(UPGRADE_ROLE, 0x1234...);
-
-// Revoke upgrade rights from an old address
-revokeRole(UPGRADE_ROLE, 0x5678...);
-
-// Check if an address has upgrade rights
-bool canUpgrade = hasRole(UPGRADE_ROLE, 0x1234...);
+function _verifyAuthorizeUpgradeRole() internal view virtual {
+    require(
+        IAddressBook(addressBook).upgradeRole(msg.sender),
+        "UpgradeableContract: caller does not have the upgrade role"
+    );
+}
 ```
 
-:::warning Role Management
-The `DEFAULT_ADMIN_ROLE` holder has the power to grant and revoke `UPGRADE_ROLE`. This admin role should be held by a **multisig wallet** or a **timelock-governed contract**, never by a single EOA. Losing or compromising the admin role can lead to irreversible contract changes.
-:::
+The `AddressBook` contract exposes a function `upgradeRole(address account) → bool` that returns `true` if the account is authorised to perform upgrades. This role is managed by the `AddressBook` itself, typically through a multisig or governance process.
 
-### Recommended Configuration
+### Why AddressBook?
 
-| Role | Recommended Holder | Rationale |
-|------|-------------------|-----------|
-| `DEFAULT_ADMIN_ROLE` | Platform multisig / DAO Timelock | Controls all role assignments |
-| `UPGRADE_ROLE` | Platform multisig | Authorises implementation upgrades |
-| `UPGRADE_ROLE` (optional) | DAO Governance | Allows on-chain governance to vote on upgrades |
+- **Single source of truth** for all protocol roles — no duplication across contracts.
+- **Simplified role management** — grant or revoke upgrade rights in one place.
+- **Consistent security** — all upgradeable contracts share the same authorization logic.
+
+## Inheritance
+
+### How to Use in Child Contracts
+
+Any contract that needs upgradeability should inherit from `UpgradeableContract` and follow this pattern:
+
+```solidity
+contract MyNewContract is UpgradeableContract {
+    // Custom state variables
+    uint256 public myValue;
+    address public myAddress;
+
+    // Unique identifier for this contract type
+    bytes32 public constant override uniqueContractId = keccak256("MyNewContract");
+
+    // Version tracking
+    uint256 public constant override implementationVersion = 1;
+
+    // Initializer (not constructor!)
+    function initialize(
+        address owner,
+        uint256 initialValue,
+        address initialAddress
+    ) public initializer {
+        __UpgradeableContract_init();
+        myValue = initialValue;
+        myAddress = initialAddress;
+    }
+
+    // Custom functions
+    function setValue(uint256 newValue) external {
+        myValue = newValue;
+    }
+}
+```
+
+### Required Overrides
+
+Every child contract **must** override:
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `uniqueContractId()` | `bytes32` | Unique keccak256 identifier for the contract type |
+| `implementationVersion()` | `uint256` | Current implementation version number |
+
+### Initialization
+
+The base `__UpgradeableContract_init()` function is called during the child's initializer. It sets up the `AddressBook` reference and initializes `UUPSUpgradeable` and `ReentrancyGuardUpgradeable`.
+
+```solidity
+// Inside UpgradeableContract
+function __UpgradeableContract_init() internal onlyInitializing {
+    __UUPSUpgradeable_init();
+    __ReentrancyGuard_init();
+}
+```
 
 ## Upgrade Mechanism (UUPS)
 
@@ -115,8 +153,8 @@ Unlike the transparent proxy pattern, UUPS stores the upgrade function (`upgrade
 
 | Function | Signature | Description | Access |
 |----------|-----------|-------------|--------|
-| `upgradeTo` | `upgradeTo(address newImplementation)` | Upgrade to a new implementation | `UPGRADE_ROLE` |
-| `upgradeToAndCall` | `upgradeToAndCall(address newImplementation, bytes memory data)` | Upgrade and call an initializer function | `UPGRADE_ROLE` |
+| `upgradeTo` | `upgradeTo(address newImplementation)` | Upgrade to a new implementation | Upgrade role (via AddressBook) |
+| `upgradeToAndCall` | `upgradeToAndCall(address newImplementation, bytes memory data)` | Upgrade and call an initializer function | Upgrade role (via AddressBook) |
 
 ```solidity
 // Simple upgrade — new implementation must be compatible
@@ -134,134 +172,6 @@ upgradeToAndCall(0xNewImplementationAddress, initData);
 :::note Storage Layout
 UUPS requires that the **storage layout never changes** between implementations. New variables must be appended at the end of the existing storage, and existing variables must not be removed or reordered. Violating this rule will corrupt the proxy's state.
 :::
-
-## Access Control
-
-`UpgradeableContract` inherits from both `OwnableUpgradeable` and `AccessControlUpgradeable`, providing two layers of access control:
-
-### OwnableUpgradeable
-
-Provides a simple `onlyOwner` modifier. The owner is set during initialization and can be transferred:
-
-```solidity
-// Set owner during initialization
-function __UpgradeableContract_init(address owner) internal onlyInitializing {
-    __Ownable_init(owner);
-    __AccessControl_init();
-}
-
-// Transfer ownership
-function transferOwnership(address newOwner) public override onlyOwner {
-    super.transferOwnership(newOwner);
-}
-```
-
-### AccessControlUpgradeable
-
-Provides role-based access control (RBAC) with granular permissions:
-
-| Role | Purpose | Default Admin |
-|------|---------|---------------|
-| `DEFAULT_ADMIN_ROLE` | Manages all roles (grant/revoke) | Owner |
-| `UPGRADE_ROLE` | Authorises `upgradeTo` calls | Admin |
-
-```solidity
-// Grant a role
-function grantRole(bytes32 role, address account) public override onlyRole(DEFAULT_ADMIN_ROLE) {
-    _grantRole(role, account);
-}
-
-// Revoke a role
-function revokeRole(bytes32 role, address account) public override onlyRole(DEFAULT_ADMIN_ROLE) {
-    _revokeRole(role, account);
-}
-```
-
-### Reinitializer
-
-OpenZeppelin's upgradeable contracts use a versioned initializer system. The `initializer` modifier can only be called once per contract lifetime. For subsequent upgrades that need to set new state variables, use `reinitializer`:
-
-```solidity
-// Initial deployment — called once
-function initialize(address owner) public initializer {
-    __UpgradeableContract_init(owner);
-    __Ownable_init(owner);
-    __AccessControl_init();
-    _grantRole(DEFAULT_ADMIN_ROLE, owner);
-    _grantRole(UPGRADE_ROLE, owner);
-}
-
-// Upgrade v1 → v2 — adds a new parameter
-function initializeV2(uint256 newParam) public reinitializer(2) {
-    _newParam = newParam;
-}
-
-// Upgrade v2 → v3 — adds another parameter
-function initializeV3(address additionalContract) public reinitializer(3) {
-    _additionalContract = additionalContract;
-}
-```
-
-| Modifier | Version | When to Use |
-|----------|---------|-------------|
-| `initializer` | 1 | First deployment only |
-| `reinitializer(2)` | 2 | First upgrade that needs state changes |
-| `reinitializer(3)` | 3 | Second upgrade with state changes |
-| `reinitializer(N)` | N | Subsequent upgrades |
-
-:::warning Reinitializer Safety
-Each `reinitializer(N)` can only be called once per version `N`. If a reinitializer function needs to be called again (e.g., after a failed upgrade), a new version number must be used. Always increment the version number for each upgrade that modifies state.
-:::
-
-## Inheritance
-
-### How to Use in Child Contracts
-
-Any contract that needs upgradeability should inherit from `UpgradeableContract` and follow this pattern:
-
-```solidity
-contract MyNewContract is UpgradeableContract {
-    // Custom state variables
-    uint256 public myValue;
-    address public myAddress;
-
-    // Unique identifier for this contract type
-    bytes32 public constant override uniqueContractId = keccak256("MyNewContract");
-
-    // Version tracking
-    uint256 public constant override implementationVersion = 1;
-
-    // Initializer (not constructor!)
-    function initialize(
-        address owner,
-        uint256 initialValue,
-        address initialAddress
-    ) public initializer {
-        __UpgradeableContract_init(owner);
-        myValue = initialValue;
-        myAddress = initialAddress;
-    }
-
-    // Custom functions
-    function setValue(uint256 newValue) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        myValue = newValue;
-    }
-
-    // Upgrade v2 initializer
-    function initializeV2(address newParam) public reinitializer(2) {
-        _newParam = newParam;
-    }
-}
-```
-
-### Required Overrides
-
-Every child contract **must** override:
-
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `uniqueContractId()` | `bytes32` | Unique keccak256 identifier for the contract type |
-| `implementationVersion()` | `uint256` | Current implementation version number |
 
 ### Deployment Flow
 
@@ -301,7 +211,7 @@ Never call `initialize` or any state-changing function directly on the implement
 ## Security Considerations
 
 :::warning Upgrade Role Compromise
-If the `UPGRADE_ROLE` is granted to a malicious or compromised address, the entire contract can be upgraded to arbitrary logic. This could drain funds, freeze assets, or alter core protocol behaviour. Always use a **multisig wallet** or **timelock-governed contract** for this role.
+If the upgrade role in the `AddressBook` is granted to a malicious or compromised address, the entire contract can be upgraded to arbitrary logic. This could drain funds, freeze assets, or alter core protocol behaviour. Always use a **multisig wallet** or **timelock-governed contract** for this role.
 :::
 
 :::note Storage Collisions
@@ -317,13 +227,12 @@ uint256[50] private __gap;
 
 | Role | Privileges | Risk if Compromised | Recommended Holder |
 |------|------------|---------------------|-------------------|
-| `DEFAULT_ADMIN_ROLE` | Grant/revoke any role | Total loss of control | Multisig / DAO Timelock |
-| `UPGRADE_ROLE` | Authorise `upgradeTo` | Arbitrary code execution | Multisig |
-| Owner (Ownable) | Transfer ownership | Ownership hijack | Multisig / DAO |
+| Upgrade role (in AddressBook) | Authorise `upgradeTo` | Arbitrary code execution | Multisig / DAO Timelock |
 
 ## See Also
 
 - [Contract Architecture](/docs/smart-contracts/architecture) — system overview and contract roles
+- [AddressBook](/docs/smart-contracts/address-book) — central role management
 - [Contract Reference](/docs/smart-contracts/contract-reference) — full function reference for all contracts
 - [Deployments](/docs/smart-contracts/deployments) — deployed contract addresses
 - [HoldToken](/docs/smart-contracts/hold-token) — ERC20 utility token built on UpgradeableContract
