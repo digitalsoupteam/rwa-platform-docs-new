@@ -72,3 +72,144 @@ RWA tokens can be traded on the secondary market through the pool's built-in AMM
 
 - **Buy RWA** — contribute HOLD to the pool and receive RWA tokens at the current AMM price
 - **Sell RWA** — burn RWA tokens and receive HOLD from the pool's reserves, plus any available bonus
+
+---
+
+## Multi-signature Approval
+
+Multi-signature (multi-sig) approval is a security mechanism that requires multiple authorized signers to approve critical on-chain actions before they can be executed. This prevents a single party from unilaterally deploying contracts or moving funds.
+
+The approval flow works as follows:
+
+1. **Request** — a user initiates a request (e.g., deploy an RWA token or a pool) via the platform API
+2. **Off-chain signing** — authorized signers review the request details and sign off-chain using their private keys
+3. **Collection** — the Signers Manager service collects the required number of signatures
+4. **On-chain execution** — once the threshold is met, the collected signatures are submitted to the Factory contract, which verifies them and executes the action
+
+The multi-sig process is used for:
+
+- **RWA token deployment** — deploying a new ERC1155 contract for a business
+- **Pool deployment** — deploying a new crowdfunding pool
+- **Contract upgrades** — updating smart contract logic via the UUPS proxy pattern
+
+For implementation details, see the [Architecture](/docs/get-started/architecture) overview and the [Signers Manager](/docs/signers-manager/overview) documentation.
+
+## AI Evaluator (off-chain)
+
+The AI Evaluator is an off-chain service that analyzes businesses and assigns a risk score to help participants make informed decisions. It is not a smart contract — it runs as a backend service and its output is stored off-chain.
+
+Key capabilities:
+
+- **Business analysis** — evaluates the business description, type, country, and tags
+- **Risk scoring** — assigns a score (e.g., low, medium, high risk) based on the analysis
+- **Metadata generation** — can assist in creating business metadata from a natural language description (see [AI-assisted creation](/docs/api/rwa/businesses/create-business-with-ai))
+
+The AI Evaluator is invoked during the onboarding flow (see [Onboarding Flow](#onboarding-flow-company--business--ai--signatures--rwa--pool)) and its results are displayed on the business profile page. For more details, refer to the [AI Evaluator](/docs/ai-evaluator/overview) documentation.
+
+## Factory Contract
+
+The Factory contract is the central deployment hub for the Slices platform. It is responsible for creating new RWA token contracts and pool contracts in a standardized, upgradeable manner.
+
+Key responsibilities:
+
+- **`deployRWA()`** — deploys a new ERC1155 token contract for a business. Requires a valid multi-sig approval (collected signatures) to proceed
+- **`deployPool()`** — deploys a new crowdfunding pool linked to an existing RWA token. Requires multi-sig approval and a creation fee paid in HOLD
+- **Contract registry** — maintains a list of all deployed contracts, enabling the platform to discover and index them
+
+The Factory uses the UUPS upgradeable proxy pattern, so its logic can be updated without changing its address. All deployed contracts are recorded in the system's [AddressBook](#системные-контракты-addressbook-config-eventemitter).
+
+See the [Architecture](/docs/get-started/architecture) page for the Factory's place in the system, and the [Quick Start](/docs/get-started/quickstart) guide for a step-by-step deployment walkthrough.
+
+## Bonuses
+
+Bonuses are additional rewards distributed to pool participants beyond the standard AMM exchange. They incentivize early participation and long-term holding.
+
+Types of bonuses:
+
+- **Entry bonus** — extra RWA tokens awarded to participants who contribute during the entry period
+- **Exit bonus** — additional HOLD tokens awarded when participants burn their RWA tokens, funded from the pool's bonus reserve
+- **Referral bonus** — rewards for referring new users to the platform (see [Loyalty](/docs/loyalty/overview))
+
+Bonuses are configured at pool creation and are paid from a dedicated bonus reserve within the pool contract. The exact bonus mechanics depend on the pool type and its configuration parameters.
+
+## Onboarding Flow (Company → Business → AI → Signatures → RWA → Pool)
+
+The complete onboarding flow for a new business on the Slices platform follows these steps:
+
+1. **Create a Company** — register an organizational entity via the web platform or API. Provide name, description, country, and social links
+2. **Create a Business** — under your company, create a business with a name, type, country, description, and tags
+3. **AI Evaluation** — the [AI Evaluator](#ai-evaluator-off-chain) analyzes the business and assigns a risk score. This step is optional but recommended
+4. **Multi-signature Approval** — request signatures from authorized signers to approve the RWA token deployment. The [Signers Manager](/docs/signers-manager/overview) coordinates the off-chain signing process
+5. **Deploy RWA Token** — call `Factory.deployRWA()` on-chain with the collected signatures to create the ERC1155 token contract
+6. **Configure and Deploy a Pool** — create a pool linked to the RWA token, configure its parameters (funding target, fees, tranches, AMM), request pool approval signatures, and call `Factory.deployPool()` to launch
+
+For a detailed walkthrough, see the [Quick Start](/docs/get-started/quickstart) guide. The [Architecture](/docs/get-started/architecture) page provides a system-level view of how the services and contracts interact during onboarding.
+
+## PlatformToken (отдельно от HOLD)
+
+PlatformToken is a separate ERC20 token from HOLD, serving a distinct role in the Slices ecosystem.
+
+| Feature | HOLD | PlatformToken |
+|---|---|---|
+| **Primary use** | Medium of exchange, fee payment | Governance, staking |
+| **Trading** | Used in pool AMMs to buy/sell RWA | Not traded in pools |
+| **Staking** | Not staked | Staked in DaoStaking for voting power |
+| **Supply** | Managed by HoldToken contract | Managed by PlatformToken contract |
+| **Fees** | Entry/exit fees are paid in HOLD | Not used for fees |
+
+Key differences:
+
+- **HOLD** is the utility token used for all economic activity — buying RWA tokens, paying fees, and participating in pools
+- **PlatformToken** is the governance token — staking it grants voting power in the DAO, allowing holders to create proposals and vote on protocol changes
+
+Both tokens are ERC20 and use the UUPS upgradeable proxy pattern. They are managed by separate contracts: `HoldToken` and `PlatformToken`, both part of the platform layer (see [Architecture](/docs/get-started/architecture)).
+
+## Системные контракты (AddressBook, Config, EventEmitter)
+
+The Slices platform includes three foundational system contracts that support all other contracts:
+
+### AddressBook
+
+The AddressBook is the central registry of all deployed contract addresses on the platform. It maps human-readable names (e.g., `"Factory"`, `"Governance"`, `"Pool:0x123..."`) to their on-chain addresses.
+
+- **Single source of truth** — any contract or service can look up another contract's address by name
+- **Upgrade-friendly** — when a contract is upgraded, only the AddressBook entry needs to be updated
+- **Discovery** — the Indexer and backend services use the AddressBook to find and monitor all deployed contracts
+
+### Config
+
+The Config contract stores platform-wide parameters that can be updated by governance:
+
+- **Fee rates** — pool entry and exit fees
+- **Thresholds** — minimum voting power for proposals, quorum percentages
+- **Addresses** — protocol fee recipient, treasury address
+- **Feature flags** — enable or disable platform features
+
+All parameters are stored as key-value pairs and can be modified through DAO proposals.
+
+### EventEmitter
+
+The EventEmitter is a centralized logging contract that emits structured events for all important on-chain actions:
+
+- **Contract deployments** — when the Factory deploys a new RWA or Pool contract
+- **Pool events** — mint, burn, tranche claims, fee collection
+- **Governance events** — proposal creation, votes, execution
+- **Upgrade events** — when any UUPS proxy is upgraded
+
+The [Indexer](/docs/get-started/architecture) (Blockchain Scanner) listens to these events to maintain a queryable database for the GraphQL API.
+
+For the system-level view of how these contracts fit together, see the [Architecture](/docs/get-started/architecture) page.
+
+## Роли пользователей
+
+The Slices platform defines several user roles, each with different permissions and responsibilities:
+
+| Role | Description | Key Actions |
+|---|---|---|
+| **Admin** | Platform administrator with full access to system contracts and governance | Upgrade contracts, update Config parameters, manage AddressBook |
+| **Manager** | Company-level role that manages businesses and pools under a company | Create/edit businesses, configure pools, request multi-sig approvals |
+| **Investor / Participant** | Any user who contributes HOLD to pools and receives RWA tokens | Buy/sell RWA tokens, view portfolio, participate in governance |
+| **Signer** | Authorized multi-sig signer who approves critical on-chain actions | Review and sign deployment requests for RWA tokens and pools |
+| **Staker** | A user who stakes PlatformToken in DaoStaking to gain voting power | Create proposals, vote on proposals, earn staking rewards |
+
+Role assignments are managed through the Company service and on-chain contract permissions. For more details on how roles interact during onboarding, see the [Onboarding Flow](#onboarding-flow-company--business--ai--signatures--rwa--pool) section and the [Quick Start](/docs/get-started/quickstart) guide.
