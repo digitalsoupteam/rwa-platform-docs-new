@@ -15,10 +15,14 @@ Paid when deploying a new RWA token contract via `Factory.deployRWA()`.
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `createRWAFeeMin` | **100 HOLD** | Minimum fee |
-| `createRWAFeeMax` | **1,000 HOLD** | Maximum fee |
+| `createRWAFeeMin` | **100** (множитель; итоговая сумма = множитель × 10^decimals HOLD, при 18 decimals = 100 HOLD) | Minimum fee |
+| `createRWAFeeMax` | **10,000** (множитель; итоговая сумма = множитель × 10^decimals HOLD, при 18 decimals = 10,000 HOLD) | Maximum fee |
 
 The caller chooses a fee within this range. The fee is transferred to the Treasury when `deployRWA()` is called.
+
+> **Note:** Вызов `deployRWA()` требует мультиподпись (несколько подписей от authorised signers).
+
+> **Note:** Значения `createRWAFeeMin` и `createRWAFeeMax` задаются как множители, которые умножаются на 10^decimals токена HOLD. Фактическая комиссия в HOLD зависит от decimals HOLD (обычно 18).
 
 ### 2. Pool Creation Fee
 
@@ -37,6 +41,8 @@ The caller chooses a ratio within this range. For example, with a funding target
 ```
 poolFee = 50,000 × 200 / 10000 = 1,000 HOLD
 ```
+
+> **Note:** Вызов `deployPool()` также требует мультиподпись (несколько подписей от authorised signers). При создании пула дополнительно проверяются `entryFeePercent`, `exitFeePercent` и `rewardPercent` — они должны быть в диапазонах, заданных в Config.
 
 ### 3. Entry Fee (Buy)
 
@@ -96,22 +102,22 @@ This means the business must return 60,000 HOLD total (50,000 principal + 10,000
 
 ```
 User pays fee → Pool contract → Treasury contract
-User → Factory → Treasury (creation fees)
+User → Treasury (creation fees)
                               ↓
                     Controlled by Governance
                     (withdrawals via Timelock)
 ```
 
-All fees flow to the **Treasury** contract. Withdrawals from the Treasury require a Governance proposal followed by a Timelock delay (2 days by default).
+All fees flow to the **Treasury** contract. Withdrawals from the Treasury require a Governance proposal followed by a Timelock delay (a configurable delay set during Config initialization, e.g., 2 days).
 
 ## Config Parameters
 
 All fee ranges are stored in the **Config** contract and can be updated by Governance:
 
-| Parameter | Default | Description |
+| Parameter | Initial Value | Description |
 |-----------|---------|-------------|
 | `createRWAFeeMin` | 100 HOLD | Min RWA creation fee |
-| `createRWAFeeMax` | 1,000 HOLD | Max RWA creation fee |
+| `createRWAFeeMax` | 10,000 HOLD | Max RWA creation fee |
 | `createPoolFeeRatioMin` | 100 (1%) | Min pool creation ratio |
 | `createPoolFeeRatioMax` | 1,000 (10%) | Max pool creation ratio |
 | `entryFeePercentMin` | 100 (1%) | Min entry fee |
@@ -121,12 +127,14 @@ All fee ranges are stored in the **Config** contract and can be updated by Gover
 | `rewardPercentMin` | 100 (1%) | Min bonus rate |
 | `rewardPercentMax` | 10,000 (100%) | Max bonus rate |
 
+> **Note:** Эти значения устанавливаются при инициализации Config и могут быть изменены Governance через соответствующие update-функции.
+
 ## Fee Collection Events
 
 Every fee payment emits an event through the EventEmitter:
 
-- `Factory_CreateRWAFeeCollected(sender, amount, token)` — RWA creation fee
-- `Factory_CreatePoolFeeCollected(sender, amount, token)` — Pool creation fee
+- `Factory_CreateRWAFeeCollected(sender, amount, holdToken)` — RWA creation fee (третий параметр — адрес HOLD токена, а не RWA)
+- `Factory_CreatePoolFeeCollected(sender, amount, holdToken)` — Pool creation fee (третий параметр — адрес HOLD токена, а не пула)
 - `Pool_RwaMinted` includes the entry fee amount
 - `Pool_RwaBurned` includes the exit fee amounts (hold fee + bonus fee)
 
