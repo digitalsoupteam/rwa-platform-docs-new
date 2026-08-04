@@ -90,13 +90,80 @@ A weighted combination of all factors:
 score = w1 × feeVolume + w2 × operationCount + w3 × referralImpact + w4 × creationActivity
 ```
 
+For example, with weights `w1 = 0.4`, `w2 = 0.2`, `w3 = 0.3`, `w4 = 0.1` and a user who has:
+
+| Metric | Value |
+|--------|-------|
+| Total fee volume | 1,250 USDT |
+| Total operations | 47 |
+| Referral reward amount | 320 USDT |
+| Tokens + pools created | 3 |
+
+The composite score would be:
+
+```
+feeVolume     = 1250
+operationCount = 47
+referralImpact = 320
+creationActivity = 3
+
+score = 0.4 × 1250 + 0.2 × 47 + 0.3 × 320 + 0.1 × 3
+     = 500 + 9.4 + 96 + 0.3
+     = 605.7
+```
+
+The weights can be adjusted per airdrop campaign to emphasize different user behaviours.
+
 ## Data Access
 
 All tracked data is queryable via GraphQL:
 
 - **[getFees](/docs/api/loyalty/get-fees)** — aggregated fee and reward totals per user
-- **[getCommissionHistory](/docs/api/loyalty/get-referrer-claim-history)** — full audit trail of every event
+- **[getReferrerClaimHistory](/docs/api/loyalty/get-referrer-claim-history)** — full audit trail of every event
 - **[getReferrals](/docs/api/loyalty/get-referrals)** — referral relationships
+
+For example, to retrieve aggregated fee data for a user:
+
+```graphql
+query GetUserFees {
+  getFees(
+    chainId: 1
+    userWallet: "0x1234...abcd"
+  ) {
+    buyCommissionAmount
+    buyCommissionCount
+    sellCommissionAmount
+    sellCommissionCount
+    tokenCreationCommissionAmount
+    tokenCreationCommissionCount
+    poolCreationCommissionAmount
+    poolCreationCommissionCount
+    referralRewardAmount
+    referralRewardCount
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "getFees": {
+      "buyCommissionAmount": "500.00",
+      "buyCommissionCount": 12,
+      "sellCommissionAmount": "350.00",
+      "sellCommissionCount": 8,
+      "tokenCreationCommissionAmount": "200.00",
+      "tokenCreationCommissionCount": 2,
+      "poolCreationCommissionAmount": "200.00",
+      "poolCreationCommissionCount": 1,
+      "referralRewardAmount": "320.00",
+      "referralRewardCount": 5
+    }
+  }
+}
+```
 
 ## Transparency
 

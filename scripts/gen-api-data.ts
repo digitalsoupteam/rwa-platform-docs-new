@@ -1123,8 +1123,13 @@ function main() {
   // Add REST operations
   if (restEndpoints.length > 0) {
     graphqlOps.push('  // ═══════ REST ═══════');
-    for (const ep of restEndpoints) {
-      graphqlOps.push(generateRestOperation(ep) + ',');
+    for (const e  path?: string;
+  errors?: Array<{ code: string; message: string; rea  path?: string;
+  errors?: Array<{ code: string; message: string; re  path?: string;
+  errors?: Array<{ code: string; message: string; reason: string }>;
+}
+
+// ── Module metadata ──generateRestOperation(ep) + ',');
     }
   }
 

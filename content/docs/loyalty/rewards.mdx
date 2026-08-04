@@ -55,6 +55,25 @@ The system:
 
 The Signers Manager distributes the task to authorized signers. Each signer reviews the withdrawal and signs the message hash. Once enough signatures are collected (minimum 3), the task is marked as completed.
 
+The message that signers sign follows the **EIP-712** typed data standard:
+
+```solidity
+struct WithdrawRequest {
+    address token;
+    uint256 amount;
+    uint256 deadline;
+}
+
+// EIP-712 Domain
+// { name: "ReferralTreasury", version: "1", chainId: 1, verifyingContract: "0x..." }
+```
+
+Each signer produces a signature over the typed data, resulting in a 65-byte `(r, s, v)` signature:
+
+```
+0xabc123...def45678901234567890123456789012345678901234567890123456789012345678901b
+```
+
 Check the task status via [getSignatureTask](/docs/api/signers-manager/get-signature-task).
 
 ### Step 3: Execute On-Chain
@@ -78,6 +97,61 @@ The contract verifies:
 - No duplicate signatures
 
 After successful withdrawal, the tokens are transferred to your wallet and a `ReferralTreasury_Withdrawn` event is emitted.
+
+### End-to-End Example: Withdrawing 50 USDT
+
+Suppose you have accumulated **100 USDT** in referral rewards and want to withdraw **50 USDT**.
+
+**Step 1 — Create the task:**
+
+Call `createReferrerWithdrawTask` with:
+- `tokenAddress`: `0xdAC17F958D2ee523a2206206994597C13D831ec7` (USDT on Ethereum)
+- `amount`: `50000000` (50 USDT with 6 decimals)
+- `chainId`: `1` (Ethereum mainnet)
+
+The system checks:
+- ✅ Available rewards: 100 USDT ≥ 50 USDT
+- ✅ Cooldown passed (no previous withdrawal in the last month)
+- ✅ Generates a message hash and creates a signature task
+
+Response:
+```json
+{
+  "createReferrerWithdrawTask": {
+    "id": "task_abc123",
+    "referrerWallet": "0xYourWallet...",
+    "chainId": 1,
+    "tokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    "totalWithdrawnAmount": "50000000",
+    "taskId": "sig_task_456",
+    "taskExpiredAt": "1712345678",
+    "taskCooldown": "1714937678"
+  }
+}
+```
+
+**Step 2 — Signers approve:**
+
+Three authorized signers review the withdrawal parameters and each signs the EIP-712 typed data. The collected signatures array looks like:
+
+```json
+[
+  "0xabc123...01b",  // Signer 1 signature
+  "0xdef456...02c",  // Signer 2 signature
+  "0xghi789...03d"   // Signer 3 signature
+]
+```
+
+**Step 3 — Execute on-chain:**
+
+Call `ReferralTreasury.withdraw()` with:
+- `token`: `0xdAC17F958D2ee523a2206206994597C13D831ec7`
+- `amount`: `50000000`
+- `deadline`: `1712345678`
+- `signers`: `[0xSigner1..., 0xSigner2..., 0xSigner3...]`
+- `signatures`: `[0xabc123...01b, 0xdef456...02c, 0xghi789...03d]`
+
+The contract verifies all signatures, transfers **50 USDT** to your wallet, and emits `ReferralTreasury_Withdrawn`.
 
 ## Constraints
 

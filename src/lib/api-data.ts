@@ -33,6 +33,10 @@ export interface ApiOperation {
   endpoint: string;
   method?: string;
   path?: string;
+  errors?: Array<{ code: string; message: string; reason: string }>;
+}
+
+// ── Module metadata ──
 }
 
 // ── Module metadata ──
