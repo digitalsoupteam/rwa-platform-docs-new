@@ -4,3 +4,27 @@ description: AI Assistant — Mutation
 ---
 
 <ApiEndpoint module="ai-assistant" operation="updateMessage" />
+
+## Example
+
+Update the content of an existing message:
+
+\`\`\`bash
+curl -X PATCH "https://api.example.com/v1/messages/msg_xyz456?assistant_id=asst_abc123" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "What is the current APY on USDC and USDT pools?"
+  }'
+\`\`\`
+
+\`\`\`json
+{
+  "id": "msg_xyz456",
+  "assistant_id": "asst_abc123",
+  "role": "user",
+  "content": "What is the current APY on USDC and USDT pools?",
+  "created_at": "2025-01-20T14:30:00Z",
+  "updated_at": "2025-01-20T15:00:00Z"
+}
+\`\`\`

@@ -4,3 +4,23 @@ description: AI Assistant — Query
 ---
 
 <ApiEndpoint module="ai-assistant" operation="getMessage" />
+
+## Example
+
+Retrieve a specific message by its ID:
+
+\`\`\`bash
+curl "https://api.example.com/v1/messages/msg_xyz456?assistant_id=asst_abc123" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+\`\`\`
+
+\`\`\`json
+{
+  "id": "msg_xyz456",
+  "assistant_id": "asst_abc123",
+  "role": "user",
+  "content": "What is the current APY on USDC pools?",
+  "created_at": "2025-01-20T14:30:00Z",
+  "updated_at": "2025-01-20T14:30:00Z"
+}
+\`\`\`

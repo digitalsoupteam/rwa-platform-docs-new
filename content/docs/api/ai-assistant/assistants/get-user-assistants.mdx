@@ -4,3 +4,33 @@ description: AI Assistant — Query
 ---
 
 <ApiEndpoint module="ai-assistant" operation="getUserAssistants" />
+
+## Example
+
+List all assistants for a given user:
+
+\`\`\`bash
+curl "https://api.example.com/v1/assistants?user_id=user_789" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+\`\`\`
+
+\`\`\`json
+[
+  {
+    "id": "asst_abc123",
+    "user_id": "user_789",
+    "name": "Trading Assistant",
+    "context_mode": "investor_base",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  },
+  {
+    "id": "asst_def456",
+    "user_id": "user_789",
+    "name": "Portfolio Analyzer",
+    "context_mode": "user_portfolio",
+    "created_at": "2025-01-16T08:15:00Z",
+    "updated_at": "2025-01-18T12:00:00Z"
+  }
+]
+\`\`\`

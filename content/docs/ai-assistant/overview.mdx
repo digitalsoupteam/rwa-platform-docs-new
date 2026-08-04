@@ -50,3 +50,46 @@ An assistant can combine multiple context modes — for example, `investor_base`
 ## AI Model
 
 The assistant uses OpenRouter to access LLM models. The context is built dynamically per request — base prompts are static, while dynamic data (pools, portfolio) is fetched from the RWA and Portfolio services in real time.
+
+## Limitations
+
+### Assistant Limit
+
+Each user can create a maximum of **10 assistants**. If you attempt to create an 11th assistant, the API returns a `409 Conflict` error.
+
+### Message Length
+
+A single message (user input or AI response) is limited to **4,096 characters**. Messages exceeding this limit are rejected with a `413 Payload Too Large` error.
+
+### Message History
+
+- **Retention period**: Message history is stored for **30 days**. After this period, old messages are automatically deleted.
+- **History size**: A maximum of **100 messages** is retained per assistant conversation. When the limit is reached, the oldest messages are pruned automatically.
+
+### Default LLM Model
+
+The default model used by the AI Assistant is **`gpt-4o-mini`**. This model is selected for its balance of speed, cost, and quality for common conversational tasks.
+
+### Rate Limiting
+
+API requests to the AI Assistant endpoints are rate-limited as follows:
+
+| Limit | Value |
+|-------|-------|
+| Requests per minute | **100** |
+| Requests per hour | **5,000** |
+| Burst | **20** consecutive requests |
+
+When the rate limit is exceeded, the API returns a `429 Too Many Requests` response with a `Retry-After` header.
+
+### Error Handling
+
+The AI Assistant API uses standard HTTP response codes to indicate success or failure:
+
+| HTTP Code | Meaning | Description |
+|-----------|---------|-------------|
+| `400 Bad Request` | Invalid input | The request body is malformed or missing required fields |
+| `401 Unauthorized` | Authentication failed | The API key is missing or invalid |
+| `404 Not Found` | Resource not found | The specified assistant or message does not exist |
+| `429 Too Many Requests` | Rate limit exceeded | Too many requests sent in a short period |
+| `500 Internal Server Error` | Server error | An unexpected error occurred on the server side |
