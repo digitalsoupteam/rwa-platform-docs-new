@@ -12,7 +12,7 @@ The Slices protocol uses a role-based access control (RBAC) system managed by th
 | Role | Contract | Description |
 |------|----------|-------------|
 | **Governance** | `Governance` | Executes DAO-approved proposals — parameter changes, upgrades, treasury management |
-| **Timelock** | `TimelockController` | Delays and executes treasury withdrawals with a 2-day timelock delay |
+| **Timelock** | `Timelock` | Delays and executes treasury withdrawals with a 2-day timelock delay |
 | **UpgradeRole** | UUPS Proxy | Authorizes contract implementation upgrades via the UUPS pattern |
 | **Signers** | `AddressBook` | Manages the set of authorized signers for multi-sig operations |
 | **ProtocolContract** | `AddressBook` | Marks contracts as protocol-authorized for cross-contract calls |
@@ -30,14 +30,66 @@ function requireGovernance(address account) external view {
 **Permissions:**
 - Update protocol parameters in `Config` (fee ranges, period durations, thresholds)
 - Upgrade contract implementations via UUPS
-- Withdraw funds from the Treasury (via Timelock)
+- Queue and cancel Timelock transactions (`Timelock.queueTransaction`, `Timelock.cancelTransaction`)
+- Lock user stakes (`DaoStaking.lock`)
 - Add or remove authorized signers
-- Mint PlatformTokens
+- Mint PlatformTokens (`PlatformToken.mint`)
 - Pause or unpause contracts in emergencies
+
+### Governance Contract Functions
+
+| Function | Signature | Access |
+|----------|-----------|--------|
+| `propose` | `propose(address target, bytes memory data, string memory description) external returns (uint256 proposalId)` | User with ≥ `proposalThreshold` staked |
+| `vote` | `vote(uint256 proposalId, bool support, string memory reason) external nonReentrant` | Any staker |
+| `cancel` | `cancel(uint256 proposalId) external` | Proposer (within 12 hours) or Governance contract itself |
+| `getProposal` | `getProposal(uint256 proposalId) external view returns (Proposal memory)` | Anyone |
+| `getReceipt` | `getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory)` | Anyone |
+| `proposalCount` | `uint256 public proposalCount` (public variable) | Anyone |
+
+> **Note:** There is no `executeProposal` function. After each vote, `_checkAutoAction()` is called internally — if quorum and majority conditions are met, the proposal is executed automatically. If the conditions are not met, it is auto-cancelled.
+
+### Proposal Structure
+
+```solidity
+struct Proposal {
+    address proposer;
+    address target;
+    bytes data;
+    string description;
+    uint256 votesFor;
+    uint256 votesAgainst;
+    uint256 creationTime;
+    uint256 endTime;
+    bool executed;
+    bool cancelled;
+}
+```
+
+### Receipt Structure
+
+```solidity
+struct Receipt {
+    bool hasVoted;
+    bool support;
+    uint256 votes;
+}
+```
+
+This is a mapping: `mapping(uint256 => mapping(address => Receipt)) public receipts`.
+
+### Governance Events
+
+| Event | Parameters |
+|-------|------------|
+| `ProposalCreated` | `uint256 proposalId, address proposer, address target, bytes data, string description, uint256 creationTime, uint256 endTime, bool executed, bool cancelled` |
+| `VoteCast` | `uint256 proposalId, address voter, bool support, uint256 votes, string reason` |
+| `ProposalCanceled` | `uint256 proposalId, address canceller` |
+| `ProposalExecuted` | `uint256 proposalId, address executor` |
 
 ## Timelock
 
-The `Timelock` role is assigned to the `TimelockController`, which acts as a safety mechanism for treasury operations. All treasury withdrawals must go through the timelock with a **2-day delay** (`timelockDelay`).
+The `Timelock` role is assigned to the `Timelock` contract, which acts as a safety mechanism for treasury operations. All treasury withdrawals must go through the timelock with a **2-day delay** (`timelockDelay`).
 
 ```solidity
 function requireTimelock(address account) external view {
@@ -46,10 +98,28 @@ function requireTimelock(address account) external view {
 ```
 
 **Permissions:**
-- Execute treasury withdrawals after the timelock delay expires
-- Queue and cancel pending treasury operations
+- Execute treasury withdrawals after the timelock delay expires (`Treasury.withdrawERC20`, `Treasury.withdrawETH`)
 
-> **Note:** The timelock delay applies only to Treasury operations. Regular governance proposals (parameter changes, upgrades) are executed immediately after passing.
+### Timelock Contract Functions
+
+| Function | Signature | Access |
+|----------|-----------|--------|
+| `queueTransaction` | `queueTransaction(address target, bytes memory data, uint256 eta) external` | Governance (`requireGovernance`) |
+| `cancelTransaction` | `cancelTransaction(address target, bytes memory data, uint256 eta) external` | Governance (`requireGovernance`) |
+| `executeTransaction` | `executeTransaction(address target, bytes memory data, uint256 eta) external` | **Anyone** (no access control) |
+| `isTransactionQueued` | `isTransactionQueued(address target, bytes memory data, uint256 eta) external view returns (bool)` | Anyone |
+| `isTransactionReady` | `isTransactionReady(address target, bytes memory data, uint256 eta) external view returns (bool)` | Anyone |
+| `getTransactionETA` | `getTransactionETA(address target, bytes memory data, uint256 eta) external view returns (uint256)` | Anyone |
+
+> **Note:** `executeTransaction` has **no access control** — once a transaction is queued and the ETA has passed, anyone can execute it. The transaction must be executed before `eta + GRACE_PERIOD` (7 days), otherwise it becomes invalid.
+
+### Timelock Events
+
+| Event | Parameters |
+|-------|------------|
+| `Timelock_TransactionQueued` | `bytes32 indexed txHash, address target, bytes data, uint256 eta` |
+| `Timelock_TransactionExecuted` | `bytes32 indexed txHash, address target, bytes data, uint256 eta` |
+| `Timelock_TransactionCancelled` | `bytes32 indexed txHash, address target, bytes data, uint256 eta` |
 
 ## UpgradeRole
 
@@ -105,7 +175,10 @@ function requireProtocolContract(address account) external view {
 |--------|:----------:|:--------:|:-----------:|:-------:|:----------------:|
 | Update Config parameters | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Upgrade contract implementation | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Treasury withdrawal | ✅ (via Timelock) | ✅ | ❌ | ❌ | ❌ |
+| Queue/cancel Timelock transactions | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Execute Timelock transaction (after ETA) | ❌ | ❌ | ❌ | ❌ | ❌ (anyone) |
+| Treasury withdrawal (ERC20/ETH) | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Lock user stakes | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Add/remove signers | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Mint PlatformTokens | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Pause/unpause contracts | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -119,7 +192,7 @@ Roles are managed through the `AddressBook` contract. The `Governance` role is t
 | Role | Assigned By | Current Holder |
 |------|-------------|----------------|
 | **Governance** | Initial deployment | `Governance` contract |
-| **Timelock** | Governance proposal | `TimelockController` contract |
+| **Timelock** | Governance proposal | `Timelock` contract |
 | **UpgradeRole** | Governance proposal | `Governance` contract |
 | **Signers** | Governance proposal | Set of authorized addresses |
 | **ProtocolContract** | Governance proposal | Set of protocol contracts |

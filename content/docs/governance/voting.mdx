@@ -27,7 +27,7 @@ To vote on a proposal:
 function vote(
     uint256 proposalId,  // The proposal to vote on
     bool support,        // true = for, false = against
-    string memory reason // Optional reason for your vote
+    string memory reason // Reason for your vote
 ) external nonReentrant
 ```
 
@@ -46,8 +46,8 @@ When you vote:
 
 ## Vote Types
 
-- **For** — you support the proposal. Your voting power is added to `votesFor`.
-- **Against** — you oppose the proposal. Your voting power is added to `votesAgainst`.
+- **For** — you support the proposal. Your voting power is added to `proposal.votesFor`.
+- **Against** — you oppose the proposal. Your voting power is added to `proposal.votesAgainst`.
 
 ## Quorum
 
@@ -57,15 +57,15 @@ A proposal passes when:
 votesFor >= quorum AND votesFor > votesAgainst
 ```
 
-Where `quorum = platformToken.totalSupply() × quorumPercentage / 10000`.
+Where `quorum = getTotalVotingPower() × quorumPercentage / 10000`, and `getTotalVotingPower()` returns the total amount of staked PlatformTokens from the `DaoStaking` contract.
 
 **quorumPercentage = 40%** (4000 bps, from Config).
 
-For example, with totalSupply = 10,000,000:
+For example, with totalVotingPower = 10,000,000:
 
 | Parameter | Value |
 |----------|-------|
-| totalSupply PlatformToken | 10,000,000 |
+| totalVotingPower (staked PlatformToken) | 10,000,000 |
 | Quorum (40%) | 4,000,000 votes |
 | Voted "For" | 2,500,000 |
 | Voted "Against" | 1,200,000 |
@@ -73,13 +73,13 @@ For example, with totalSupply = 10,000,000:
 
 | Parameter | Value |
 |----------|-------|
-| totalSupply PlatformToken | 10,000,000 |
+| totalVotingPower (staked PlatformToken) | 10,000,000 |
 | Quorum (40%) | 4,000,000 votes |
 | Voted "For" | 4,500,000 |
 | Voted "Against" | 2,000,000 |
 | Result | ✅ **PASSED** — 4.5M >= 4M and 4.5M > 2M |
 
-Quorum is calculated from the **total PlatformToken supply** (not just staked amount). This means if a large portion of the supply is unstaked, reaching quorum requires higher participation from active stakers.
+Quorum is calculated from the **total staked PlatformToken amount** (via `DaoStaking.getTotalVotingPower()`), not the total supply. This means only actively staked tokens count toward quorum.
 
 A proposal is cancelled when:
 
@@ -87,10 +87,35 @@ A proposal is cancelled when:
 votesAgainst >= quorum AND votesAgainst > votesFor
 ```
 
-## Viewing Votes
+## Auto-Execution and Auto-Cancellation
 
-You can query indexed votes via the GraphQL API — see [Get Votes](/docs/api/dao/get-votes) for the full reference. Filter by `proposalId` and paginate with `limit`.
+After each vote, the system automatically calls `_checkAutoAction()`, which evaluates the proposal's votes:
+
+- If `votesFor >= quorum AND votesFor > votesAgainst` — the proposal is **executed automatically**: the `target` contract is called with the proposal's `data`.
+- If `votesAgainst >= quorum AND votesAgainst > votesFor` — the proposal is **cancelled automatically**.
+
+There is no manual `executeProposal` or `cancelProposal` function. All execution and cancellation happens automatically through `_checkAutoAction()` after each vote.
 
 ## Staking Lock
 
-When you vote, your staked tokens are locked until the proposal's end time. You cannot unstake while your tokens are locked. This prevents vote-buying and ensures voters have skin in the game. The lock only extends (if you vote on multiple proposals, it extends to the latest `endTime`) — it never shortens.
+When you vote, `daoStaking.lock(msg.sender, proposal.endTime)` is called, which locks your staked tokens until the proposal's `endTime`. You cannot unstake while your tokens are locked. This prevents vote-buying and ensures voters have skin in the game.
+
+The lock only extends — if you vote on multiple proposals, it extends to the latest `endTime`. The `lock` function checks that the new `endTime` is greater than the current `votingLockTimestamp[user]` before updating; it never shortens the lock.
+
+## Events
+
+When a vote is cast, the following event is emitted:
+
+```solidity
+event Governance_VoteCast(
+    uint256 indexed proposalId,
+    address indexed voter,
+    bool support,
+    uint256 votes,
+    string reason
+);
+```
+
+## Viewing Votes
+
+You can query indexed votes via the GraphQL API — see [Get Votes](/docs/api/dao/get-votes) for the full reference. Filter by `proposalId` and paginate with `limit`.

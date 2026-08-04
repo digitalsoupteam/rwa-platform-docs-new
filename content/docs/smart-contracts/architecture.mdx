@@ -82,8 +82,9 @@ Timelock public timelock;
 Treasury public treasury;
 Factory public factory;
 PlatformToken public platformToken;
-HoldToken public holdToken;
 ReferralTreasury public referralTreasury;
+address public rwaImplementation;
+address public poolImplementation;
 ```
 
 It also maintains:
@@ -92,8 +93,9 @@ It also maintains:
 - **Registered RWAs** — an array of all deployed `RWA` contracts with an `isRWA` mapping
 - **Authorized signers** — a set of addresses that can approve multi-signature operations
 - **Protocol contracts** — an `isProtocolContract` mapping used for access control on `EventEmitter`
+- **Implementation addresses** — `rwaImplementation` and `poolImplementation` store the current implementation contract addresses used by `Factory` when deploying new RWA and Pool proxies via ERC1967
 
-All setter functions are restricted to `Governance` (via `requireGovernance`).
+Most setter functions are restricted to `Governance` (via `requireGovernance`). However, `addPool` and `addRWA` are called by `Factory` during deployment to register new contracts in the registry.
 
 ### Config
 
@@ -152,23 +154,20 @@ function deployRWA(
 function deployPool(
     uint256 createPoolFeeRatio,
     string calldata entityId,
-    string calldata entityOwnerId,
-    string calldata entityOwnerType,
-    address owner,
     RWA rwa,
     uint256 expectedHoldAmount,
     uint256 expectedRwaAmount,
-    uint256 rewardPercent,
-    uint256 entryFeePercent,
-    uint256 exitFeePercent,
     uint256 priceImpactPercent,
+    uint256 rewardPercent,
     uint256 entryPeriodStart,
     uint256 entryPeriodExpired,
     uint256 completionPeriodExpired,
-    bool awaitCompletionExpired,
-    bool floatingOutTranchesTimestamps,
+    uint256 entryFeePercent,
+    uint256 exitFeePercent,
     bool fixedSell,
     bool allowEntryBurn,
+    bool awaitCompletionExpired,
+    bool floatingOutTranchesTimestamps,
     uint256[] calldata outgoingTranches,
     uint256[] calldata outgoingTranchTimestamps,
     uint256[] calldata incomingTranches,
@@ -178,6 +177,8 @@ function deployPool(
     uint256 expired
 ) external nonReentrant returns (address)
 ```
+
+> **Note:** The `entityOwnerId` and `entityOwnerType` values are not passed as parameters to `deployPool`. Instead, they are read directly from the corresponding RWA contract via `rwa.entityOwnerId()` and `rwa.entityOwnerType()` during pool initialization.
 
 Both functions require:
 
@@ -212,8 +213,8 @@ uint256 public virtualHoldReserve;   // Virtual HOLD for price stability
 uint256 public virtualRwaReserve;    // Virtual RWA for price stability
 
 // Tranches
-OutgoingTranche[] public outgoingTranches;  // Distributions to participants
-IncomingTranche[] public incomingTranches;  // Expected returns from business
+uint256[] public outgoingTranches;  // Distributions to participants
+uint256[] public incomingTranches;  // Expected returns from business
 ```
 
 Core functions:
@@ -222,6 +223,9 @@ Core functions:
 - **`burn`** — sell RWA tokens back for HOLD. Returns proportional share of returned funds plus any available bonus.
 - **`claimOutgoingTranches`** — claim distributed HOLD tokens from completed outgoing tranches. Only callable by the pool owner.
 - **`returnIncomingTranche`** — business returns funds to fulfill an incoming tranche. Anyone can call this.
+- **Pause** — `enablePause()` and `disablePause()` are both callable by `Governance`. When paused, all pool operations (mint, burn, tranche claims) are blocked.
+
+- **`parentId`** — a string field that stores the `entityId` from the associated RWA contract. It is set during pool initialization and passed as `businessId` in `Pool_RwaMinted` and `Pool_RwaBurned` events.
 
 ### Treasury
 
@@ -257,7 +261,7 @@ function cancel(uint256 proposalId) external
 - **Proposal threshold** — minimum voting power required to create a proposal (set in `Config`)
 - **Voting period** — duration of the voting window (set in `Config`)
 - **Quorum** — minimum participation required for a proposal to pass (set in `Config`)
-- **Execution** — proposals are executed automatically when the voting period ends if they pass
+- **Execution** — proposals are executed automatically immediately after each vote if the required conditions are met (quorum and majority in favor)
 
 ### DaoStaking
 
@@ -290,19 +294,17 @@ The protocol uses a layered access control model:
 | **Signer** | Authorized multi-sig addresses | Approve RWA and Pool deployments |
 | **Protocol Contract** | Any registered contract | `EventEmitter` emit functions |
 | **Pool Owner** | The business that owns the pool | `claimOutgoingTranches` |
-| **HoldToken** | HoldToken contract | Mint/burn by Factory and Pool |
+| **HoldToken** | HoldToken contract | Base currency of the protocol — Factory and Pool use `transferFrom`/`transfer` for payments |
 
 ## Upgradeability
 
 All core contracts inherit from `UpgradeableContract`, which implements the UUPS proxy pattern:
 
 ```solidity
-abstract contract UpgradeableContract is Initializable, UUPSUpgradeable {
-    function uniqueContractId() public pure virtual returns (bytes32);
-    function implementationVersion() public pure virtual returns (uint256);
-    function _verifyAuthorizeUpgradeRole() internal view virtual;
-    function upgradeTo(address newImplementation) external virtual;
-    function upgradeToAndCall(address newImplementation, bytes memory data) external virtual;
+abstract contract UpgradeableContract is Initializable, UUPSUpgradeable, ERC165Upgradeable {
+    function uniqueContractId() public view virtual returns (bytes32);
+    function implementationVersion() public view virtual returns (uint256);
+    function _authorizeUpgrade(address newImplementation) internal view override;
 }
 ```
 

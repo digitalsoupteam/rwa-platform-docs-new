@@ -15,6 +15,8 @@ PlatformToken is the governance token of the Slices protocol. It is an upgradeab
 - **Supply:** Mintable — controlled by Governance
 - **Contract:** `PlatformToken` — deployed behind an ERC1967 proxy
 
+> **Note:** The `PlatformToken` contract is located **outside** `contracts/dao/` — it resides elsewhere in the `rwa-platform/` project tree. Only the `DaoStaking`, `Governance`, `Timelock`, and `Treasury` contracts are in `contracts/dao/`.
+
 ## Purpose
 
 PlatformToken serves one primary role: **governance participation**. Holders stake PlatformTokens in the `DaoStaking` contract to gain voting power in the Slices DAO.
@@ -29,7 +31,7 @@ PlatformToken serves one primary role: **governance participation**. Holders sta
 PlatformTokens are distributed by **Governance** through the `mint()` function, which can mint tokens to multiple addresses in a single transaction:
 
 ```solidity
-function mint(address[] calldata holders, uint256[] calldata amounts) external {
+function mint(address[] memory holders, uint256[] memory amounts) external {
     addressBook.requireGovernance(msg.sender);
     // Mints tokens to each holder
 }
@@ -55,7 +57,7 @@ Key points:
 
 ## Voting Power
 
-Your voting power equals your staked PlatformToken balance (1:1 ratio):
+Your voting power equals your staked PlatformToken balance (1:1 ratio), queried from the `DaoStaking` contract:
 
 ```solidity
 function getVotingPower(address user) external view returns (uint256) {
@@ -65,19 +67,27 @@ function getVotingPower(address user) external view returns (uint256) {
 
 For example, if you stake 50,000 PlatformToken, your voting weight is 50,000. To create a proposal, you need **1,000,000 PlatformToken** staked (`proposalThreshold`).
 
-Quorum is calculated from the **total PlatformToken supply** (`totalSupply`), not just the staked amount. See [Voting](/docs/governance/voting).
+Quorum is calculated from the **total staked PlatformToken amount** (`getTotalVotingPower()` in `DaoStaking`), not the total supply. See [Voting](/docs/governance/voting).
 
 ## Key Parameters (from Config)
 
 | Parameter | Value | Description |
 |----------|-------|-------------|
 | `proposalThreshold` | **1,000,000** PlatformToken | Minimum stake to create a proposal |
-| `quorumPercentage` | **40%** (4000 bps) | Of totalSupply PlatformToken |
+| `quorumPercentage` | **40%** (4000 bps) | Of total staked PlatformToken |
 | `votingPeriod` | **7 days** | Duration of voting |
 | `timelockDelay` | **2 days** | Delay before queued governance action executes |
 | `daoStakingAnnualRewardRate` | **10%** (1000 bps) | Annual staking reward |
 
-All parameters are adjustable via Governance proposals (calling `Config.update*` functions).
+All parameters are stored in the `Config` contract, which is located **outside** `contracts/dao/` — it resides elsewhere in the `rwa-platform/` project tree. The `Config` contract provides the following update functions, each callable only by Governance:
+
+- `updateProposalThreshold(uint256 newThreshold)`
+- `updateQuorumPercentage(uint256 newPercentage)`
+- `updateVotingPeriod(uint256 newPeriod)`
+- `updateTimelockDelay(uint256 newDelay)`
+- `updateDaoStakingAnnualRewardRate(uint256 newRate)`
+
+All these functions are callable only by Governance (via `addressBook.requireGovernance(msg.sender)`).
 
 ## Key Differences from HOLD
 

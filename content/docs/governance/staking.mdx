@@ -18,10 +18,10 @@ function unstake(uint256 amount) external nonReentrant
 
 When you stake:
 
-1. PlatformTokens are transferred from your wallet to the staking contract
-2. Your staked amount is recorded and converted to voting power (1:1 ratio)
-3. Your staking timestamp is set, starting reward accrual
-4. If you already have staked tokens, any pending rewards are automatically reinvested
+1. Any pending rewards are automatically claimed and reinvested (reinvestment)
+2. PlatformTokens are transferred from your wallet to the staking contract
+3. Your staked amount is recorded and converted to voting power (1:1 ratio)
+4. Your staking timestamp is set, starting reward accrual
 
 ```javascript
 // Approve PlatformToken for DaoStaking contract
@@ -78,7 +78,7 @@ await daoStaking.unstake(amount);
 
 ## Voting Lock
 
-When you vote on a proposal, `Governance.vote()` calls `DaoStaking.lock(user, proposal.endTime)`, which locks your staked tokens until the proposal's end time:
+When you vote on a proposal, `Governance.vote()` calls `DaoStaking.lock(user, proposal.endTime)`, which locks your staked tokens until the proposal's end time. The `lock` function is callable only by the Governance contract (via `addressBook.requireGovernance`) and updates the lock only if the new `unlockTimestamp` is greater than the current `votingLockTimestamp[user]`:
 
 ```solidity
 function lock(address user, uint256 unlockTimestamp) external {
@@ -109,3 +109,26 @@ const availableRewards = await daoStaking.getAvailableRewards();
 ```
 
 Total voting power for quorum calculations is based on the total PlatformToken supply (not just staked amount).
+
+## State Variables
+
+The `DaoStaking` contract maintains the following key state variables:
+
+- **`stakedAmount[user]`** — mapping of user address to their staked token amount
+- **`votingLockTimestamp[user]`** — mapping of user address to their voting lock expiration timestamp
+- **`totalUserDeposits`** — total amount of tokens deposited by all users across the contract
+- **`stakingTimestamp[user]`** — mapping of user address to the timestamp of their first stake
+
+## Events
+
+The `DaoStaking` contract emits the following events:
+
+```solidity
+event DaoStaking_TokensStaked(address indexed user, uint256 amount, uint256 timestamp);
+event DaoStaking_TokensUnstaked(address indexed user, uint256 amount, uint256 timestamp);
+event DaoStaking_TokensLocked(address indexed user, uint256 unlockTimestamp, uint256 timestamp);
+```
+
+- **`DaoStaking_TokensStaked`** — emitted when a user stakes tokens, includes the user address, staked amount, and block timestamp
+- **`DaoStaking_TokensUnstaked`** — emitted when a user unstakes tokens, includes the user address, unstaked amount, and block timestamp
+- **`DaoStaking_TokensLocked`** — emitted when a user's tokens are locked after voting, includes the user address, unlock timestamp, and block timestamp

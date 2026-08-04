@@ -34,6 +34,13 @@ The central registry. Stores addresses of all protocol contracts and manages acc
 | `getRWAByIndex(uint256)` → `RWA` | Anyone | Get RWA by index |
 | `rwasLength()` → `uint256` | Anyone | Number of registered RWAs |
 | `poolsLength()` → `uint256` | Anyone | Number of registered pools |
+| `initialize()` | initializer | Initialize contract (called once on deploy) |
+| `requireGovernance(address)` | public view | Revert if caller is not governance |
+| `requireTimelock(address)` | public view | Revert if caller is not timelock |
+| `requireUpgradeRole(address)` | public view | Revert if caller is not upgrade role |
+| `requireFactory(address)` | public view | Revert if caller is not factory |
+| `requireSigner(address)` | public view | Revert if caller is not an authorized signer |
+| `requireProtocolContract(address)` | public view | Revert if caller is not a registered protocol contract |
 
 ### Config
 

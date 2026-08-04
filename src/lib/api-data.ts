@@ -37,7 +37,6 @@ export interface ApiOperation {
 }
 
 // ── Module metadata ──
-}
 
 // ── Module metadata ──
 export const apiModuleMeta: Record<string, { label: string; icon: string }> = {

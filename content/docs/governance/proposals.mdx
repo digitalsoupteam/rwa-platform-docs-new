@@ -62,15 +62,88 @@ Created → Voting Period → Auto-Executed or Auto-Cancelled
 | Parameter | Value | Description |
 |----------|-------|-------------|
 | **Proposal threshold** | **1,000,000** PlatformToken | Minimum stake to create a proposal (`proposalThreshold`) |
-| **Quorum** | **40%** of totalSupply | Minimum participation for proposal to pass (`quorumPercentage = 4000 bps`) |
+| **Quorum** | **40%** of totalVotingPower (total staked tokens) | Minimum participation for proposal to pass (`quorumPercentage = 4000 bps`) |
 | **Voting period** | **7 days** | Duration of voting (`votingPeriod`) |
 
 
-For example, if totalSupply PlatformToken = **10,000,000**, quorum = 10,000,000 × 40% = **4,000,000 votes**. To pass, a proposal needs `votesFor >= 4,000,000` AND `votesFor > votesAgainst`.
+For example, if total staked PlatformToken = **10,000,000**, quorum = 10,000,000 × 40% = **4,000,000 votes**. To pass, a proposal needs `votesFor >= 4,000,000` AND `votesFor > votesAgainst`.
 
 To create a proposal, you must have **≥ 1,000,000 PlatformToken** staked. If you have 500,000 — you can only vote on others' proposals, not create your own.
 
-> **Note:** The `timelockDelay` parameter is used only for Treasury operations that go through the Timelock controller. Regular governance proposals are executed immediately after passing (see [Proposal Lifecycle](#proposal-lifecycle)).
+## Timelock Controller
+
+The Timelock controller adds a mandatory delay for sensitive operations (e.g., Treasury withdrawals). The delay is set via `config.timelockDelay()` (default 2 days).
+
+```solidity
+// Queue a transaction for execution
+function queueTransaction(
+    address target,
+    bytes memory data,
+    uint256 eta       // Unix timestamp when execution becomes available
+) external            // requires addressBook.requireGovernance(msg.sender)
+
+// Execute a queued transaction (anyone can call once eta is reached)
+function executeTransaction(
+    address target,
+    bytes memory data,
+    uint256 eta
+) external            // no access control — anyone can execute
+
+// Cancel a queued transaction
+function cancelTransaction(
+    address target,
+    bytes memory data,
+    uint256 eta
+) external            // requires addressBook.requireGovernance(msg.sender)
+```
+
+**Key points:**
+- Governance calls `queueTransaction` to schedule an operation
+- After `eta` is reached, **anyone** can call `executeTransaction` (no access control)
+- The transaction must be executed within `GRACE_PERIOD = 7 days` after `eta`, otherwise it expires
+- `timelockDelay` is used to set the minimum `eta` when queuing
+
+## Events
+
+All governance events are emitted through the `EventEmitter` contract:
+
+| Event | Parameters |
+|-------|-----------|
+| `Governance_ProposalCreated` | `uint256 proposalId, address proposer, address target, bytes data, string description, uint256 creationTime, uint256 endTime, bool executed, bool cancelled` |
+| `Governance_VoteCast` | `uint256 proposalId, address voter, bool support, uint256 votes, string reason` |
+| `Governance_ProposalCancelled` | `uint256 proposalId, address canceller` |
+| `Governance_ProposalExecuted` | `uint256 proposalId, address executor` |
+
+## Data Structures
+
+### Proposal
+
+```solidity
+struct Proposal {
+    address proposer;      // Creator of the proposal
+    address target;        // Contract to call
+    bytes data;            // Encoded function call
+    string description;    // Human-readable description
+    uint256 votesFor;      // Total votes in favor
+    uint256 votesAgainst;  // Total votes against
+    uint256 creationTime;  // Timestamp when created
+    uint256 endTime;       // Timestamp when voting ends
+    bool executed;         // Whether the proposal was executed
+    bool cancelled;        // Whether the proposal was cancelled
+}
+```
+
+### Receipt
+
+```solidity
+struct Receipt {
+    bool hasVoted;    // Whether the voter has voted
+    bool support;     // true = for, false = against
+    uint256 votes;    // Voting power used
+}
+```
+
+Receipts are stored as a mapping: `proposalId → voter → Receipt`.
 
 ## Viewing Proposals
 
