@@ -1,55 +1,55 @@
 ---
-title: "Глоссарий"
+title: "Glossary"
 ---
 
-# Глоссарий
+# Glossary
 
 ## RWA (Real World Asset)
 
-Реальный актив, токенизированный на блокчейне в формате ERC-1155. RWA-токен представляет собой долю в реальном бизнесе (Growth, Startup или Franchise) и торгуется через пулы ликвидности со встроенным AMM.
+A real-world asset tokenized on the blockchain in ERC-1155 format. An RWA token represents a share in a real business (Growth, Startup, or Franchise) and trades through liquidity pools with a built-in AMM.
 
-→ [Токенизация](../tokenization/overview)
+→ [Tokenization](../tokenization/overview)
 
 ---
 
-## Токенизация
+## Tokenization
 
-Процесс преобразования прав на реальный актив в цифровой токен на блокчейне. Включает создание компании, бизнеса, деплой RWA-контракта через Factory, настройку пула и выпуск токенов.
+The process of converting rights to a real-world asset into a digital token on the blockchain. It includes creating a company and a business, deploying the RWA contract through the Factory, configuring the pool, and issuing tokens.
 
-→ [Токенизация](../tokenization/overview)
+→ [Tokenization](../tokenization/overview)
 
 ---
 
 ## AMM (Automated Market Maker)
 
-Автоматический маркет-мейкер — алгоритм, определяющий цену токена на основе формулы постоянного произведения (x·y = k). Встроен непосредственно в каждый пул ликвидности, позволяя покупать (mint) и продавать (burn) RWA-токены без традиционного ордербука.
+An algorithm that determines the token price based on the constant product formula (x·y = k). It is built directly into every liquidity pool, allowing RWA tokens to be bought (mint) and sold (burn) without a traditional order book.
 
 → [Order Matching](../trading/order-matching)
 
 ---
 
-## Пул ликвидности
+## Liquidity Pool
 
-Смарт-контракт краудфандингового типа, который аккумулирует средства (HOLD) и эмитирует RWA-токены. Содержит встроенный AMM, поддерживает транши, бонусы и проходит через несколько стадий жизненного цикла: Entry Period → Trading → Completion → Fully Returned → Bonus Unlock.
+A crowdfunding-type smart contract that accumulates funds (HOLD) and issues RWA tokens. It contains a built-in AMM, supports tranches and bonuses, and goes through several lifecycle stages: Entry Period → Trading → Completion → Fully Returned → Bonus Unlock.
 
-→ [Пулы](../pools/overview)
-
----
-
-## Транш (outgoing/incoming)
-
-- **Outgoing Tranche** — платёж от пула участникам (возврат тела инвестиций + доходность).
-- **Incoming Tranche** — платёж от бизнеса в пул (поступление средств от операционной деятельности).
-
-Транши могут иметь фиксированные или плавающие (floating) даты выплат.
-
-→ [Транши и распределения](../pools/tranches)
+→ [Pools](../pools/overview)
 
 ---
 
-## HOLD токен
+## Tranche (outgoing/incoming)
 
-Основной стейблкоин платформы (ERC-20, не upgradeable) с фиксированным общим предложением в 1 квадриллион токенов. Используется для всех операций: создание RWA, пополнение пулов, оплата комиссий. На тестнете выполняет роль USDT-мока.
+- **Outgoing Tranche** — a payment from the pool to participants (return of the invested principal + yield).
+- **Incoming Tranche** — a payment from the business into the pool (funds received from operating activity).
+
+Tranches can have fixed or floating payout dates.
+
+→ [Tranches & Distributions](../pools/tranches)
+
+---
+
+## HOLD Token
+
+The platform's main stablecoin (ERC-20, non-upgradeable) with a fixed total supply of 1 quadrillion tokens. It is used for all operations: creating RWAs, funding pools, and paying fees. On the testnet it acts as a USDT mock.
 
 → [HoldToken](../smart-contracts/hold-token)
 
@@ -57,7 +57,7 @@ title: "Глоссарий"
 
 ## PlatformToken (RWAP)
 
-Токен управления платформой (ERC-20 upgradeable). Даёт право голоса в DAO, используется для стейкинга (10% APY), создания предложений и голосования. Отличается от HOLD тем, что является токеном управления, а не платёжным средством.
+The platform's governance token (ERC-20, upgradeable). It grants voting rights in the DAO and is used for staking (10% APY), creating proposals, and voting. It differs from HOLD in that it is a governance token rather than a means of payment.
 
 → [PlatformToken](../governance/platform-token)
 
@@ -65,7 +65,7 @@ title: "Глоссарий"
 
 ## DAO (Decentralized Autonomous Organization)
 
-Децентрализованная автономная организация — система управления платформой через голосование держателей PlatformToken (RWAP). Включает механизмы создания предложений, голосования, кворума, Timelock-контроллера и управления казной.
+A decentralized autonomous organization — a system of platform governance through voting by holders of PlatformToken (RWAP). It includes mechanisms for creating proposals, voting, quorum, the Timelock controller, and treasury management.
 
 → [Governance](../governance/proposals)
 
@@ -73,7 +73,7 @@ title: "Глоссарий"
 
 ## Governance
 
-Система управления платформой, реализованная через набор смарт-контрактов: Governance (голосование), Timelock (задержка исполнения), Treasury (казна), DaoStaking (стейкинг). Позволяет изменять параметры протокола, проводить апгрейды и управлять средствами через голосование.
+The platform's governance system, implemented as a set of smart contracts: Governance (voting), Timelock (execution delay), Treasury (treasury), DaoStaking (staking). It allows protocol parameters to be changed, upgrades to be performed, and funds to be managed through voting.
 
 → [Governance](../governance/proposals)
 
@@ -81,7 +81,7 @@ title: "Глоссарий"
 
 ## Timelock
 
-Контроллер временной задержки исполнения решений DAO. После принятия предложения решение не исполняется мгновенно, а попадает в очередь с задержкой (timelock delay), давая сообществу время на реакцию. Управляется через Governance.
+A controller for the time delay on the execution of DAO decisions. Once a proposal is accepted, it is not executed immediately but enters a queue with a delay (timelock delay), giving the community time to react. Managed through Governance.
 
 → [Proposals](../governance/proposals)
 
@@ -89,7 +89,7 @@ title: "Глоссарий"
 
 ## Proposal
 
-Предложение в системе DAO. Типы: изменение параметров протокола, апгрейд контрактов, управление казной, управление подписантами (signers). Проходит жизненный цикл: Created → Voting → Auto-Executed или Auto-Cancelled.
+A proposal in the DAO system. Types: changing protocol parameters, upgrading contracts, treasury management, and signer management. It goes through a lifecycle: Created → Voting → Auto-Executed or Auto-Cancelled.
 
 → [Proposals](../governance/proposals)
 
@@ -97,15 +97,15 @@ title: "Глоссарий"
 
 ## Quorum
 
-Минимальный порог явки для принятия решения в DAO. Установлен на уровне 40% от общего предложения PlatformToken (total supply). Если кворум не достигнут, предложение автоматически отклоняется.
+The minimum turnout threshold for a decision to be made in the DAO. It is set at 40% of the total PlatformToken supply. If quorum is not reached, the proposal is automatically rejected.
 
 → [Voting](../governance/voting)
 
 ---
 
-## Стейкинг
+## Staking
 
-Механизм блокировки PlatformToken (RWAP) в контракте DaoStaking для получения награды (10% APY) и увеличения голосовательной силы. Чем дольше заблокированы токены, тем выше вес голоса.
+A mechanism for locking PlatformToken (RWAP) in the DaoStaking contract to earn rewards (10% APY) and increase voting power. The longer tokens are locked, the higher the voting weight.
 
 → [Staking](../governance/staking)
 
@@ -113,15 +113,15 @@ title: "Глоссарий"
 
 ## Voting Power
 
-Голосовательная сила держателя PlatformToken. Зависит от количества заблокированных в стейкинге токенов и срока блокировки. Определяет вес голоса участника при голосовании по предложениям DAO.
+The voting strength of a PlatformToken holder. It depends on the number of tokens locked in staking and the lock duration. It determines a participant's voting weight on DAO proposals.
 
 → [Voting](../governance/voting)
 
 ---
 
-## Мультиподпись (Multi-sig)
+## Multi-Signature (Multi-sig)
 
-Механизм, требующий подтверждения от нескольких подписантов (signers) для выполнения критических операций: деплой RWA-токена, деплой пула, вывод средств из ReferralTreasury. Используется для повышения безопасности и распределённого контроля.
+A mechanism that requires confirmation from several signers to perform critical operations: deploying an RWA token, deploying a pool, and withdrawing funds from the ReferralTreasury. It is used to improve security and provide distributed control.
 
 → [Signers Manager](../signers-manager/overview)
 
@@ -129,7 +129,7 @@ title: "Глоссарий"
 
 ## Signer
 
-Участник мультиподписной схемы, уполномоченный подписывать транзакции от имени платформы. Управляется через Governance. Для исполнения операции требуется подпись от 3 из 5 подписантов (3/5 multi-sig).
+A participant in the multi-signature scheme authorized to sign transactions on behalf of the platform. Managed through Governance. Executing an operation requires signatures from 3 of 5 signers (3/5 multi-sig).
 
 → [Signers Manager](../signers-manager/overview)
 
@@ -137,7 +137,7 @@ title: "Глоссарий"
 
 ## UUPS (Universal Upgradeable Proxy Standard)
 
-Стандарт обновляемых смарт-контрактов, при котором логика апгрейда находится в имплементационном контракте, а не в прокси. Используется для всех основных контрактов платформы (кроме HoldToken). Апгрейд выполняется через AddressBook.
+A standard for upgradeable smart contracts in which the upgrade logic resides in the implementation contract rather than in the proxy. It is used for all core platform contracts (except HoldToken). Upgrades are performed through the AddressBook.
 
 → [Upgradeable Contract](../smart-contracts/upgradeable-contract)
 
@@ -145,7 +145,7 @@ title: "Глоссарий"
 
 ## EventEmitter
 
-Системный смарт-контракт, который агрегирует и эмитирует события от других контрактов платформы. Используется бэкендом (Indexer Service) для отслеживания изменений состояния on-chain.
+A system smart contract that aggregates and emits events from other platform contracts. It is used by the backend (Indexer Service) to track on-chain state changes.
 
 → [Smart Contracts Architecture](../smart-contracts/architecture)
 
@@ -153,7 +153,7 @@ title: "Глоссарий"
 
 ## AddressBook
 
-Центральный реестр всех смарт-контрактов платформы. Хранит адреса прокси и имплементаций, управляет ролями и разрешениями (RBAC). Через AddressBook выполняются апгрейды контрактов по UUPS-стандарту.
+The central registry of all platform smart contracts. It stores proxy and implementation addresses and manages roles and permissions (RBAC). Contract upgrades via the UUPS standard are performed through the AddressBook.
 
 → [Smart Contracts Architecture](../smart-contracts/architecture)
 
@@ -161,7 +161,7 @@ title: "Глоссарий"
 
 ## Factory (RWA Factory, Pool Factory)
 
-Смарт-контракты для создания RWA-токенов (RWA Factory) и пулов ликвидности (Pool Factory). Деплой выполняется через Factory с мультиподписным подтверждением. Factory валидирует параметры и создаёт новые экземпляры контрактов.
+Smart contracts for creating RWA tokens (RWA Factory) and liquidity pools (Pool Factory). Deployment is performed through the Factory with multi-signature confirmation. The Factory validates parameters and creates new contract instances.
 
 → [Token Creation](../tokenization/token-creation) · [Launch a Pool](../pools/launch-pool)
 
@@ -169,7 +169,7 @@ title: "Глоссарий"
 
 ## Risk Score
 
-Оценка риска бизнеса или пула по шкале от 1 до 100, вычисляемая AI Evaluator. Учитывает 10 факторов, включая тип бизнеса (Growth, Startup, Franchise), финансовые показатели и другие параметры. Влияет на конфигурацию пула и комиссии.
+A risk rating of a business or pool on a scale from 1 to 100, calculated by the AI Evaluator. It takes into account 10 factors, including the business type (Growth, Startup, Franchise), financial metrics, and other parameters. It affects the pool configuration and fees.
 
 → [AI Evaluator](../ai-evaluator/overview)
 
@@ -177,7 +177,7 @@ title: "Глоссарий"
 
 ## AI Evaluator
 
-Синхронный AI-оценщик рисков на базе OpenRouter (модель `google/gemini-2.0-flash-001`). Оценивает бизнесы и пулы по 10 факторам, возвращая score 1–100. Встроен в RWA Service и используется при создании пулов.
+A synchronous AI risk evaluator built on OpenRouter (model `google/gemini-2.0-flash-001`). It evaluates businesses and pools across 10 factors, returning a score of 1–100. It is built into the RWA Service and is used when creating pools.
 
 → [AI Evaluator](../ai-evaluator/overview)
 
@@ -185,7 +185,7 @@ title: "Глоссарий"
 
 ## AI Assistant
 
-Конверсационный AI-ассистент для поддержки пользователей платформы. Работает на модели `gpt-4o-mini` через OpenRouter. Поддерживает контекстные режимы (investor_base, product_owner_base, popular_pools, user_portfolio). Лимиты: 10 ассистентов на пользователя, 4096 символов на сообщение, история 30 дней / 100 сообщений.
+A conversational AI assistant for supporting platform users. It runs on the `gpt-4o-mini` model via OpenRouter. It supports contextual modes (investor_base, product_owner_base, popular_pools, user_portfolio). Limits: 10 assistants per user, 4096 characters per message, 30 days / 100 messages of history.
 
 → [AI Assistant](../ai-assistant/overview)
 
@@ -193,7 +193,7 @@ title: "Глоссарий"
 
 ## Testnet Faucet
 
-Тестнетовый кран для раздачи токенов на BSC Testnet: BNB (для газа), HOLD и PlatformToken (RWAP). Доступен через GraphQL-мутации (`requestGas`, `requestHold`, `requestPlatform`) с ограничением — 24 часа между запросами.
+A testnet faucet for distributing tokens on BSC Testnet: BNB (for gas), HOLD, and PlatformToken (RWAP). Available through GraphQL mutations (`requestGas`, `requestHold`, `requestPlatform`) with a limit of 24 hours between requests.
 
 → [Testnet Faucet](../testnet-faucet/overview)
 
@@ -201,7 +201,7 @@ title: "Глоссарий"
 
 ## BSC (Binance Smart Chain)
 
-Блокчейн-сеть Binance Smart Chain (Chain ID 97 для тестнета), на которой развёрнуты все смарт-контракты платформы. Обеспечивает совместимость с EVM, низкие комиссии и высокую пропускную способность.
+The Binance Smart Chain network (Chain ID 97 for the testnet), on which all platform smart contracts are deployed. It provides EVM compatibility, low fees, and high throughput.
 
 → [Deployments](../smart-contracts/deployments)
 
@@ -209,7 +209,7 @@ title: "Глоссарий"
 
 ## BSC Testnet
 
-Тестовая сеть Binance Smart Chain (Chain ID 97), используемая для разработки и тестирования платформы. Содержит развёрнутые версии всех контрактов с тестовыми токенами (BNB, HOLD, RWAP), доступными через Faucet.
+The Binance Smart Chain test network (Chain ID 97), used for developing and testing the platform. It contains deployed versions of all contracts with test tokens (BNB, HOLD, RWAP) available through the Faucet.
 
 → [Deployments](../smart-contracts/deployments)
 
@@ -217,7 +217,7 @@ title: "Глоссарий"
 
 ## ERC-1155
 
-Мульти-токен стандарт Ethereum, используемый для RWA-токенов. Позволяет одному контракту управлять множеством различных типов токенов (token ID), что эффективно для представления разных реальных активов.
+An Ethereum multi-token standard used for RWA tokens. It allows a single contract to manage many different token types (token IDs), which is efficient for representing different real-world assets.
 
 → [Tokenization Overview](../tokenization/overview)
 
@@ -225,7 +225,7 @@ title: "Глоссарий"
 
 ## ERC-20
 
-Стандарт взаимозаменяемых токенов Ethereum. Используется для HOLD токена (не upgradeable) и PlatformToken / RWAP (upgradeable, с механизмом UUPS).
+The Ethereum fungible token standard. It is used for the HOLD token (non-upgradeable) and PlatformToken / RWAP (upgradeable, with the UUPS mechanism).
 
 → [HoldToken](../smart-contracts/hold-token) · [PlatformToken](../smart-contracts/platform-token)
 
@@ -233,7 +233,7 @@ title: "Глоссарий"
 
 ## Grace Period
 
-Период отсрочки после завершения сбора средств в пуле (Entry Period). В течение этого времени участники могут выйти из пула без штрафных санкций, если целевая сумма не была достигнута.
+A grace period after a pool's fundraising period ends (Entry Period). During this time, participants can exit the pool without penalties if the target amount was not reached.
 
 → [Pool Lifecycle](../pools/lifecycle)
 
@@ -241,22 +241,22 @@ title: "Глоссарий"
 
 ## Floating Timestamp
 
-Механизм плавающих дат для траншей (outgoing tranches). Вместо фиксированной даты выплаты используется условие: транш становится доступным после накопления определённой суммы в пуле. Позволяет более гибко управлять распределениями.
+A mechanism for floating dates on tranches (outgoing tranches). Instead of a fixed payout date, it uses a condition: the tranche becomes available once a certain amount has accumulated in the pool. This allows for more flexible management of distributions.
 
 → [Tranches & Distributions](../pools/tranches)
 
 ---
 
-## Виртуальные резервы
+## Virtual Reserves
 
-Механизм AMM, при котором часть резервов пула считается «виртуальной» и не участвует в ценообразовании. Используется для ограничения price impact и предотвращения манипуляций ценой RWA-токена при крупных сделках.
+An AMM mechanism in which part of a pool's reserves is considered "virtual" and does not participate in pricing. It is used to limit price impact and prevent manipulation of the RWA token price during large trades.
 
 → [Order Matching](../trading/order-matching)
 
 ---
 
-## Бонус (awaiting bonus)
+## Bonus (awaiting bonus)
 
-Дополнительное вознаграждение участникам пула после полного возврата всех инвестиций (Fully Returned). Бонус выплачивается из прибыли бизнеса и находится в статусе «ожидания» (awaiting bonus) до момента, пока бизнес не сгенерирует достаточную прибыль.
+An additional reward for pool participants after all investments are fully returned (Fully Returned). The bonus is paid from the business's profit and remains in "awaiting" status (awaiting bonus) until the business generates sufficient profit.
 
 → [Pool Lifecycle](../pools/lifecycle)

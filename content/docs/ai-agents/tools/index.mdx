@@ -9,7 +9,7 @@ AI agents interact with Slices through several interfaces. This page describes w
 
 ## GraphQL API
 
-The primary interface for all off-chain operations — creating businesses, pools, companies, uploading content, querying indexed data, triggering AI evaluations, coordinating multi-sig approvals.
+The primary interface for all off-chain operations — creating businesses, pools, companies, querying indexed data, triggering AI evaluations, coordinating multi-sig approvals.
 
 **Endpoint:** `https://api.slices.xyz/graphql` (POST)
 
@@ -24,8 +24,8 @@ The GraphQL API is organized into 19 modules:
 | **auth** | `authenticate`, `refreshToken`, `revokeTokens`, `getUserTokens` |
 | **rwa** | `createBusiness`, `createBusinessWithAI`, `editBusiness`, `updateBusinessRiskScore`, `requestBusinessApprovalSignatures`, `rejectBusinessApprovalSignatures`, `createPool`, `createPoolWithAI`, `editPool`, `updatePoolRiskScore`, `requestPoolApprovalSignatures`, `rejectPoolApprovalSignatures`, `getBusiness`, `getBusinesses`, `getPool`, `getPools` |
 | **company** | `createCompany`, `updateCompany`, `deleteCompany`, `addMember`, `removeMember`, `grantPermission`, `revokePermission`, `getCompany`, `getCompanies` |
-| **documents** | `createFolder`, `createDocument` (file upload), `updateDocument`, `deleteDocument`, `getDocuments`, `getFolders` |
-| **gallery** | `createGallery`, `createImage` (file upload), `updateImage`, `deleteImage`, `getGalleries`, `getImages` |
+| **documents** | `createFolder`, `updateDocument`, `deleteDocument`, `getDocuments`, `getFolders` (upload — REST `POST /api/documents/createDocument`) |
+| **gallery** | `createGallery`, `updateImage`, `deleteImage`, `getGalleries`, `getImages` (upload — REST `POST /api/gallery/createImage`) |
 | **blog** | `createBlog`, `createPost`, `updatePost`, `deletePost`, `getBlogs`, `getPosts` |
 | **faq** | `createFaqTopic`, `createFaqAnswer`, `updateFaqAnswer`, `deleteFaqTopic`, `getFaqTopics`, `getFaqAnswers` |
 | **questions** | `createTopic`, `createQuestion`, `createQuestionAnswer`, `toggleQuestionLike`, `getTopics`, `getQuestions` |

@@ -5,39 +5,39 @@ description: Persistent authentication keys for GraphQL API access
 
 # API Keys
 
-> **⚠️ В разработке** — API Keys как отдельный механизм аутентификации ещё не реализованы в бэкенде. Текущая реализация использует wallet-based JWT-аутентификацию (см. ниже).
+> **⚠️ Under development** — API Keys as a separate authentication mechanism are not implemented in the backend yet. The current implementation uses wallet-based JWT authentication (see below).
 
-## Текущая реализация: Wallet-based JWT
+## Current implementation: Wallet-based JWT
 
-На данный момент аутентификация в API осуществляется через **подпись сообщения (EIP-712) кошельком пользователя** с последующей выдачей JWT-токенов. Это основной и единственный способ аутентификации.
+Currently, API authentication is performed via **message signature (EIP-712) by the user's wallet**, followed by the issuance of JWT tokens. This is the primary and only authentication method.
 
-### Как это работает
+### How it works
 
-1. Пользователь подписывает сообщение своим кошельком (EIP-712 типизированные данные)
-2. Сервер проверяет подпись и возвращает пару токенов: **accessToken** (краткосрочный) и **refreshToken** (долгосрочный)
-3. AccessToken используется для аутентификации GraphQL-запросов
-4. RefreshToken используется для получения нового accessToken по истечении срока действия
+1. The user signs a message with their wallet (EIP-712 typed data)
+2. The server verifies the signature and returns a pair of tokens: **accessToken** (short-lived) and **refreshToken** (long-lived)
+3. The accessToken is used to authenticate GraphQL requests
+4. The refreshToken is used to obtain a new accessToken once the current one expires
 
-### GraphQL-операции аутентификации
+### GraphQL authentication operations
 
-| Операция | Тип | Описание |
+| Operation | Type | Description |
 |---|---|---|
-| [`authenticate`](/docs/api/auth/authenticate) | Mutation | Подпись кошельком → получение JWT-токенов |
-| [`refreshToken`](/docs/api/auth/refresh-token) | Mutation | Обновление accessToken по refreshToken |
-| [`revokeTokens`](/docs/api/auth/revoke-tokens) | Mutation | Отзыв refreshToken'ов |
-| [`getUserTokens`](/docs/api/auth/get-user-tokens) | Query | Получение списка активных refreshToken'ов |
+| [`authenticate`](/docs/api/auth/authenticate) | Mutation | Wallet signature → obtaining JWT tokens |
+| [`refreshToken`](/docs/api/auth/refresh-token) | Mutation | Refreshing accessToken via refreshToken |
+| [`revokeTokens`](/docs/api/auth/revoke-tokens) | Mutation | Revoking refreshTokens |
+| [`getUserTokens`](/docs/api/auth/get-user-tokens) | Query | Retrieving the list of active refreshTokens |
 
-### REST-эндпоинты (альтернативный доступ)
+### REST endpoints (alternative access)
 
-| Эндпоинт | Метод | Описание |
+| Endpoint | Method | Description |
 |---|---|---|
-| `/authenticate` | POST | Аутентификация по подписи кошелька |
-| `/refreshToken` | POST | Обновление токенов |
-| `/getUser` | POST | Получение данных пользователя |
-| `/getUserTokens` | POST | Список токенов пользователя |
-| `/revokeTokens` | POST | Отзыв токенов |
+| `/authenticate` | POST | Authentication via wallet signature |
+| `/refreshToken` | POST | Refreshing tokens |
+| `/getUser` | POST | Retrieving user data |
+| `/getUserTokens` | POST | List of the user's tokens |
+| `/revokeTokens` | POST | Revoking tokens |
 
-### Использование
+### Usage
 
 ```bash
 curl -X POST https://api.slices.xyz/graphql \
@@ -46,16 +46,16 @@ curl -X POST https://api.slices.xyz/graphql \
   -d '{"query": "{ getBusinesses(input: { filter: {} }) { id name } }"}'
 ```
 
-## Планируемое: API Keys
+## Planned: API Keys
 
-API Keys будут предоставлять альтернативу wallet-signature аутентификации для автоматизированных интеграций, ботов и AI-агентов, которым нужен постоянный доступ без интерактивного подписания кошельком.
+API Keys will provide an alternative to wallet-signature authentication for automated integrations, bots, and AI agents that need persistent access without interactive wallet signing.
 
-**Планируемые операции:**
+**Planned operations:**
 
-- `createApiKey` — создание ключа
-- `updateApiKey` — переименование ключа
-- `deleteApiKey` — удаление/отзыв ключа
-- `getApiKeys` — список всех ключей
-- `getApiKey` — получение одного ключа
+- `createApiKey` — create a key
+- `updateApiKey` — rename a key
+- `deleteApiKey` — delete/revoke a key
+- `getApiKeys` — list all keys
+- `getApiKey` — retrieve a single key
 
-Следите за обновлениями — функциональность появится в одном из следующих релизов.
+Stay tuned for updates — this functionality will appear in one of the upcoming releases.

@@ -215,11 +215,12 @@ query {
 | Mutation | Input | Description |
 |---|---|---|
 | `createFolder` | `CreateFolderInput { name, parentId, type }` | Create folder under business/pool |
-| `createDocument` | `CreateDocumentInput { folderId, name, file: Upload }` | Upload document |
 | `updateDocument` | `UpdateDocumentInput { id, updateData: { name } }` | Rename document |
 | `deleteDocument` | `id: ID!` | Delete document |
 | `updateFolder` | `UpdateFolderInput { id, updateData: { name } }` | Rename folder |
 | `deleteFolder` | `id: ID!` | Delete folder |
+
+> **Uploads are REST-only:** documents are uploaded via `POST /api/documents/createDocument` (multipart/form-data: `file`, `folderId`, `name`).
 
 `type` enum: `business` | `pool`
 
@@ -241,11 +242,12 @@ query {
 | Mutation | Input | Description |
 |---|---|---|
 | `createGallery` | `CreateGalleryInput { name, parentId, type }` | Create gallery under business/pool/user |
-| `createImage` | `CreateImageInput { galleryId, name, description, file: Upload }` | Upload image |
 | `updateImage` | `UpdateImageInput { id, updateData }` | Update image name/description |
 | `deleteImage` | `id: ID!` | Delete image |
 | `updateGallery` | `UpdateGalleryInput { id, updateData: { name } }` | Rename gallery |
 | `deleteGallery` | `id: ID!` | Delete gallery |
+
+> **Uploads are REST-only:** images are uploaded via `POST /api/gallery/createImage` (multipart/form-data: `file`, `galleryId`, `name`, `description`).
 
 `type` enum: `business` | `pool` | `user`
 

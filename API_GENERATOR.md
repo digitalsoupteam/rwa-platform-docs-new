@@ -1,69 +1,73 @@
 # API Reference Generator
 
-Документация API (GraphQL + REST) генерируется из исходников бэкенда одним скриптом.
+The API documentation (GraphQL + REST) is generated from the backend sources by a single script.
 
-## Источники
+## Sources
 
-| Что | Где |
+| What | Where |
 |---|---|
-| GraphQL схемы | `rwa-backend-new2/services/gateway/src/graphql/modules/*/schema.graphql` |
-| REST контроллеры | `rwa-backend-new2/services/gateway/src/controllers/*.controller.ts` |
-| Генератор | `rwa_docs_new/scripts/gen-api-data.ts` |
-| Результат | `rwa_docs_new/src/lib/api-data.ts` (автогенерится, не редактировать руками) |
+| GraphQL schemas | `<backend>/services/gateway/src/graphql/modules/*/schema.graphql` |
+| REST controllers | `<backend>/services/gateway/src/controllers/*.controller.ts` |
+| Generator | `scripts/gen-api-data.ts` |
+| Output | `src/lib/api-data.ts` (auto-generated — do not edit by hand) |
 
-## Когда запускать
+## When to run
 
-После **любого** изменения в GraphQL-схемах или REST-контроллерах бэкенда:
-- добавили/удалили поле в типе
-- добавили/удалили мутацию или запрос
-- изменили input-тип
-- добавили новый REST endpoint
-- изменили enum
+After **any** change to the backend GraphQL schemas or REST controllers:
+- added/removed a field in a type
+- added/removed a mutation or query
+- changed an input type
+- added a new REST endpoint
+- changed an enum
 
-## Как обновить
+## How to update
 
 ```bash
-cd C:\Users\User\Desktop\WORK2025\rwa_docs_new
+# Run from the docs repo root.
+# The backend checkout path can be passed as an argument or via an env var;
+# without it the script uses its default local checkout path.
 
-# 1. Сгенерировать api-data.ts из схем
-bun run scripts/gen-api-data.ts
+# 1. Generate api-data.ts from the schemas
+bun run scripts/gen-api-data.ts /path/to/rwa-backend
+# — or —
+RWA_BACKEND_PATH=/path/to/rwa-backend bun run scripts/gen-api-data.ts
 
-# 2. Проверить что TypeScript компилится без ошибок
+# 2. Check that TypeScript compiles without errors
 bunx tsc --noEmit
 
-# 3. (опционально) запустить dev-сервер и визуально проверить
+# 3. (optional) run the dev server and check visually
 bun run dev
 ```
 
-Если `tsc --noEmit` ругается — почти всегда это значит, что в схеме что-то нестандартное (новый кастомный скаляр, синтаксис которого не покрыт парсером). Править нужно в `scripts/gen-api-data.ts`, не в сгенерированном файле.
+If `tsc --noEmit` complains — it almost always means the schema contains something non-standard (a new custom scalar whose syntax the parser does not cover). Fix `scripts/gen-api-data.ts`, not the generated file.
 
-## Что генерируется автоматически
+## What is generated automatically
 
-- **135 GraphQL операций** (Query / Mutation / Subscription) из 19 модулей
-- **4 REST endpoint** из Elysia-контроллеров
-- **65 типов**, 103 input-типа, 12 enum'ов
-- Input-типы инлайнятся в `params` как `children` (рекурсивно)
-- Return-типы полностью раскрываются — вложенные кастомные типы становятся литералами
-- Enum-значения инлайнятся в description: `enum: like | dislike | love`
-- MDX-страницы (`content/docs/api/**/*.mdx`) **не генерируются** — их нужно создавать вручную, если добавлена новая операция
+- **133 GraphQL operations** (Query / Mutation / Subscription) from 19 modules
+- **5 REST endpoints** from Elysia controllers
+- **65 types**, 101 input types, 13 enums
+- Input types are inlined into `params` as `children` (recursively)
+- Return types are fully expanded — nested custom types become literals
+- Enum values are inlined into the description: `enum: like | dislike | love`
+- MDX pages (`content/docs/api/**/*.mdx`) are **not** generated — create them manually when a new operation is added
 
-## Структура api-data.ts
+## Structure of api-data.ts
 
 ```
-apiModuleMeta       — { module: { label, icon } }     — метаданные модулей
-apiSubgroupLabels   — { subgroup: label }              — человекочитаемые названия подгрупп
-apiOperations       — ApiOperation[]                   — все операции (GraphQL + REST)
-typeDefs            — Record<string, string>           — поля типов (для обратной совместимости)
-getApiOperation()   — lookup по module + name
-getModuleOperations() — все операции модуля
-formatReturnType()  — раскрывает \n в многострочный вывод
+apiModuleMeta       — { module: { label, icon } }     — module metadata
+apiSubgroupLabels   — { subgroup: label }              — human-readable subgroup names
+apiOperations       — ApiOperation[]                   — all operations (GraphQL + REST)
+typeDefs            — Record<string, string>           — type fields (kept for backwards compatibility)
+getApiOperation()   — lookup by module + name
+getModuleOperations() — all operations of a module
+formatReturnType()  — expands \n into multiline output
 ```
 
-## Добавление новой операции в доках
+## Adding a new operation to the docs
 
-1. Добавить операцию в GraphQL-схему бэкенда
-2. Запустить генератор (см. выше)
-3. Создать MDX-страницу в `content/docs/api/<module>/<subgroup>/<operation-name>.mdx`:
+1. Add the operation to the backend GraphQL schema
+2. Run the generator (see above)
+3. Create an MDX page at `content/docs/api/<module>/<subgroup>/<operation-name>.mdx`:
 
 ```mdx
 ---
@@ -74,5 +78,5 @@ description: Module — Mutation
 <ApiEndpoint module="moduleName" operation="operationName" />
 ```
 
-4. Добавить страницу в `content/docs/api/<module>/<subgroup>/meta.json` в массив `pages`
-5. `bunx tsc --noEmit` — проверить что всё компилится
+4. Add the page to `content/docs/api/<module>/<subgroup>/meta.json` in the `pages` array
+5. `bunx tsc --noEmit` — make sure everything compiles
