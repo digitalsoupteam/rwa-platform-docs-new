@@ -18,7 +18,8 @@
  *   operations array as GraphQL operations.
  *
  * Usage:
- *   bun run scripts/gen-api-data.ts
+ *   bun run scripts/gen-api-data.ts [path-to-rwa-backend]
+ *   (or set RWA_BACKEND_PATH; default: local Windows checkout)
  *
  * Output: src/lib/api-data.ts (overwrites)
  */
@@ -28,10 +29,13 @@ import * as path from 'path';
 
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
-const GRAPHQL_MODULES_DIR =
-  'C:\\Users\\User\\Desktop\\WORK2025\\rwa-backend-new2\\services\\gateway\\src\\graphql\\modules';
-const CONTROLLERS_DIR =
-  'C:\\Users\\User\\Desktop\\WORK2025\\rwa-backend-new2\\services\\gateway\\src\\controllers';
+// Backend sources root: CLI arg → RWA_BACKEND_PATH env → default local checkout
+const BACKEND_ROOT =
+  process.argv[2] ??
+  process.env.RWA_BACKEND_PATH ??
+  'C:\\Users\\User\\Desktop\\WORK2025\\rwa-backend-new2';
+const GRAPHQL_MODULES_DIR = path.join(BACKEND_ROOT, 'services/gateway/src/graphql/modules');
+const CONTROLLERS_DIR = path.join(BACKEND_ROOT, 'services/gateway/src/controllers');
 const OUTPUT_FILE = path.join(__dirname, '..', 'src', 'lib', 'api-data.ts');
 
 // ─── Types ───────────────────────────────────────────────────────────────────

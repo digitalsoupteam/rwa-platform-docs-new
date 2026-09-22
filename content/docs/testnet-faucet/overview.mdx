@@ -12,8 +12,8 @@ The Testnet Faucet provides free test tokens on BSC Testnet for platform develop
 | Token | Purpose | How to Use |
 |-------|---------|------------|
 | **Gas (BNB)** | Pay transaction fees on BSC Testnet | Required for any on-chain interaction |
-| **HOLD** | Тестовый USDT-токен для покупки RWA токенов в пулах и оплаты комиссий | Buy RWA tokens in pools, pay fees |
-| **Platform (RWAP)** | Токен управления (RWAP) для стейкинга и голосования в DAO | Stake for voting power in the DAO |
+| **HOLD** | Test USDT token for buying RWA tokens in pools and paying fees | Buy RWA tokens in pools, pay fees |
+| **Platform (RWAP)** | Governance token (RWAP) for staking and voting in the DAO | Stake for voting power in the DAO |
 
 ## Rate Limits
 
@@ -25,7 +25,7 @@ Each token type has an independent cooldown period. After requesting a token, yo
 | HOLD | Configurable (typically 24h) |
 | PlatformToken | Configurable (typically 24h) |
 
-Каждый тип токена имеет свой независимый период ожидания, который настраивается отдельно.
+Each token type has its own independent cooldown period, which is configured separately.
 
 You can [check your unlock times](/docs/api/testnet-faucet/get-unlock-time) before making a request. A value of `0` means no previous request — you can request immediately.
 

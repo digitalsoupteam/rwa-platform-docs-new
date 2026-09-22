@@ -33,10 +33,7 @@ export interface ApiOperation {
   endpoint: string;
   method?: string;
   path?: string;
-  errors?: Array<{ code: string; message: string; reason: string }>;
 }
-
-// ── Module metadata ──
 
 // ── Module metadata ──
 export const apiModuleMeta: Record<string, { label: string; icon: string }> = {
@@ -184,7 +181,7 @@ export const apiOperations: ApiOperation[] = [
     params: [
       { name: 'id', type: 'ID!', required: true }
     ],
-    returnType: 'Message! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n}',
+    returnType: 'Message! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n  sender: MessageSender! // user | assistant\n}',
     endpoint: '/graphql',
   },
   {
@@ -204,7 +201,7 @@ export const apiOperations: ApiOperation[] = [
       ] }
   ] }
     ],
-    returnType: '[Message!]! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n}',
+    returnType: '[Message!]! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n  sender: MessageSender! // user | assistant\n}',
     endpoint: '/graphql',
   },
   {
@@ -262,7 +259,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'text', type: 'String!', required: true }
   ] }
     ],
-    returnType: '[Message!]! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n}',
+    returnType: '[Message!]! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n  sender: MessageSender! // user | assistant\n}',
     endpoint: '/graphql',
   },
   {
@@ -277,7 +274,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'text', type: 'String!', required: true }
   ] }
     ],
-    returnType: 'Message! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n}',
+    returnType: 'Message! {\n  id: ID!\n  assistantId: ID!\n  text: String!\n  sender: MessageSender! // user | assistant\n}',
     endpoint: '/graphql',
   },
   {
@@ -1018,22 +1015,6 @@ export const apiOperations: ApiOperation[] = [
   {
     module: 'documents',
     subgroup: 'documents',
-    name: 'createDocument',
-    type: 'Mutation',
-    description: 'Create new document',
-    params: [
-      { name: 'input', type: 'CreateDocumentInput!', required: true, description: 'Input object with operation parameters', children: [
-    { name: 'folderId', type: 'String!', required: true },
-    { name: 'name', type: 'String!', required: true },
-    { name: 'file', type: 'Upload!', required: true }
-  ] }
-    ],
-    returnType: 'Document! {\n  id: ID!\n  folderId: String!\n  name: String!\n  fileId: String!\n  path: String!\n  url: String!\n  mimeType: String!\n  size: Float!\n  ownerId: String!\n  ownerType: String!\n  creator: String!\n  parentId: String!\n  grandParentId: String!\n  createdAt: Float!\n  updatedAt: Float!\n}',
-    endpoint: '/graphql',
-  },
-  {
-    module: 'documents',
-    subgroup: 'documents',
     name: 'updateDocument',
     type: 'Mutation',
     description: 'Update existing document',
@@ -1359,23 +1340,6 @@ export const apiOperations: ApiOperation[] = [
       { name: 'id', type: 'ID!', required: true }
     ],
     returnType: 'ID!',
-    endpoint: '/graphql',
-  },
-  {
-    module: 'gallery',
-    subgroup: 'images',
-    name: 'createImage',
-    type: 'Mutation',
-    description: 'Create new image',
-    params: [
-      { name: 'input', type: 'CreateImageInput!', required: true, description: 'Input object with operation parameters', children: [
-    { name: 'galleryId', type: 'String!', required: true },
-    { name: 'name', type: 'String!', required: true },
-    { name: 'description', type: 'String!', required: true },
-    { name: 'file', type: 'Upload', required: false }
-  ] }
-    ],
-    returnType: 'Image! {\n  id: ID!\n  galleryId: String!\n  name: String!\n  description: String!\n  fileId: String!\n  path: String!\n  url: String!\n  mimeType: String!\n  size: Float!\n  ownerId: String!\n  ownerType: String!\n  creator: String!\n  parentId: String!\n  grandParentId: String!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1807,7 +1771,7 @@ export const apiOperations: ApiOperation[] = [
     params: [
       { name: 'id', type: 'ID!', required: true }
     ],
-    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1824,7 +1788,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'offset', type: 'Int', required: false }
   ] }
     ],
-    returnType: '[Business!]! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: '[Business!]! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1836,7 +1800,7 @@ export const apiOperations: ApiOperation[] = [
     params: [
       { name: 'id', type: 'ID!', required: true }
     ],
-    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1853,7 +1817,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'offset', type: 'Int', required: false }
   ] }
     ],
-    returnType: '[Pool!]! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: '[Pool!]! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1870,7 +1834,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'chainId', type: 'String!', required: true }
   ] }
     ],
-    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1895,7 +1859,7 @@ export const apiOperations: ApiOperation[] = [
       ] }
   ] }
     ],
-    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1921,7 +1885,7 @@ export const apiOperations: ApiOperation[] = [
       ] }
   ] }
     ],
-    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1933,7 +1897,7 @@ export const apiOperations: ApiOperation[] = [
     params: [
       { name: 'id', type: 'ID!', required: true }
     ],
-    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Business! {\n  id: ID!\n  chainId: String!\n  name: String!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  tokenAddress: String\n  description: String\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  country: String\n  businessType: String\n  socials: [SocialLink!]! {\n    type: String!\n    url: String!\n  }\n  paused: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -1977,7 +1941,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'businessId', type: 'String!', required: true }
   ] }
     ],
-    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -2017,7 +1981,7 @@ export const apiOperations: ApiOperation[] = [
     { name: 'tags', type: '[String!]', required: false }
   ] }
     ],
-    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -2060,7 +2024,7 @@ export const apiOperations: ApiOperation[] = [
       ] }
   ] }
     ],
-    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -2072,7 +2036,7 @@ export const apiOperations: ApiOperation[] = [
     params: [
       { name: 'id', type: 'ID!', required: true }
     ],
-    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   {
@@ -2113,7 +2077,7 @@ export const apiOperations: ApiOperation[] = [
     params: [
       
     ],
-    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
+    returnType: 'Pool! {\n  id: ID!\n  ownerId: String!\n  ownerType: String!\n  ownerWallet: String\n  name: String!\n  businessId: String!\n  description: String\n  chainId: String!\n  tags: [String!]\n  riskScore: Int\n  image: String\n  imageUrl: String\n  fileId: String\n  rwaAddress: String!\n  poolAddress: String\n  holdToken: String\n  tokenId: String\n  entryFeePercent: String\n  exitFeePercent: String\n  expectedHoldAmount: String\n  expectedRwaAmount: String\n  expectedBonusAmount: String\n  rewardPercent: String\n  priceImpactPercent: String\n  liquidityCoefficient: String\n  awaitCompletionExpired: Boolean!\n  floatingOutTranchesTimestamps: Boolean!\n  fixedSell: Boolean!\n  allowEntryBurn: Boolean!\n  paused: Boolean!\n  entryPeriodStart: Float\n  entryPeriodExpired: Float\n  completionPeriodExpired: Float\n  floatingTimestampOffset: Float!\n  fullReturnTimestamp: Float\n  k: String\n  realHoldReserve: String\n  virtualHoldReserve: String\n  virtualRwaReserve: String\n  isTargetReached: Boolean!\n  isFullyReturned: Boolean!\n  totalClaimedAmount: String\n  totalReturnedAmount: String\n  awaitingBonusAmount: String\n  awaitingRwaAmount: String\n  outgoingTranchesBalance: String\n  outgoingTranches: [OutgoingTranche!]! {\n    amount: String!\n    timestamp: Float!\n    executedAmount: String!\n  }\n  incomingTranches: [IncomingTranche!]! {\n    amount: String!\n    expiredAt: Float!\n    returnedAmount: String!\n  }\n  lastCompletedIncomingTranche: Int!\n  approvalSignaturesTaskId: String\n  approvalSignaturesTaskExpired: Float\n  riskScoreEvaluationProcess: Boolean!\n  createdAt: Float!\n  updatedAt: Float!\n}',
     endpoint: '/graphql',
   },
   // ═══════ Signers Manager ═══════
@@ -2280,45 +2244,6 @@ export const apiOperations: ApiOperation[] = [
   },
   // ═══════ REST ═══════
   {
-    module: 'rwa',
-    subgroup: 'businesses',
-    name: 'uploadBusinessImage',
-    type: 'REST',
-    description: 'Upload an image (multipart/form-data)',
-    params: [
-      { name: 'file', type: 'File', required: true, description: '' },
-      { name: 'businessId', type: 'String', required: true, description: '' }
-    ],
-    headers: [
-      { name: 'Authorization', type: 'string', required: true, description: 'Bearer JWT access token' },
-      { name: 'Content-Type', type: 'string', required: true, description: 'multipart/form-data' }
-    ],
-    returnType: '{ id: String!, image: String, url: String! }',
-    endpoint: '/api/business/uploadImage',
-    method: 'POST',
-    path: '/api/business/uploadImage',
-  },
-  {
-    module: 'documents',
-    subgroup: 'documents',
-    name: 'uploadDocument',
-    type: 'REST',
-    description: 'Upload a document (multipart/form-data)',
-    params: [
-      { name: 'file', type: 'File', required: true, description: '' },
-      { name: 'folderId', type: 'String', required: true, description: '' },
-      { name: 'name', type: 'String', required: true, description: '' }
-    ],
-    headers: [
-      { name: 'Authorization', type: 'string', required: true, description: 'Bearer JWT access token' },
-      { name: 'Content-Type', type: 'string', required: true, description: 'multipart/form-data' }
-    ],
-    returnType: '{ id: String!, folderId: String!, name: String!, fileId: String!, path: String!, url: String!, mimeType: String!, size: Float!, ownerId: String!, ownerType: String!, creator: String!, parentId: String!, grandParentId: String!, createdAt: Float!, updatedAt: Float! }',
-    endpoint: '/api/documents/createDocument',
-    method: 'POST',
-    path: '/api/documents/createDocument',
-  },
-  {
     module: 'gallery',
     subgroup: 'images',
     name: 'uploadImage',
@@ -2341,6 +2266,63 @@ export const apiOperations: ApiOperation[] = [
   },
   {
     module: 'rwa',
+    subgroup: 'rest',
+    name: 'getTokenMetadata',
+    type: 'REST',
+    description: 'REST endpoint at /storage/rwa/metadata/:tokenAddress/:tokenId',
+    params: [
+      
+    ],
+    headers: [
+      { name: 'Authorization', type: 'string', required: true, description: 'Bearer JWT access token' },
+      { name: 'Content-Type', type: 'string', required: true, description: 'multipart/form-data' }
+    ],
+    returnType: 'JSON',
+    endpoint: '/storage/rwa/metadata/:tokenAddress/:tokenId',
+    method: 'GET',
+    path: '/storage/rwa/metadata/:tokenAddress/:tokenId',
+  },
+  {
+    module: 'documents',
+    subgroup: 'documents',
+    name: 'uploadDocument',
+    type: 'REST',
+    description: 'Upload a document (multipart/form-data)',
+    params: [
+      { name: 'file', type: 'File', required: true, description: '' },
+      { name: 'folderId', type: 'String', required: true, description: '' },
+      { name: 'name', type: 'String', required: true, description: '' }
+    ],
+    headers: [
+      { name: 'Authorization', type: 'string', required: true, description: 'Bearer JWT access token' },
+      { name: 'Content-Type', type: 'string', required: true, description: 'multipart/form-data' }
+    ],
+    returnType: '{ id: String!, folderId: String!, name: String!, fileId: String!, path: String!, url: String!, mimeType: String!, size: Float!, ownerId: String!, ownerType: String!, creator: String!, parentId: String!, grandParentId: String!, createdAt: Float!, updatedAt: Float! }',
+    endpoint: '/api/documents/createDocument',
+    method: 'POST',
+    path: '/api/documents/createDocument',
+  },
+  {
+    module: 'rwa',
+    subgroup: 'businesses',
+    name: 'uploadBusinessImage',
+    type: 'REST',
+    description: 'Upload an image (multipart/form-data)',
+    params: [
+      { name: 'file', type: 'File', required: true, description: '' },
+      { name: 'businessId', type: 'String', required: true, description: '' }
+    ],
+    headers: [
+      { name: 'Authorization', type: 'string', required: true, description: 'Bearer JWT access token' },
+      { name: 'Content-Type', type: 'string', required: true, description: 'multipart/form-data' }
+    ],
+    returnType: '{ id: String!, image: String, imageUrl: String! }',
+    endpoint: '/api/business/uploadImage',
+    method: 'POST',
+    path: '/api/business/uploadImage',
+  },
+  {
+    module: 'rwa',
     subgroup: 'pools',
     name: 'uploadPoolImage',
     type: 'REST',
@@ -2353,7 +2335,7 @@ export const apiOperations: ApiOperation[] = [
       { name: 'Authorization', type: 'string', required: true, description: 'Bearer JWT access token' },
       { name: 'Content-Type', type: 'string', required: true, description: 'multipart/form-data' }
     ],
-    returnType: '{ id: String!, image: String, url: String! }',
+    returnType: '{ id: String!, image: String, imageUrl: String! }',
     endpoint: '/api/pool/uploadImage',
     method: 'POST',
     path: '/api/pool/uploadImage',
@@ -2363,7 +2345,7 @@ export const apiOperations: ApiOperation[] = [
 // ── GraphQL type definitions for output types ──
 // Maps type name → comma-separated field definitions
 export const typeDefs: Record<string, string> = {
-  Message: 'id: ID!, assistantId: ID!, text: String!',
+  Message: 'id: ID!, assistantId: ID!, text: String!, sender: MessageSender! // user | assistant',
   Assistant: 'id: ID!, userId: String!, name: String!, contextPreferences: [AssistantContext!]! // investor_base | product_owner_base | popular_pools | user_portfolio',
   IdResponse: 'id: ID!',
   EvaluationFactor: 'name: String!, impact: String!, detail: String!',
@@ -2417,8 +2399,8 @@ export const typeDefs: Record<string, string> = {
   Question: 'id: ID!, topicId: String!, text: String!, answer: Answer, answered: Boolean!, likesCount: Int!, ownerId: String!, ownerType: String!, creator: String!, parentId: String!, grandParentId: String!, createdAt: Float!, updatedAt: Float!',
   Reaction: 'id: ID!, parentId: String!, parentType: String!, userId: String!, reaction: String!, createdAt: Float!, updatedAt: Float!',
   EntityReactionsResponse: 'reactions: JSON!, userReactions: [String!]!',
-  Business: 'id: ID!, chainId: String!, name: String!, ownerId: String!, ownerType: String!, ownerWallet: String, tokenAddress: String, description: String, tags: [String!], riskScore: Int, image: String, approvalSignaturesTaskId: String, approvalSignaturesTaskExpired: Float, riskScoreEvaluationProcess: Boolean!, country: String, businessType: String, socials: [SocialLink!]!, paused: Boolean!, createdAt: Float!, updatedAt: Float!',
-  Pool: 'id: ID!, ownerId: String!, ownerType: String!, ownerWallet: String, name: String!, businessId: String!, description: String, chainId: String!, tags: [String!], riskScore: Int, image: String, rwaAddress: String!, poolAddress: String, holdToken: String, tokenId: String, entryFeePercent: String, exitFeePercent: String, expectedHoldAmount: String, expectedRwaAmount: String, expectedBonusAmount: String, rewardPercent: String, priceImpactPercent: String, liquidityCoefficient: String, awaitCompletionExpired: Boolean!, floatingOutTranchesTimestamps: Boolean!, fixedSell: Boolean!, allowEntryBurn: Boolean!, paused: Boolean!, entryPeriodStart: Float, entryPeriodExpired: Float, completionPeriodExpired: Float, floatingTimestampOffset: Float!, fullReturnTimestamp: Float, k: String, realHoldReserve: String, virtualHoldReserve: String, virtualRwaReserve: String, isTargetReached: Boolean!, isFullyReturned: Boolean!, totalClaimedAmount: String, totalReturnedAmount: String, awaitingBonusAmount: String, awaitingRwaAmount: String, outgoingTranchesBalance: String, outgoingTranches: [OutgoingTranche!]!, incomingTranches: [IncomingTranche!]!, lastCompletedIncomingTranche: Int!, approvalSignaturesTaskId: String, approvalSignaturesTaskExpired: Float, riskScoreEvaluationProcess: Boolean!, createdAt: Float!, updatedAt: Float!',
+  Business: 'id: ID!, chainId: String!, name: String!, ownerId: String!, ownerType: String!, ownerWallet: String, tokenAddress: String, description: String, tags: [String!], riskScore: Int, image: String, imageUrl: String, fileId: String, approvalSignaturesTaskId: String, approvalSignaturesTaskExpired: Float, riskScoreEvaluationProcess: Boolean!, country: String, businessType: String, socials: [SocialLink!]!, paused: Boolean!, createdAt: Float!, updatedAt: Float!',
+  Pool: 'id: ID!, ownerId: String!, ownerType: String!, ownerWallet: String, name: String!, businessId: String!, description: String, chainId: String!, tags: [String!], riskScore: Int, image: String, imageUrl: String, fileId: String, rwaAddress: String!, poolAddress: String, holdToken: String, tokenId: String, entryFeePercent: String, exitFeePercent: String, expectedHoldAmount: String, expectedRwaAmount: String, expectedBonusAmount: String, rewardPercent: String, priceImpactPercent: String, liquidityCoefficient: String, awaitCompletionExpired: Boolean!, floatingOutTranchesTimestamps: Boolean!, fixedSell: Boolean!, allowEntryBurn: Boolean!, paused: Boolean!, entryPeriodStart: Float, entryPeriodExpired: Float, completionPeriodExpired: Float, floatingTimestampOffset: Float!, fullReturnTimestamp: Float, k: String, realHoldReserve: String, virtualHoldReserve: String, virtualRwaReserve: String, isTargetReached: Boolean!, isFullyReturned: Boolean!, totalClaimedAmount: String, totalReturnedAmount: String, awaitingBonusAmount: String, awaitingRwaAmount: String, outgoingTranchesBalance: String, outgoingTranches: [OutgoingTranche!]!, incomingTranches: [IncomingTranche!]!, lastCompletedIncomingTranche: Int!, approvalSignaturesTaskId: String, approvalSignaturesTaskExpired: Float, riskScoreEvaluationProcess: Boolean!, createdAt: Float!, updatedAt: Float!',
   OutgoingTranche: 'amount: String!, timestamp: Float!, executedAmount: String!',
   IncomingTranche: 'amount: String!, expiredAt: Float!, returnedAmount: String!',
   ApprovalSignaturesResponse: 'taskId: String!',

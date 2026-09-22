@@ -4,59 +4,61 @@ title: "API Reference Overview"
 
 # API Reference Overview
 
-RWA Platform предоставляет единый GraphQL API через Gateway, построенный на **Elysia** с **GraphQL Yoga**. Аутентификация осуществляется через **JWT** (access + refresh токены). Внутренняя коммуникация между микросервисами реализована через **Eden Treaty** (прокси-клиент). Подписки (Subscriptions) работают через **SSE** (Server-Sent Events) с использованием **Redis Pub/Sub**.
+The RWA Platform provides a unified GraphQL API through the Gateway, built on **Elysia** with **GraphQL Yoga**. Authentication uses **JWT** (access + refresh tokens). Internal communication between microservices runs through **Eden Treaty** (a proxy client). Subscriptions work over **SSE** (Server-Sent Events) using **Redis Pub/Sub**.
 
-## Архитектура Gateway
+## Gateway Architecture
 
-- **HTTP-сервер**: Elysia (Bun)
-- **GraphQL-движок**: GraphQL Yoga
-- **Аутентификация**: JWT (access token в заголовке Authorization, refresh token через мутацию)
-- **Прокси-клиент**: Eden Treaty для вызовов внутренних микросервисов
-- **Подписки**: SSE через Redis Pub/Sub (каналы `priceUpdates`, `transactionUpdates`, `poolDeployed`, `countdown`)
-- **Контекст**: содержит информацию о пользователе, клиенты Redis и Eden, сервисы кэширования и валидации
+- **HTTP server**: Elysia (Bun)
+- **GraphQL engine**: GraphQL Yoga
+- **Authentication**: JWT (access token in the Authorization header, refresh token via a mutation)
+- **Proxy client**: Eden Treaty for calling internal microservices
+- **Subscriptions**: SSE over Redis Pub/Sub (channels `priceUpdates`, `transactionUpdates`, `poolDeployed`, `countdown`)
+- **Context**: holds user information, Redis and Eden clients, caching and validation services
 
-## Доступные модули GraphQL
+## Available GraphQL Modules
 
-Всего в схеме определено **17 модулей**. Каждый модуль предоставляет набор Query, Mutation и/или Subscription.
+The schema defines **17 modules** in total. Each module provides a set of Queries, Mutations and/or Subscriptions.
 
-| Модуль | Описание | Query | Mutation | Subscription |
+| Module | Description | Query | Mutation | Subscription |
 |--------|----------|-------|----------|-------------|
-| **auth** | Аутентификация и управление токенами | `getUserTokens` | `authenticate`, `refreshToken`, `revokeTokens` | — |
-| **ai-assistant** | AI-ассистенты и сообщения | `getAssistant`, `getUserAssistants`, `getMessage`, `getMessageHistory` | `createAssistant`, `updateAssistant`, `deleteAssistant`, `createMessage`, `updateMessage`, `deleteMessage` | — |
-| **testnet-faucet** | Тестнетовый кран для токенов | `getHistory`, `getUnlockTime` | `requestGas`, `requestHold`, `requestPlatform` | — |
-| **signers-manager** | Управление подписями | `getSignatureTask` | — | — |
-| **rwa** | Реальные активы (бизнесы и пулы) | `getBusiness`, `getBusinesses`, `getPool`, `getPools` | `createBusiness`, `createBusinessWithAI`, `editBusiness`, `updateBusinessRiskScore`, `requestBusinessApprovalSignatures`, `rejectBusinessApprovalSignatures`, `createPool`, `createPoolWithAI`, `editPool`, `updatePoolRiskScore`, `requestPoolApprovalSignatures`, `rejectPoolApprovalSignatures` | `poolDeployed` |
-| **documents** | Документы и папки | `getDocument`, `getDocuments`, `getFolder`, `getFolders` | `createDocument`, `updateDocument`, `deleteDocument`, `createFolder`, `updateFolder`, `deleteFolder` | — |
-| **gallery** | Галереи и изображения | `getGallery`, `getGalleries`, `getImage`, `getImages` | `createGallery`, `updateGallery`, `deleteGallery`, `createImage`, `updateImage`, `deleteImage` | — |
-| **faq** | FAQ (темы и ответы) | `getFaqTopic`, `getFaqTopics`, `getFaqAnswer`, `getFaqAnswers` | `createFaqTopic`, `updateFaqTopic`, `deleteFaqTopic`, `createFaqAnswer`, `updateFaqAnswer`, `deleteFaqAnswer` | — |
-| **blog** | Блоги и посты | `getBlog`, `getBlogs`, `getPost`, `getPosts` | `createBlog`, `updateBlog`, `deleteBlog`, `createPost`, `updatePost`, `deletePost` | — |
-| **questions** | Вопросы и ответы (Q&A) | `getTopic`, `getTopics`, `getQuestion`, `getQuestions` | `createTopic`, `updateTopic`, `deleteTopic`, `createQuestion`, `updateQuestionText`, `createQuestionAnswer`, `updateQuestionAnswer`, `deleteQuestion`, `toggleQuestionLike` | — |
-| **portfolio** | Портфель (балансы и транзакции) | `getBalances`, `getTransactions` | — | — |
-| **company** | Компании и участники | `getCompany`, `getCompanies` | `createCompany`, `updateCompany`, `deleteCompany`, `addMember`, `removeMember`, `grantPermission`, `revokePermission` | — |
-| **charts** | Графики и ценовые данные | `getRawPriceData`, `getOhlcPriceData`, `getPoolTransactions`, `getVolumeData` | — | `priceUpdates`, `transactionUpdates` |
-| **reactions** | Реакции (лайки/дизлайки) | `getEntityReactions`, `getReactions` | `setReaction`, `resetReaction` | — |
-| **loyalty** | Лояльность (рефералы, комиссии) | `getFees`, `getReferrals`, `getReferrerWithdraws`, `getReferrerClaimHistory` | `registerReferral`, `createReferrerWithdrawTask` | — |
-| **dao** | DAO (стейкинг, голосования, казна) | `getStaking`, `getProposals`, `getVotes`, `getStakingHistory`, `getTimelockTasks`, `getTreasuryWithdraws` | — | — |
-| **demo** | Демо-подписки | — | — | `countdown` |
+| **auth** | Authentication and token management | `getUserTokens` | `authenticate`, `refreshToken`, `revokeTokens` | — |
+| **ai-assistant** | AI assistants and messages | `getAssistant`, `getUserAssistants`, `getMessage`, `getMessageHistory` | `createAssistant`, `updateAssistant`, `deleteAssistant`, `createMessage`, `updateMessage`, `deleteMessage` | — |
+| **testnet-faucet** | Testnet faucet for tokens | `getHistory`, `getUnlockTime` | `requestGas`, `requestHold`, `requestPlatform` | — |
+| **signers-manager** | Signature management | `getSignatureTask` | — | — |
+| **rwa** | Real-world assets (businesses and pools) | `getBusiness`, `getBusinesses`, `getPool`, `getPools` | `createBusiness`, `createBusinessWithAI`, `editBusiness`, `updateBusinessRiskScore`, `requestBusinessApprovalSignatures`, `rejectBusinessApprovalSignatures`, `createPool`, `createPoolWithAI`, `editPool`, `updatePoolRiskScore`, `requestPoolApprovalSignatures`, `rejectPoolApprovalSignatures` | `poolDeployed` |
+| **documents** | Documents and folders | `getDocument`, `getDocuments`, `getFolder`, `getFolders` | `updateDocument`, `deleteDocument`, `createFolder`, `updateFolder`, `deleteFolder` | — |
+| **gallery** | Galleries and images | `getGallery`, `getGalleries`, `getImage`, `getImages` | `createGallery`, `updateGallery`, `deleteGallery`, `updateImage`, `deleteImage` | — |
+| **faq** | FAQ (topics and answers) | `getFaqTopic`, `getFaqTopics`, `getFaqAnswer`, `getFaqAnswers` | `createFaqTopic`, `updateFaqTopic`, `deleteFaqTopic`, `createFaqAnswer`, `updateFaqAnswer`, `deleteFaqAnswer` | — |
+| **blog** | Blogs and posts | `getBlog`, `getBlogs`, `getPost`, `getPosts` | `createBlog`, `updateBlog`, `deleteBlog`, `createPost`, `updatePost`, `deletePost` | — |
+| **questions** | Questions and answers (Q&A) | `getTopic`, `getTopics`, `getQuestion`, `getQuestions` | `createTopic`, `updateTopic`, `deleteTopic`, `createQuestion`, `updateQuestionText`, `createQuestionAnswer`, `updateQuestionAnswer`, `deleteQuestion`, `toggleQuestionLike` | — |
+| **portfolio** | Portfolio (balances and transactions) | `getBalances`, `getTransactions` | — | — |
+| **company** | Companies and members | `getCompany`, `getCompanies` | `createCompany`, `updateCompany`, `deleteCompany`, `addMember`, `removeMember`, `grantPermission`, `revokePermission` | — |
+| **charts** | Charts and price data | `getRawPriceData`, `getOhlcPriceData`, `getPoolTransactions`, `getVolumeData` | — | `priceUpdates`, `transactionUpdates` |
+| **reactions** | Reactions (likes/dislikes) | `getEntityReactions`, `getReactions` | `setReaction`, `resetReaction` | — |
+| **loyalty** | Loyalty (referrals, fees) | `getFees`, `getReferrals`, `getReferrerWithdraws`, `getReferrerClaimHistory` | `registerReferral`, `createReferrerWithdrawTask` | — |
+| **dao** | DAO (staking, voting, treasury) | `getStaking`, `getProposals`, `getVotes`, `getStakingHistory`, `getTimelockTasks`, `getTreasuryWithdraws` | — | — |
+| **demo** | Demo subscriptions | — | — | `countdown` |
 
-## Planned модули
+> File uploads are handled via REST, not GraphQL: `POST /api/documents/createDocument`, `POST /api/gallery/createImage` (multipart/form-data).
 
-Следующие модули находятся в стадии планирования и пока не реализованы в Gateway:
+## Planned Modules
+
+The following modules are planned and not yet implemented in the Gateway:
 - **webhooks**
 - **ai-evaluator**
 - **api-keys**
 
-## Базовые типы
+## Base Types
 
-В схеме определены общие скаляры, енумы и инпуты:
+The schema defines common scalars, enums and inputs:
 - **Scalar**: `JSON`
 - **Enum**: `SortDirection` (`asc`, `desc`)
 - **Input**: `SortFieldInput`, `PaginationInput`, `SocialLinkInput`
 - **Type**: `SocialLink`
 
-## Документация по модулям
+## Module Documentation
 
-Подробное описание каждого модуля, включая типы, инпуты и примеры запросов, находится в соответствующих разделах:
+A detailed description of each module — types, inputs and request examples — can be found in the corresponding sections:
 - [Auth](./auth/)
 - [AI Assistant](./ai-assistant/)
 - [Testnet Faucet](./testnet-faucet/)

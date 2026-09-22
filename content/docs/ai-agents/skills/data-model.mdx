@@ -35,7 +35,7 @@ A tokenizable business entity owned by a company.
 | `createdAt` | `Float!` | Creation timestamp |
 | `updatedAt` | `Float!` | Last update timestamp |
 
-**Source:** `rwa/schema.graphql` строки 14-34
+**Source:** `rwa/schema.graphql` lines 14-34
 
 ### Pool
 
@@ -103,7 +103,7 @@ A crowdfunding pool linked to a business. Has on-chain contract state (synced fr
 | `createdAt` | `Float!` | Creation timestamp |
 | `updatedAt` | `Float!` | Last update timestamp |
 
-**Source:** `rwa/schema.graphql` строки 36-106
+**Source:** `rwa/schema.graphql` lines 36-106
 
 ### OutgoingTranche
 
@@ -115,7 +115,7 @@ type OutgoingTranche {
 }
 ```
 
-**Source:** `rwa/schema.graphql` строки 108-112
+**Source:** `rwa/schema.graphql` lines 108-112
 
 ### IncomingTranche
 
@@ -127,7 +127,7 @@ type IncomingTranche {
 }
 ```
 
-**Source:** `rwa/schema.graphql` строки 114-118
+**Source:** `rwa/schema.graphql` lines 114-118
 
 ---
 
@@ -155,7 +155,7 @@ type UserPermission { id, permission: String!, entity: String }
 type Permission { id, permission, entity, createdAt, updatedAt }
 ```
 
-**Source:** `company/schema.graphql` строки 4-55
+**Source:** `company/schema.graphql` lines 4-55
 
 ---
 
@@ -225,7 +225,7 @@ type Transaction {
 }
 ```
 
-**Source:** `portfolio/schema.graphql` строки 4-31
+**Source:** `portfolio/schema.graphql` lines 4-31
 
 ---
 
@@ -267,7 +267,7 @@ type TreasuryWithdraw {
 }
 ```
 
-**Source:** `dao/schema.graphql` строки 3-80
+**Source:** `dao/schema.graphql` lines 3-80
 
 ---
 
@@ -296,7 +296,7 @@ type PoolTransaction {
 }
 ```
 
-**Source:** `charts/schema.graphql` строки 1-41
+**Source:** `charts/schema.graphql` lines 1-41
 
 ---
 
@@ -332,7 +332,7 @@ type ReferrerClaimHistory {
 }
 ```
 
-**Source:** `loyalty/schema.graphql` строки 4-64
+**Source:** `loyalty/schema.graphql` lines 4-64
 
 ---
 
@@ -343,9 +343,9 @@ All content types follow the same pattern: owned by a company, attached to a bus
 | Entity | Parent | Key Fields |
 |---|---|---|
 | **Folder** | business/pool | `name, parentId, type` |
-| **Document** | folder | `folderId, name, link, ownerId, ownerType, creator, parentId, grandParentId` |
+| **Document** | folder | `folderId, name, fileId, path, url, mimeType, size` |
 | **Gallery** | business/pool/user | `name, parentId, type` |
-| **Image** | gallery | `galleryId, name, description, link, ownerId, ownerType, creator, parentId, grandParentId` |
+| **Image** | gallery | `galleryId, name, description, fileId, path, url, mimeType, size` |
 | **Blog** | business/pool | `name, parentId, type` |
 | **Post** | blog | `blogId, title, content, images[], documents[]` |
 | **FaqTopic** | business/pool | `name, parentId, type` |
@@ -354,18 +354,20 @@ All content types follow the same pattern: owned by a company, attached to a bus
 | **Question** | topic | `topicId, text, answer { text, userId }, answered, likesCount` |
 | **Reaction** | any entity | `parentId, parentType, userId, reaction` |
 
+> **Note:** `url` on Document/Image is a computed, read-only link to the file (derived from `path`); it is not stored in the database and cannot be updated.
+
 **Sources:**
-- Document: `documents/schema.graphql` строки 5-17
-- Folder: `documents/schema.graphql` строки 20-30
-- Gallery: `gallery/schema.graphql` строки 5-15
-- Image: `gallery/schema.graphql` строки 18-31
-- Blog: `blog/schema.graphql` строки 4-14
-- Post: `blog/schema.graphql` строки 17-31
-- FaqTopic: `faq/schema.graphql` строки 4-14
-- FaqAnswer: `faq/schema.graphql` строки 17-30
-- Topic: `questions/schema.graphql` строки 12-22
-- Question: `questions/schema.graphql` строки 25-39
-- Reaction: `reactions/schema.graphql` строки 26-34
+- Document: `documents/schema.graphql` lines 5-17
+- Folder: `documents/schema.graphql` lines 20-30
+- Gallery: `gallery/schema.graphql` lines 5-15
+- Image: `gallery/schema.graphql` lines 18-31
+- Blog: `blog/schema.graphql` lines 4-14
+- Post: `blog/schema.graphql` lines 17-31
+- FaqTopic: `faq/schema.graphql` lines 4-14
+- FaqAnswer: `faq/schema.graphql` lines 17-30
+- Topic: `questions/schema.graphql` lines 12-22
+- Question: `questions/schema.graphql` lines 25-39
+- Reaction: `reactions/schema.graphql` lines 26-34
 
 ---
 

@@ -1,251 +1,251 @@
 ---
 title: Use Cases
-description: Практические сценарии использования платформы Slices — от токенизации бизнеса до участия в DAO и реферальной программе.
+description: Practical use cases for the Slices platform — from tokenizing a business to participating in the DAO and the referral program.
 ---
 
 # Use Cases
 
-Платформа **Slices** предоставляет полный цикл для токенизации реальных активов (RWA),
-привлечения капитала через краудфандинговые пулы и децентрализованного управления.
-Ниже описаны пять ключевых сценариев использования.
+The **Slices** platform provides a full cycle for tokenizing real-world assets (RWA),
+raising capital through crowdfunding pools, and decentralized governance.
+Five key use cases are described below.
 
 ---
 
-## Use Case 1: Токенизация бизнеса и привлечение капитала через пул
+## Use Case 1: Tokenizing a Business and Raising Capital Through a Pool
 
-### Проблема
+### Problem
 
-Владелец малого бизнеса (производство мебели) хочет привлечь **50 000 USDT** на расширение
-цеха, но не имеет доступа к традиционному банковскому кредитованию. Инвесторы не готовы
-вкладывать крупные суммы без ликвидности и прозрачности.
+The owner of a small business (furniture manufacturing) wants to raise **50,000 USDT** to expand
+the workshop, but has no access to traditional bank lending. Investors are not ready
+to commit large sums without liquidity and transparency.
 
-### Решение на платформе
+### Solution on the Platform
 
-Slices позволяет токенизировать бизнес как **RWA-актив** (ERC-1155) и создать
-краудфандинговый **Pool** с встроенным **AMM**, через который инвесторы смогут покупать
-и продавать доли бизнеса.
+Slices lets you tokenize the business as an **RWA asset** (ERC-1155) and create
+a crowdfunding **Pool** with a built-in **AMM**, through which investors can buy
+and sell shares in the business.
 
-### Пошаговый сценарий
+### Step-by-Step Scenario
 
-1. **Создание Company.** Владелец регистрирует компанию на платформе, указывает название,
-   страну, описание и социальные сети.
-2. **Создание Business.** Внутри компании создаётся бизнес типа `growth` с описанием
-   проекта, финансовыми показателями и загруженными документами.
-3. **AI Evaluation.** Платформа автоматически анализирует бизнес (документы, изображения)
-   и присваивает **riskScore** (0–100) с детальным reasoning и факторами.
-4. **Multi-sig одобрение.** Авторизованные **Signers** подписывают EIP-712 сообщение
-   для развёртывания RWA-контракта через **Factory**.
-5. **Создание Pool.** Владелец настраивает пул: `expectedHoldAmount = 50 000 HOLD`,
-   entry fee 2%, exit fee 2%, bonus rate 10%, outgoing и incoming tranches.
-6. **Multi-sig одобрение пула.** Signers повторно подписывают развёртывание пула.
-7. **Entry Period.** Инвесторы покупают RWA-токены через AMM по формуле `k = x·y`.
-8. **Target Reached.** Цель собрана — бизнес получает первый **OutgoingTranche**.
-9. **Trading.** RWA-токены торгуются на встроенном AMM; бизнес по графику выплачивает
-   **IncomingTranches** обратно в пул.
-10. **Fully Returned + Bonus Unlock.** Все средства возвращены, бонусы распределены
-    между держателями RWA.
+1. **Company creation.** The owner registers a company on the platform, specifies the name,
+   country, description, and social media.
+2. **Business creation.** Inside the company, a business of type `growth` is created with a project
+   description, financial metrics, and uploaded documents.
+3. **AI Evaluation.** The platform automatically analyzes the business (documents, images)
+   and assigns a **riskScore** (0–100) with detailed reasoning and factors.
+4. **Multi-sig approval.** Authorized **Signers** sign an EIP-712 message
+   to deploy the RWA contract through the **Factory**.
+5. **Pool creation.** The owner configures the pool: `expectedHoldAmount = 50,000 HOLD`,
+   entry fee 2%, exit fee 2%, bonus rate 10%, outgoing and incoming tranches.
+6. **Pool multi-sig approval.** Signers sign the pool deployment again.
+7. **Entry Period.** Investors buy RWA tokens through the AMM using the formula `k = x·y`.
+8. **Target Reached.** The target is raised — the business receives the first **OutgoingTranche**.
+9. **Trading.** RWA tokens trade on the built-in AMM; the business pays out
+   **IncomingTranches** back into the pool on schedule.
+10. **Fully Returned + Bonus Unlock.** All funds are returned, and bonuses are distributed
+    among RWA holders.
 
-### Результат
+### Result
 
-- Бизнес получил 50 000 HOLD на развитие.
-- Инвесторы владеют ликвидными RWA-токенами, которые можно продать в любой момент.
-- Все комиссии (entry, exit, creation) уходят в **Treasury** и управляются через **DAO**.
+- The business received 50,000 HOLD for development.
+- Investors hold liquid RWA tokens that can be sold at any time.
+- All fees (entry, exit, creation) go to the **Treasury** and are managed through the **DAO**.
 
 ---
 
-## Use Case 2: Инвестирование в RWA-пулы с диверсификацией портфеля
+## Use Case 2: Investing in RWA Pools with Portfolio Diversification
 
-### Проблема
+### Problem
 
-Инвестор с 10 000 USDT хочет диверсифицировать вложения между несколькими реальными
-активами, но покупка долей в каждом бизнесе по отдельности требует больших сумм
-и сложного юридического оформления.
+An investor with 10,000 USDT wants to diversify their investments across several real-world
+assets, but buying shares in each business separately requires large sums
+and complex legal paperwork.
 
-### Решение на платформе
+### Solution on the Platform
 
-Slices предоставляет **AMM-пулы** с дроблением RWA-токенов — инвестор может купить
-любое количество токенов в каждом пуле, начиная с малых сумм.
+Slices provides **AMM pools** with fractionalized RWA tokens — an investor can buy
+any number of tokens in each pool, starting with small amounts.
 
-### Пошаговый сценарий
+### Step-by-Step Scenario
 
-1. **Подключение кошелька.** Инвестор подключает MetaMask (BSC Testnet) и подписывает
-   EIP-712 сообщение для аутентификации (JWT).
-2. **Пополнение баланса.** Получает **HOLD** через **Testnet Faucet** (или покупает
-   на бирже в production).
-3. **Выбор пулов.** Через **Portfolio** и **Charts** изучает доступные пулы:
-   - Пул A: riskScore 25, expectedHoldAmount 100 000 HOLD, entry fee 2%
-   - Пул B: riskScore 55, expectedHoldAmount 50 000 HOLD, entry fee 3%
-   - Пул C: riskScore 80, expectedHoldAmount 20 000 HOLD, entry fee 5%
-4. **Покупка RWA.** Инвестор покупает RWA-токены в каждом пуле через AMM:
-   - Пул A: 5 000 HOLD → получает RWA по формуле AMM
-   - Пул B: 3 000 HOLD → получает RWA
-   - Пул C: 2 000 HOLD → получает RWA
-5. **Мониторинг.** Отслеживает цену RWA через **Charts** (OHLC-свечи, real-time
+1. **Wallet connection.** The investor connects MetaMask (BSC Testnet) and signs
+   an EIP-712 message for authentication (JWT).
+2. **Balance top-up.** The investor gets **HOLD** through the **Testnet Faucet** (or buys
+   it on an exchange in production).
+3. **Pool selection.** Through **Portfolio** and **Charts**, the investor reviews the available pools:
+   - Pool A: riskScore 25, expectedHoldAmount 100,000 HOLD, entry fee 2%
+   - Pool B: riskScore 55, expectedHoldAmount 50,000 HOLD, entry fee 3%
+   - Pool C: riskScore 80, expectedHoldAmount 20,000 HOLD, entry fee 5%
+4. **Buying RWA.** The investor buys RWA tokens in each pool through the AMM:
+   - Pool A: 5,000 HOLD → receives RWA using the AMM formula
+   - Pool B: 3,000 HOLD → receives RWA
+   - Pool C: 2,000 HOLD → receives RWA
+5. **Monitoring.** Tracks the RWA price through **Charts** (OHLC candles, real-time
    WebSocket priceUpdates).
-6. **Продажа.** При необходимости продаёт RWA через AMM (burn) с уплатой exit fee.
-   Если пул достиг стадии **Bonus Unlock**, получает бонус сверх суммы продажи.
-7. **Реферальная программа.** Если инвестора пригласил реферер, часть комиссий
-   (buy/sell) автоматически направляется в **ReferralTreasury**.
+6. **Selling.** If needed, the investor sells RWA through the AMM (burn) and pays the exit fee.
+   If the pool has reached the **Bonus Unlock** stage, the investor receives a bonus on top of the sale amount.
+7. **Referral program.** If the investor was invited by a referrer, part of the fees
+   (buy/sell) is automatically sent to the **ReferralTreasury**.
 
-### Результат
+### Result
 
-- Инвестор владеет диверсифицированным портфелем из 3 RWA-активов.
-- Все операции — on-chain, прозрачны и мгновенны.
-- Доход формируется за счёт роста стоимости RWA-токенов и бонусов при возврате средств.
-
----
-
-## Use Case 3: Участие в DAO — стейкинг и голосование за параметры протокола
-
-### Проблема
-
-Активные участники платформы хотят влиять на ключевые параметры протокола:
-размер комиссий, лимиты пулов, распределение treasury. Без DAO все решения
-принимаются централизованно.
-
-### Решение на платформе
-
-**DAO** на базе **PlatformToken (RWAP)** и **DaoStaking** позволяет участникам
-блокировать токены, получать голосующую силу и создавать/голосовать за пропозалы.
-
-### Пошаговый сценарий
-
-1. **Получение PlatformToken.** Участник запрашивает RWAP через **Testnet Faucet**
-   (в production — покупка или получение через Governance.mint()).
-2. **Стейкинг.** Переходит в раздел DAO, стейкает 5 000 RWAP в **DaoStaking**.
-   - Голосующая сила: 5 000 (1:1 к стейку).
-   - Годовая награда за стейкинг: 10% (500 RWAP в год).
-3. **Создание пропозала** (требуется ≥ 1 000 000 RWAP staked). Участник создаёт
-   пропозал на снижение entry fee с 3% до 2% для всех пулов.
-   - Описание: обоснование, ссылки на аналитику.
-   - Период голосования: 7 дней.
-4. **Голосование.** Другие участники с застейканными RWAP голосуют "за" или "против".
-   - При голосовании токены блокируются до окончания голосования.
-5. **Авто-исполнение.** После каждого голоса проверяется кворум (40% от totalSupply
-   RWAP). Если кворум достигнут и голосов "за" больше — пропозал исполняется
-   автоматически.
-6. **Timelock (2 дня).** Если пропозал затрагивает **Treasury** (например, вывод
-   средств), исполнение откладывается на 2 дня через **Timelock**.
-
-### Результат
-
-- Участники децентрализованно управляют протоколом.
-- Стейкеры получают пассивный доход (10% годовых в RWAP).
-- Все решения прозрачны и необратимы после исполнения.
+- The investor holds a diversified portfolio of 3 RWA assets.
+- All operations are on-chain, transparent, and instant.
+- Income comes from the growth in the value of RWA tokens and bonuses when funds are returned.
 
 ---
 
-## Use Case 4: Реферальная программа и airdrop для привлечения новых участников
+## Use Case 3: Participating in the DAO — Staking and Voting on Protocol Parameters
 
-### Проблема
+### Problem
 
-Платформе нужно масштабировать базу пользователей. Традиционная реклама дорога,
-а органический рост медленный. Нужна программа лояльности, мотивирующая участников
-приводить новых инвесторов и создателей бизнесов.
+Active participants on the platform want to influence key protocol parameters:
+fee sizes, pool limits, treasury distribution. Without a DAO, all decisions
+are made centrally.
 
-### Решение на платформе
+### Solution on the Platform
 
-**Loyalty-программа** с реферальными ссылками, накоплением наград в
-**ReferralTreasury** и потенциальным **airdrop** на основе скоринга.
+The **DAO**, based on the **PlatformToken (RWAP)** and **DaoStaking**, lets participants
+lock tokens, gain voting power, and create/vote on proposals.
 
-### Пошаговый сценарий
+### Step-by-Step Scenario
 
-1. **Получение реферальной ссылки.** Участник (реферер) заходит в раздел Loyalty,
-   генерирует уникальную реферальную ссылку.
-2. **Приглашение.** Реферер делится ссылкой в соцсетях, чатах, блоге.
-3. **Регистрация реферала.** Новый пользователь переходит по ссылке, подключает
-   кошелёк — система фиксирует привязку: реферер → реферал.
-4. **Активность реферала.** Реферал совершает операции:
-   - Покупка RWA (entry fee) → реферер получает % в **ReferralTreasury**
-   - Продажа RWA (exit fee) → реферер получает %
-   - Создание RWA (creation fee) → реферер получает %
-   - Создание пула (pool creation fee) → реферер получает %
-5. **Вывод наград.** Реферер запрашивает вывод. Требуется 3 из 5 подписей **Signers**
-   (multi-sig) и cooldown 30 дней.
-6. **Airdrop.** По итогам периода платформа проводит airdrop:
-   - **Критерии:** объём комиссий, количество операций, реферальное влияние,
-     создание токенов/пулов.
-   - **Композитный скоринг** определяет размер награды каждому участнику.
+1. **Getting PlatformToken.** A participant requests RWAP through the **Testnet Faucet**
+   (in production — buying it or receiving it through Governance.mint()).
+2. **Staking.** The participant goes to the DAO section and stakes 5,000 RWAP in **DaoStaking**.
+   - Voting power: 5,000 (1:1 with the stake).
+   - Annual staking reward: 10% (500 RWAP per year).
+3. **Creating a proposal** (requires ≥ 1,000,000 RWAP staked). The participant creates
+   a proposal to reduce the entry fee from 3% to 2% for all pools.
+   - Description: rationale, links to analytics.
+   - Voting period: 7 days.
+4. **Voting.** Other participants with staked RWAP vote "for" or "against".
+   - When voting, tokens are locked until the vote ends.
+5. **Auto-execution.** After each vote, quorum is checked (40% of the totalSupply
+   of RWAP). If quorum is reached and there are more "for" votes, the proposal is executed
+   automatically.
+6. **Timelock (2 days).** If the proposal affects the **Treasury** (for example, withdrawing
+   funds), execution is delayed by 2 days through the **Timelock**.
 
-### Результат
+### Result
 
-- Реферер получает пассивный доход от комиссий приглашённых пользователей.
-- Платформа растёт органически за счёт сети рефералов.
-- Airdrop мотивирует долгосрочную активность и лояльность.
+- Participants govern the protocol in a decentralized way.
+- Stakers earn passive income (10% per year in RWAP).
+- All decisions are transparent and irreversible once executed.
 
 ---
 
-## Use Case 5: Полный цикл — от стартапа до возврата инвестиций с бонусами
+## Use Case 4: Referral Program and Airdrop to Attract New Participants
 
-### Проблема
+### Problem
 
-Стартап в сфере зелёной энергетики ищет **200 000 USDT** на пилотный проект.
-Инвесторы хотят не только возврат тела инвестиций, но и премию за риск.
-Традиционные краудфандинговые платформы не предоставляют встроенной ликвидности
-и бонусных механизмов.
+The platform needs to scale its user base. Traditional advertising is expensive,
+and organic growth is slow. A loyalty program is needed to motivate participants
+to bring in new investors and business creators.
 
-### Решение на платформе
+### Solution on the Platform
 
-Slices предлагает полный цикл: токенизация → пул с траншами и бонусами →
-AMM-торговля → возврат с бонусом.
+A **loyalty program** with referral links, reward accrual in the
+**ReferralTreasury**, and a potential **airdrop** based on scoring.
 
-### Пошаговый сценарий
+### Step-by-Step Scenario
 
-#### Этап 1: Подготовка
+1. **Getting a referral link.** A participant (the referrer) opens the Loyalty section
+   and generates a unique referral link.
+2. **Invitation.** The referrer shares the link on social media, in chats, or on a blog.
+3. **Referral registration.** A new user follows the link and connects
+   a wallet — the system records the link: referrer → referral.
+4. **Referral activity.** The referral performs operations:
+   - Buying RWA (entry fee) → the referrer receives a % in the **ReferralTreasury**
+   - Selling RWA (exit fee) → the referrer receives a %
+   - Creating RWA (creation fee) → the referrer receives a %
+   - Creating a pool (pool creation fee) → the referrer receives a %
+5. **Withdrawing rewards.** The referrer requests a withdrawal. This requires 3 of 5 **Signers**
+   signatures (multi-sig) and a 30-day cooldown.
+6. **Airdrop.** Based on the results of the period, the platform runs an airdrop:
+   - **Criteria:** fee volume, number of operations, referral influence,
+     token/pool creation.
+   - **Composite scoring** determines the reward size for each participant.
 
-1. **Company.** Стартап регистрирует компанию на платформе, добавляет участников
-   с разными правами (permissions).
-2. **Business.** Создаётся бизнес типа `startup` с детальным бизнес-планом,
-   финансовыми прогнозами, документами и изображениями в **Gallery**.
-3. **AI Evaluation.** Система анализирует проект, выдаёт riskScore = 45 (умеренный
-   риск), перечисляет positive/negative/neutral факторы.
-4. **Multi-sig.** Signers проверяют и подписывают развёртывание RWA-контракта.
+### Result
 
-#### Этап 2: Запуск пула
+- The referrer earns passive income from the fees of invited users.
+- The platform grows organically through the referral network.
+- The airdrop motivates long-term activity and loyalty.
 
-5. **Pool Configuration.** Настраивается пул:
-   - `expectedHoldAmount = 200 000 HOLD`
+---
+
+## Use Case 5: Full Cycle — From Startup to Investment Return with Bonuses
+
+### Problem
+
+A green energy startup is looking for **200,000 USDT** for a pilot project.
+Investors want not only the return of their principal but also a risk premium.
+Traditional crowdfunding platforms do not provide built-in liquidity
+and bonus mechanisms.
+
+### Solution on the Platform
+
+Slices offers a full cycle: tokenization → pool with tranches and bonuses →
+AMM trading → return with a bonus.
+
+### Step-by-Step Scenario
+
+#### Phase 1: Preparation
+
+1. **Company.** The startup registers a company on the platform and adds participants
+   with different permissions.
+2. **Business.** A business of type `startup` is created with a detailed business plan,
+   financial forecasts, documents, and images in the **Gallery**.
+3. **AI Evaluation.** The system analyzes the project, outputs riskScore = 45 (moderate
+   risk), and lists positive/negative/neutral factors.
+4. **Multi-sig.** Signers review and sign the RWA contract deployment.
+
+#### Phase 2: Pool Launch
+
+5. **Pool Configuration.** The pool is configured:
+   - `expectedHoldAmount = 200,000 HOLD`
    - `entryFeePercent = 150 bps` (1.5%)
    - `exitFeePercent = 100 bps` (1%)
-   - `rewardPercent = 3000 bps` (30% бонус)
-   - OutgoingTranches: 50 000 HOLD сразу, 150 000 HOLD через 3 месяца
-   - IncomingTranches: 50 000 HOLD через 6 мес, 50 000 через 9 мес,
-     100 000 через 12 мес, 60 000 бонус через 13 мес
-6. **Multi-sig.** Signers подписывают развёртывание пула через **Factory**.
+   - `rewardPercent = 3000 bps` (30% bonus)
+   - OutgoingTranches: 50,000 HOLD immediately, 150,000 HOLD after 3 months
+   - IncomingTranches: 50,000 HOLD after 6 months, 50,000 after 9 months,
+     100,000 after 12 months, 60,000 bonus after 13 months
+6. **Multi-sig.** Signers sign the pool deployment through the **Factory**.
 
-#### Этап 3: Сбор средств
+#### Phase 3: Raising Funds
 
-7. **Entry Period (30 дней).** Инвесторы покупают RWA-токены через AMM.
-   - Комиссия entry fee (1.5%) уходит в **Treasury**.
-   - Рефереры инвесторов получают % в **ReferralTreasury**.
-8. **Target Reached.** Цель достигнута на 20-й день.
-   - Floating timestamps: все транши сдвигаются на 10 дней раньше.
-   - Первый outgoing tranche (50 000 HOLD) выплачивается стартапу.
+7. **Entry Period (30 days).** Investors buy RWA tokens through the AMM.
+   - The entry fee (1.5%) goes to the **Treasury**.
+   - The investors' referrers receive a % in the **ReferralTreasury**.
+8. **Target Reached.** The target is reached on day 20.
+   - Floating timestamps: all tranches shift 10 days earlier.
+   - The first outgoing tranche (50,000 HOLD) is paid out to the startup.
 
-#### Этап 4: Торговля и возврат
+#### Phase 4: Trading and Return
 
-9. **Trading.** RWA-токены торгуются на AMM. Инвесторы могут продать долю
-   в любой момент, уплатив exit fee (1%).
-10. **IncomingTranches.** Стартап возвращает средства по графику:
-    - 6 мес: 50 000 HOLD → цена RWA растёт
-    - 9 мес: 50 000 HOLD → цена RWA растёт
-    - 12 мес: 100 000 HOLD → все средства возвращены
-11. **Completion Period.** Новые покупки заблокированы, продажи возможны.
-12. **Fully Returned.** Пул переходит в статус fully returned.
-13. **Bonus Unlock.** Бонус (60 000 HOLD = 30%) распределяется между держателями
-    RWA пропорционально их доле.
+9. **Trading.** RWA tokens trade on the AMM. Investors can sell their share
+   at any time by paying the exit fee (1%).
+10. **IncomingTranches.** The startup returns the funds on schedule:
+    - 6 months: 50,000 HOLD → the RWA price rises
+    - 9 months: 50,000 HOLD → the RWA price rises
+    - 12 months: 100,000 HOLD → all funds are returned
+11. **Completion Period.** New purchases are blocked; sales remain possible.
+12. **Fully Returned.** The pool moves to the fully returned status.
+13. **Bonus Unlock.** The bonus (60,000 HOLD = 30%) is distributed among RWA holders
+    in proportion to their share.
 
-#### Этап 5: Пост-инвестиционный период
+#### Phase 5: Post-Investment Period
 
-14. **DAO.** Держатели RWAP могут создать пропозал на изменение параметров
-    будущих пулов на основе опыта этого цикла.
-15. **Loyalty.** Участники, приведшие рефералов, накапливают награды
-    и участвуют в airdrop.
+14. **DAO.** RWAP holders can create a proposal to change the parameters
+    of future pools based on the experience of this cycle.
+15. **Loyalty.** Participants who brought referrals accumulate rewards
+    and take part in the airdrop.
 
-### Результат
+### Result
 
-- **Стартап** получил 200 000 HOLD на развитие и вернул их с 30% бонусом.
-- **Инвесторы** получили: возврат тела + 30% бонус + возможность выйти
-  досрочно через AMM.
-- **Платформа** собрала комиссии в Treasury, рефереры получили награды.
-- **DAO** получил опыт для улучшения параметров протокола.
+- The **startup** received 200,000 HOLD for development and returned it with a 30% bonus.
+- **Investors** received: return of the principal + 30% bonus + the ability to exit
+  early through the AMM.
+- The **platform** collected fees in the Treasury, and referrers received rewards.
+- The **DAO** gained experience to improve the protocol parameters.

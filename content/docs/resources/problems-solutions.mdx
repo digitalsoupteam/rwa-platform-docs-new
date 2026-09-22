@@ -1,269 +1,269 @@
 ---
-title: Проблемы и решения
-description: Обзор проблем традиционного финансирования, краудфандинга и управления — и как Slices решает их с помощью блокчейн-технологий
+title: Problems and Solutions
+description: An overview of the problems of traditional financing, crowdfunding, and governance — and how Slices solves them with blockchain technology
 ---
 
-# Проблемы и решения платформы Slices
-
----
-
-## 1. Проблемы традиционного финансирования
-
-### Сложность доступа к инвестициям в реальные активы
-
-**Проблема:** Инвестиции в реальные активы (real-world assets) — недвижимость, бизнес, оборудование — традиционно доступны только аккредитованным инвесторам и институциональным фондам. Розничные инвесторы практически не имеют возможности участвовать в таких проектах из-за регуляторных и юридических барьеров.
-
-**Как Slices решает:** Платформа токенизирует реальные активы через смарт-контракты (ERC1155), превращая их в цифровые доли — RWA-токены. Любой пользователь может приобрести долю в пуле, представляющем реальный актив, без необходимости статуса аккредитованного инвестора. Процесс полностью автоматизирован: AI-оценка рисков, мультиподписное одобрение и развёртывание смарт-контрактов занимают минуты.
-
-**Ключевые преимущества:**
-- Демократизация доступа — участвовать может любой желающий
-- Автоматизация онбординга через AI Risk Evaluator
-- Прозрачная токенизация на блокчейне BSC
+# Problems and Solutions of the Slices Platform
 
 ---
 
-### Высокие пороги входа
+## 1. Problems of traditional financing
 
-**Проблема:** Традиционные инвестиции в недвижимость или бизнес требуют крупного капитала — от сотен тысяч до миллионов долларов. Это исключает большинство розничных инвесторов.
+### Difficulty of access to real-world asset investments
 
-**Как Slices решает:** Платформа позволяет разделить любой актив на множество токенов. Инвестор может купить одну или несколько долей (RWA-токенов) в пуле, а не весь актив целиком. Минимальная сумма входа определяется параметрами конкретного пула и может быть очень низкой.
+**Problem:** Investments in real-world assets — real estate, businesses, equipment — are traditionally available only to accredited investors and institutional funds. Retail investors have practically no opportunity to participate in such projects because of regulatory and legal barriers.
 
-**Ключевые преимущества:**
-- Дробление активов на токены любой номинации
-- Низкий порог входа для розничных инвесторов
-- Возможность диверсификации по множеству пулов
+**How Slices solves it:** The platform tokenizes real-world assets through smart contracts (ERC1155), turning them into digital shares — RWA tokens. Any user can buy a share in a pool that represents a real asset without needing accredited investor status. The process is fully automated: AI risk evaluation, multi-signature approval, and smart contract deployment take minutes.
 
----
-
-### Неликвидность активов
-
-**Проблема:** Традиционные вложения в реальные активы трудно продать до наступления срока. Недвижимость может продаваться месяцами, долю в бизнесе — годами. Инвестор фактически «заперт» в инвестиции до её завершения.
-
-**Как Slices решает:** Платформа предоставляет встроенный Automated Market Maker (AMM) — децентрализованную биржу, где участники могут покупать и продавать RWA-токены в любой момент. AMM использует резервы HOLD-токенов и RWA-токенов для обеспечения ликвидности, а цены определяются алгоритмически на основе соотношения резервов.
-
-**Ключевые преимущества:**
-- Выход из инвестиции в любой момент через AMM
-- Алгоритмическое ценообразование без посредников
-- Постоянная ликвидность пулов
+**Key benefits:**
+- Democratization of access — anyone can participate
+- Automated onboarding through the AI Risk Evaluator
+- Transparent tokenization on the BSC blockchain
 
 ---
 
-### Отсутствие прозрачности
+### High entry thresholds
 
-**Проблема:** В традиционных инвестициях миноритарные инвесторы часто не имеют доступа к детальной информации об активе, финансовых потоках и условиях сделки. Вся информация находится у посредников.
+**Problem:** Traditional investments in real estate or a business require large capital — from hundreds of thousands to millions of dollars. This excludes most retail investors.
 
-**Как Slices решает:** Все параметры пула — целевая сумма, комиссии, графики траншей (incoming/outgoing), резервы AMM — хранятся в смарт-контрактах на блокчейне BSC и публично верифицируемы. AI Risk Evaluator присваивает каждому бизнесу числовой риск-скор (1–100), который также доступен всем участникам.
+**How Slices solves it:** The platform allows splitting any asset into many tokens. An investor can buy one or more shares (RWA tokens) in a pool instead of the entire asset. The minimum entry amount is determined by the parameters of a specific pool and can be very low.
 
-**Ключевые преимущества:**
-- Полная прозрачность через блокчейн
-- Публичный риск-скор от AI
-- Верифицируемые смарт-контракты
+**Key benefits:**
+- Splitting assets into tokens of any denomination
+- Low entry threshold for retail investors
+- Ability to diversify across many pools
 
 ---
 
-### Как Slices решает эти проблемы (сводка)
+### Asset illiquidity
 
-| Проблема | Решение Slices |
+**Problem:** Traditional investments in real-world assets are hard to sell before maturity. Real estate can take months to sell, a business share can take years. The investor is effectively "locked" into the investment until it completes.
+
+**How Slices solves it:** The platform provides a built-in Automated Market Maker (AMM) — a decentralized exchange where participants can buy and sell RWA tokens at any time. The AMM uses HOLD token and RWA token reserves to provide liquidity, and prices are determined algorithmically based on the ratio of the reserves.
+
+**Key benefits:**
+- Exit an investment at any time through the AMM
+- Algorithmic pricing without intermediaries
+- Constant pool liquidity
+
+---
+
+### Lack of transparency
+
+**Problem:** In traditional investments, minority investors often have no access to detailed information about the asset, the cash flows, and the deal terms. All information is held by intermediaries.
+
+**How Slices solves it:** All pool parameters — target amount, fees, tranche schedules (incoming/outgoing), AMM reserves — are stored in smart contracts on the BSC blockchain and are publicly verifiable. The AI Risk Evaluator assigns each business a numeric risk score (1–100), which is also available to all participants.
+
+**Key benefits:**
+- Full transparency through the blockchain
+- Public risk score from the AI
+- Verifiable smart contracts
+
+---
+
+### How Slices solves these problems (summary)
+
+| Problem | Slices solution |
 |----------|----------------|
-| Сложность доступа | Токенизация RWA через ERC1155, открытая для всех |
-| Высокие пороги входа | Дробление активов на токены |
-| Неликвидность | Встроенный AMM для мгновенной торговли |
-| Непрозрачность | Все данные на блокчейне, AI-скоринг |
-| Высокие комиссии | Автоматизация через смарт-контракты, без посредников |
-| Медленные расчёты | Автоматические транши (incoming/outgoing) |
+| Difficulty of access | RWA tokenization through ERC1155, open to everyone |
+| High entry thresholds | Splitting assets into tokens |
+| Illiquidity | Built-in AMM for instant trading |
+| Lack of transparency | All data on the blockchain, AI scoring |
+| High fees | Automation through smart contracts, no intermediaries |
+| Slow settlements | Automatic tranches (incoming/outgoing) |
 
 ---
 
-## 2. Проблемы краудфандинга
+## 2. Crowdfunding problems
 
-### Доверие между создателем и инвесторами
+### Trust between the creator and investors
 
-**Проблема:** В классическом краудфандинге (Kickstarter, GoFundMe) бэкеры доверяют создателю проекта «на слово». Нет гарантий, что собранные средства будут использованы по назначению, а обещанные вознаграждения — выплачены. Мошеннические проекты — распространённое явление.
+**Problem:** In classic crowdfunding (Kickstarter, GoFundMe), backers trust the project creator "at their word". There is no guarantee that the funds raised will be used as intended or that the promised rewards will be paid out. Fraudulent projects are a common occurrence.
 
-**Как Slices решает:** Платформа использует многоуровневую систему защиты:
-- **AI Risk Evaluator** автоматически оценивает каждый бизнес и пул, присваивая риск-скор на основе описания, типа бизнеса, документов и изображений
-- **Мультиподписное одобрение (multi-sig)** — развёртывание RWA-токена и пула требует подписей от нескольких авторизованных подписантов
-- **Incoming tranches** — график ожидаемых возвратов от бизнеса зашивается в смарт-контракт; если бизнес не возвращает средства вовремя, это фиксируется на блокчейне
+**How Slices solves it:** The platform uses a multi-layered protection system:
+- **AI Risk Evaluator** automatically assesses every business and pool, assigning a risk score based on the description, business type, documents, and images
+- **Multi-signature approval (multi-sig)** — deploying the RWA token and pool requires signatures from several authorized signers
+- **Incoming tranches** — the schedule of expected returns from the business is hard-coded into the smart contract; if the business does not return funds on time, this is recorded on the blockchain
 
-**Ключевые преимущества:**
-- Автоматическая AI-оценка рисков каждого проекта
-- Мультиподпись предотвращает мошенническое развёртывание
-- Смарт-контракты гарантируют исполнение обязательств
-
----
-
-### Сложность юридического оформления
-
-**Проблема:** Традиционный краудфандинг требует сложного юридического оформления: договоры, лицензии, разрешения регулирующих органов. Для малого бизнеса и стартапов это дорого и долго.
-
-**Как Slices решает:** Платформа автоматизирует юридические и процедурные аспекты через смарт-контракты:
-- **Outgoing tranches** — средства распределяются бизнесу по графику, зашитому в контракт, а не единовременно
-- **AddressBook с RBAC** — разделение ролей (Admin, Manager, Signer, ProtocolContract) с чёткими полномочиями
-- **Timelock** — 2-дневная задержка для критических операций (вывод из Treasury, разморозка)
-
-**Ключевые преимущества:**
-- Минимизация юридических издержек
-- Автоматическое распределение средств по траншам
-- Ролевая модель безопасности
+**Key benefits:**
+- Automatic AI risk assessment of every project
+- Multi-sig prevents fraudulent deployment
+- Smart contracts guarantee the fulfillment of obligations
 
 ---
 
-### Отсутствие вторичного рынка
+### Complexity of legal formalities
 
-**Проблема:** В классическом краудфандинге бэкеры не могут продать свою долю до завершения проекта. Средства заморожены на весь срок кампании, что отпугивает многих потенциальных участников.
+**Problem:** Traditional crowdfunding requires complex legal formalities: contracts, licenses, regulatory approvals. For small businesses and startups, this is expensive and slow.
 
-**Как Slices решает:** Платформа предоставляет полноценный вторичный рынок через **AMM (Automated Market Maker)**. Участники могут:
-- Продать RWA-токены в любой момент через AMM-пул
-- Купить дополнительные токены у других участников
-- Использовать алгоритмическое ценообразование без посредников
+**How Slices solves it:** The platform automates the legal and procedural aspects through smart contracts:
+- **Outgoing tranches** — funds are distributed to the business on a schedule hard-coded into the contract rather than as a lump sum
+- **AddressBook with RBAC** — role separation (Admin, Manager, Signer, ProtocolContract) with clear permissions
+- **Timelock** — a 2-day delay for critical operations (Treasury withdrawal, unfreezing)
 
-**Ключевые преимущества:**
-- Мгновенный выход из инвестиции
-- Постоянная ликвидность
-- Рыночное ценообразование
+**Key benefits:**
+- Minimized legal costs
+- Automatic distribution of funds in tranches
+- Role-based security model
 
 ---
 
-### Как Slices решает эти проблемы (сводка)
+### No secondary market
 
-| Проблема краудфандинга | Решение Slices |
+**Problem:** In classic crowdfunding, backers cannot sell their share before the project completes. Funds are frozen for the entire campaign period, which puts off many potential participants.
+
+**How Slices solves it:** The platform provides a full-fledged secondary market through the **AMM (Automated Market Maker)**. Participants can:
+- Sell RWA tokens at any time through the AMM pool
+- Buy additional tokens from other participants
+- Use algorithmic pricing without intermediaries
+
+**Key benefits:**
+- Instant exit from an investment
+- Constant liquidity
+- Market-based pricing
+
+---
+
+### How Slices solves these problems (summary)
+
+| Crowdfunding problem | Slices solution |
 |------------------------|----------------|
-| Доверие и мошенничество | AI Risk Evaluator + мультиподпись + incoming tranches |
-| Юридическая сложность | Автоматизация через смарт-контракты + RBAC |
-| Отсутствие вторичного рынка | Встроенный AMM для торговли RWA-токенами |
-| Нет возврата средств | Incoming tranches с блокчейн-фиксацией |
-| Нет скоринга проектов | AI-оценка рисков (1–100) |
-| Нет токенизации долей | ERC1155 токены, представляющие долю в пуле |
+| Trust and fraud | AI Risk Evaluator + multi-sig + incoming tranches |
+| Legal complexity | Automation through smart contracts + RBAC |
+| No secondary market | Built-in AMM for trading RWA tokens |
+| No refunds | Incoming tranches with blockchain recording |
+| No project scoring | AI risk assessment (1–100) |
+| No share tokenization | ERC1155 tokens representing a share in a pool |
 
 ---
 
-## 3. Проблемы управления
+## 3. Governance problems
 
-### Централизация
+### Centralization
 
-**Проблема:** Традиционные финансовые платформы управляются одной компанией или группой лиц, которые могут в одностороннем порядке менять правила, комиссии и условия. Это создаёт риск злоупотреблений и единую точку отказа.
+**Problem:** Traditional financial platforms are run by a single company or group of people who can unilaterally change the rules, fees, and terms. This creates a risk of abuse and a single point of failure.
 
-**Как Slices решает:** Платформа использует **DAO (Decentralized Autonomous Organization)**:
-- Ключевые параметры протокола (комиссии, лимиты, периоды) контролируются через голосование стейкеров PlatformToken
-- **Разделение ролей (RBAC)** через AddressBook: Governance, Timelock, UpgradeRole, Signers, ProtocolContract — каждая роль имеет строго ограниченные полномочия
-- **Emergency Pause** — Governance может заморозить контракты, но разморозка требует Timelock (разделение полномочий)
+**How Slices solves it:** The platform uses a **DAO (Decentralized Autonomous Organization)**:
+- Key protocol parameters (fees, limits, periods) are controlled through voting by PlatformToken stakers
+- **Role separation (RBAC)** through the AddressBook: Governance, Timelock, UpgradeRole, Signers, ProtocolContract — each role has strictly limited permissions
+- **Emergency Pause** — Governance can freeze contracts, but unfreezing requires the Timelock (separation of powers)
 
-**Ключевые преимущества:**
-- Децентрализованное принятие решений
-- Разделение полномочий исключает единую точку отказа
-- Механизм экстренной остановки с защитой от злоупотреблений
-
----
-
-### Отсутствие механизмов голосования
-
-**Проблема:** В традиционных системах у пользователей нет возможности влиять на развитие платформы. Все решения принимаются централизованно, без учёта мнения сообщества.
-
-**Как Slices решает:** DAO предоставляет полноценную систему голосования:
-- **Создание предложений** — любой стейкер с ≥1,000,000 PlatformToken может создать proposal
-- **Голосование** — длится 7 дней, требуется кворум 40% от общего объёма застейканных токенов
-- **Стейкинг** — пользователи стейкают PlatformToken, получая право голоса и доход 10% годовых с автоматическим реинвестированием
-- **Timelock** — одобренные предложения вступают в силу через 2 дня, давая сообществу время на реакцию
-
-**Ключевые преимущества:**
-- Демократичное управление платформой
-- Стимулы для долгосрочного участия (10% годовых)
-- Защита от поспешных решений (Timelock)
-- Прозрачность всех голосований
+**Key benefits:**
+- Decentralized decision-making
+- Separation of powers eliminates a single point of failure
+- Emergency stop mechanism with protection against abuse
 
 ---
 
-### Как DAO решает эти проблемы (сводка)
+### No voting mechanisms
 
-| Проблема управления | Решение Slices |
+**Problem:** In traditional systems, users have no way to influence the development of the platform. All decisions are made centrally, without considering the opinion of the community.
+
+**How Slices solves it:** The DAO provides a full-fledged voting system:
+- **Creating proposals** — any staker with ≥1,000,000 PlatformToken can create a proposal
+- **Voting** — lasts 7 days, requires a quorum of 40% of the total amount of staked tokens
+- **Staking** — users stake PlatformToken, gaining voting rights and a 10% annual yield with automatic reinvestment
+- **Timelock** — approved proposals take effect after 2 days, giving the community time to react
+
+**Key benefits:**
+- Democratic governance of the platform
+- Incentives for long-term participation (10% annual yield)
+- Protection against hasty decisions (Timelock)
+- Transparency of all votes
+
+---
+
+### How the DAO solves these problems (summary)
+
+| Governance problem | Slices solution |
 |--------------------|----------------|
-| Централизация | DAO с голосованием стейкеров PlatformToken |
-| Единая точка отказа | RBAC (AddressBook) с разделением ролей |
-| Отсутствие голосования | Proposals + 7-дневное голосование + кворум 40% |
-| Риск мгновенных изменений | Timelock (2 дня) для критических операций |
-| Нет стимулов к участию | Стейкинг с доходностью 10% годовых |
-| Риск недобросовестного развёртывания | Мультиподпись (multi-sig) для RWA и пулов |
+| Centralization | DAO with PlatformToken staker voting |
+| Single point of failure | RBAC (AddressBook) with role separation |
+| No voting | Proposals + 7-day voting + 40% quorum |
+| Risk of instant changes | Timelock (2 days) for critical operations |
+| No incentives to participate | Staking with a 10% annual yield |
+| Risk of malicious deployment | Multi-signature (multi-sig) for RWA and pools |
 
 ---
 
-## 4. Кому подходит платформа
+## 4. Who the platform is for
 
-### Владельцам реальных активов (недвижимость, бизнес)
+### Owners of real-world assets (real estate, businesses)
 
-**Описание:** Платформа предназначена для бизнесов, ищущих капитал под реальные активы:
+**Description:** The platform is intended for businesses seeking capital against real-world assets:
 
-- **Growth-компании** — established businesses seeking expansion capital (например, производственная компания открывает новый цех). Для них — более короткие периоды завершения, низкие риск-скоры, более частые outgoing tranches.
-- **Стартапы** — early-stage ventures with high growth potential (например, tech startup разрабатывает новый продукт). Для них — более длинные периоды, высокие риск-скоры, высокие процентные ставки вознаграждения.
-- **Франшизы** — franchise operations expanding to new locations (например, сеть ресторанов открывает новый филиал). Умеренные периоды и ставки.
+- **Growth companies** — established businesses seeking expansion capital (for example, a manufacturing company opening a new shop). For them — shorter completion periods, low risk scores, more frequent outgoing tranches.
+- **Startups** — early-stage ventures with high growth potential (for example, a tech startup developing a new product). For them — longer periods, high risk scores, high reward interest rates.
+- **Franchises** — franchise operations expanding to new locations (for example, a restaurant chain opening a new branch). Moderate periods and rates.
 
-**Как Slices помогает:**
-- Быстрый сбор средств через токенизацию активов
-- Автоматическое распределение капитала по outgoing tranches
-- Прозрачная отчётность перед инвесторами через блокчейн
-- AI-оценка помогает привлечь доверие инвесторов
+**How Slices helps:**
+- Fast fundraising through asset tokenization
+- Automatic distribution of capital through outgoing tranches
+- Transparent reporting to investors through the blockchain
+- AI assessment helps build investor trust
 
-**Ключевые преимущества:**
-- Доступ к глобальному пулу инвесторов
-- Минимизация бюрократии
-- Гибкие условия финансирования
-
----
-
-### Инвесторам (розничным и институциональным)
-
-**Описание:** Платформа подходит для разных категорий инвесторов:
-
-- **Розничные инвесторы** — любой желающий может вложить HOLD-токены в пулы и получить RWA-токены, представляющие долю в реальном активе. Низкий порог входа, возможность диверсификации.
-- **Крупные инвесторы** — могут участвовать в управлении через DAO, создавать предложения (требуется ≥1,000,000 PlatformToken), влиять на развитие платформы.
-- **Стейкеры** — пользователи, которые стейкают PlatformToken для получения права голоса и дохода 10% годовых с автоматическим реинвестированием наград.
-
-**Как Slices помогает:**
-- Доступ к инвестициям в реальные активы с низким порогом входа
-- Выход из инвестиции в любой момент через AMM
-- Прозрачная информация о рисках (AI Risk Score)
-- Дополнительный доход через стейкинг и реферальную программу
-
-**Ключевые преимущества:**
-- Демократичный доступ к RWA
-- Ликвидность через AMM
-- Доход от стейкинга (10% годовых)
-- Реферальные бонусы
+**Key benefits:**
+- Access to a global pool of investors
+- Minimal bureaucracy
+- Flexible financing terms
 
 ---
 
-### Разработчикам (интеграция через API)
+### Investors (retail and institutional)
 
-**Описание:** Платформа предоставляет богатые возможности для интеграции:
+**Description:** The platform suits different categories of investors:
 
-- **GraphQL API** — более 100 эндпоинтов для чтения данных о пулах, токенах, транзакциях, пользователях
-- **AI Assistant API** — создание кастомных AI-ассистентов с контекстом платформы
-- **WebSocket** — подписка на обновления цен и транзакций в реальном времени
-- **Webhooks** — уведомления о событиях (создание пула, покупка токенов, выплаты по траншам)
+- **Retail investors** — anyone can deposit HOLD tokens into pools and receive RWA tokens representing a share in a real asset. Low entry threshold, diversification opportunities.
+- **Large investors** — can participate in governance through the DAO, create proposals (≥1,000,000 PlatformToken required), and influence the development of the platform.
+- **Stakers** — users who stake PlatformToken to gain voting rights and a 10% annual yield with automatic reinvestment of rewards.
 
-**Как Slices помогает:**
-- Готовая инфраструктура для создания dApps
-- Документированные эндпоинты и примеры запросов
-- Режим реального времени через WebSocket
-- Автоматизация через webhooks
+**How Slices helps:**
+- Access to investments in real-world assets with a low entry threshold
+- Exit an investment at any time through the AMM
+- Transparent information about risks (AI Risk Score)
+- Additional income through staking and the referral program
 
-**Ключевые преимущества:**
-- Полная документация API
-- Интеграция в реальном времени
-- Кастомизация через AI Assistant API
-- Бесплатный тестовый доступ (testnet faucet)
+**Key benefits:**
+- Democratic access to RWA
+- Liquidity through the AMM
+- Income from staking (10% annual yield)
+- Referral bonuses
 
 ---
 
-### Сводная таблица аудитории
+### Developers (integration via API)
 
-| Категория | Потребность | Решение Slices |
+**Description:** The platform offers extensive integration capabilities:
+
+- **GraphQL API** — more than 100 endpoints for reading data about pools, tokens, transactions, and users
+- **AI Assistant API** — creating custom AI assistants with the platform context
+- **WebSocket** — subscription to real-time price and transaction updates
+- **Webhooks** — notifications about events (pool creation, token purchases, tranche payouts)
+
+**How Slices helps:**
+- Ready-made infrastructure for building dApps
+- Documented endpoints and request examples
+- Real-time mode through WebSocket
+- Automation through webhooks
+
+**Key benefits:**
+- Full API documentation
+- Real-time integration
+- Customization through the AI Assistant API
+- Free test access (testnet faucet)
+
+---
+
+### Audience summary table
+
+| Category | Need | Slices solution |
 |-----------|-------------|----------------|
-| Владельцы активов | Привлечение капитала под RWA | Токенизация + outgoing tranches + AI-скоринг |
-| Розничные инвесторы | Доступ к RWA с низким порогом | Дробление токенов + AMM |
-| Институциональные инвесторы | Управление и влияние | DAO + стейкинг + proposals |
-| Разработчики | Интеграция и автоматизация | GraphQL API + WebSocket + webhooks |
-| Партнёры | Дополнительный доход | Реферальная программа + бонусы |
+| Asset owners | Raising capital against RWA | Tokenization + outgoing tranches + AI scoring |
+| Retail investors | Access to RWA with a low threshold | Token splitting + AMM |
+| Institutional investors | Governance and influence | DAO + staking + proposals |
+| Developers | Integration and automation | GraphQL API + WebSocket + webhooks |
+| Partners | Additional income | Referral program + bonuses |
 
 ---
 
-*Документация платформы Slices. Версия 1.0*
+*Slices platform documentation. Version 1.0*
