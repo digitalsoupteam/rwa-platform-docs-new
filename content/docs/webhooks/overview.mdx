@@ -1,14 +1,82 @@
 ---
 title: Webhooks
-description: Webhooks service is under development
+description: Receive real-time HTTP notifications about platform events
 ---
 
 # Webhooks
 
-> **⚠️ Under development**
->
-> The Webhooks service is not implemented yet. This section describes plans for the future.
+Webhooks let you receive real-time HTTP notifications about platform events instead of polling the GraphQL API. Register an endpoint, choose the events you want, and the platform will `POST` each event to your URL.
 
-Webhooks will allow you to receive real-time HTTP notifications about platform events. Instead of polling the GraphQL API, you will be able to register a webhook endpoint and receive push notifications on your server.
+Manage endpoints with the GraphQL API — see [createWebhookEndpoint](/docs/api/webhooks/create-webhook-endpoint), [getWebhookEndpoint](/docs/api/webhooks/get-webhook-endpoint), [getWebhookEndpoints](/docs/api/webhooks/get-webhook-endpoints), [updateWebhookEndpoint](/docs/api/webhooks/update-webhook-endpoint) and [deleteWebhookEndpoint](/docs/api/webhooks/delete-webhook-endpoint). Each user can register up to 50 endpoints.
 
-At the moment the service is in the design stage. Stay tuned for documentation updates — details will appear after implementation.
+## Events
+
+The event type travels in the `webhook-event` header; the request body is the event payload.
+
+| Event | Fired when | Payload fields |
+|-------|------------|----------------|
+| `business.deployed` | A business RWA token contract is deployed on-chain | `businessId`, `ownerId`, `ownerType`, `ownerWallet`, `tokenAddress`, `chainId`, `name` |
+| `pool.deployed` | A pool contract is deployed on-chain | `poolId`, `poolAddress`, `ownerId`, `ownerWallet`, `holdToken`, `rwaAddress`, `tokenId`, `expectedHoldAmount`, `expectedRwaAmount` |
+
+Subscriptions are validated: an endpoint can only subscribe to the events listed above.
+
+## Delivery
+
+- Method: `POST` with `Content-Type: application/json`
+- Body: the event payload (see the table above)
+- Your endpoint must answer within **10 seconds**
+- Only a `2xx` response counts as success; redirects are never followed
+
+### Headers
+
+| Header | Description |
+|--------|-------------|
+| `webhook-id` | Unique event id. Stable across retries — use it as a deduplication key |
+| `webhook-timestamp` | UNIX time in seconds at which the request was signed |
+| `webhook-signature` | `v1,<base64 HMAC-SHA256>` of `<webhook-id>.<webhook-timestamp>.<raw body>` |
+| `webhook-event` | Event type, for example `pool.deployed` |
+
+### Verifying the signature
+
+The signing scheme follows the [Standard Webhooks](https://github.com/standard-webhooks/standard-webhooks) specification, so standard verification libraries work out of the box. Endpoint secrets are issued in the `whsec_` format and shown only once when the endpoint is created (or rotated when the URL changes).
+
+```ts
+import crypto from 'crypto';
+
+const secret = process.env.WEBHOOK_SECRET!; // "whsec_..." from createWebhookEndpoint
+const key = Buffer.from(secret.replace(/^whsec_/, ''), 'base64');
+
+function verify(rawBody: string, headers: Record<string, string>): boolean {
+  const timestamp = Number(headers['webhook-timestamp']);
+  if (Math.abs(Date.now() / 1000 - timestamp) > 300) return false; // replay window: ±5 minutes
+
+  const expected = crypto
+    .createHmac('sha256', key)
+    .update(`${headers['webhook-id']}.${headers['webhook-timestamp']}.${rawBody}`)
+    .digest('base64');
+
+  return `v1,${expected}` === headers['webhook-signature'];
+}
+```
+
+Always verify the signature against the **raw request body**, before parsing the JSON.
+
+## Retries
+
+If a delivery fails (non-2xx response, timeout or network error), it is retried with exponential backoff:
+
+- 5 seconds, 5 minutes, 30 minutes, 2 hours, 5 hours, 10 hours, 10 hours — 8 attempts over roughly 24 hours
+
+Permanent responses (`400`, `404`, `410`, redirects) are treated as misconfiguration: the delivery is not retried and the endpoint is disabled. When all retries are exhausted, the event is parked in a dead-letter queue and the endpoint is disabled as well — fix your handler and re-enable the endpoint through the API.
+
+## Delivery guarantees
+
+- Deliveries are **at-least-once**: an event can be delivered more than once (retry, replay). Deduplicate on your side by `webhook-id`.
+- Event **ordering is not guaranteed** — process events idempotently.
+- Delivery logs are kept for 30 days.
+
+## Limits
+
+- Only `https://` endpoints are accepted; URLs resolving to private or reserved networks are rejected.
+- Maximum payload size: **256 KB**
+- Each endpoint has a per-minute delivery budget (`rateLimitPerMinute`, default 100). When the budget is exceeded, further events for that endpoint are skipped until the next minute.
